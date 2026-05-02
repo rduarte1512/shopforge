@@ -120,6 +120,7 @@ export default function StoreCustomizePage() {
   };
 
   const handleSave = async () => {
+    if (!supabase) return;
     setIsSaving(true);
     try {
       const { error } = await supabase
