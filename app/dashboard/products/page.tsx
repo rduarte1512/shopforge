@@ -455,12 +455,119 @@ export default function ProductsPage() {
         </motion.div>
       )}
 
+      {/* Filters and Search Bar */}
+      <div className="flex items-center gap-3">
+        <button 
+          onClick={() => setFilterLowStock(!filterLowStock)}
+          className={`px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 border ${filterLowStock ? 'bg-orange-500 text-white border-orange-400' : 'bg-white text-text-secondary border-border hover:border-primary/30'}`}
+        >
+          <AlertCircle className={`w-4 h-4 ${filterLowStock ? 'text-white' : 'text-orange-500'}`} />
+          Stock Baixo ({products.filter(p => Number(p.stock) < 5).length})
+        </button>
+      </div>
+
+      {/* Bulk Actions Bar */}
+      <AnimatePresence>
+        {selectedIds.length > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[80] glass border border-primary/20 shadow-2xl rounded-3xl px-8 py-4 flex items-center gap-8 min-w-[600px]"
+          >
+            <div className="flex items-center gap-3 pr-8 border-r border-border">
+              <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-black">
+                {selectedIds.length}
+              </div>
+              <div>
+                <p className="text-xs font-black text-text-primary uppercase tracking-widest">Selecionados</p>
+                <button onClick={() => setSelectedIds([])} className="text-[10px] font-bold text-text-muted hover:text-primary transition-colors">Limpar Seleção</button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 flex-1">
+              <button 
+                onClick={() => handleBulkAction('status', true)}
+                className="flex flex-col items-center gap-1 group"
+              >
+                <div className="p-2.5 rounded-xl bg-slate-50 group-hover:bg-emerald-50 text-text-secondary group-hover:text-emerald-600 transition-all">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <span className="text-[9px] font-black uppercase tracking-widest">Ativar</span>
+              </button>
+              <button 
+                onClick={() => handleBulkAction('status', false)}
+                className="flex flex-col items-center gap-1 group"
+              >
+                <div className="p-2.5 rounded-xl bg-slate-50 group-hover:bg-slate-200 text-text-secondary transition-all">
+                  <Minus className="w-5 h-5" />
+                </div>
+                <span className="text-[9px] font-black uppercase tracking-widest">Rascunho</span>
+              </button>
+              <button 
+                onClick={() => {
+                  const newStock = prompt('Novo stock para os selecionados:', '0');
+                  if (newStock !== null) handleBulkAction('stock', parseInt(newStock));
+                }}
+                className="flex flex-col items-center gap-1 group"
+              >
+                <div className="p-2.5 rounded-xl bg-slate-50 group-hover:bg-blue-50 text-text-secondary group-hover:text-blue-600 transition-all">
+                  <Package className="w-5 h-5" />
+                </div>
+                <span className="text-[9px] font-black uppercase tracking-widest">Stock</span>
+              </button>
+              <button 
+                onClick={() => {
+                  const newPrice = prompt('Novo preço para os selecionados:', '0.00');
+                  if (newPrice !== null) handleBulkAction('price', parseFloat(newPrice));
+                }}
+                className="flex flex-col items-center gap-1 group"
+              >
+                <div className="p-2.5 rounded-xl bg-slate-50 group-hover:bg-amber-50 text-text-secondary group-hover:text-amber-600 transition-all">
+                  <Tag className="w-5 h-5" />
+                </div>
+                <span className="text-[9px] font-black uppercase tracking-widest">Preço</span>
+              </button>
+              <button 
+                onClick={() => handleBulkAction('delete')}
+                className="flex flex-col items-center gap-1 group ml-auto"
+              >
+                <div className="p-2.5 rounded-xl bg-red-50 text-red-500 group-hover:bg-red-500 group-hover:text-white transition-all">
+                  <Trash2 className="w-5 h-5" />
+                </div>
+                <span className="text-[9px] font-black uppercase tracking-widest text-red-500 group-hover:text-red-600">Eliminar</span>
+              </button>
+            </div>
+            
+            {bulkActionLoading && (
+              <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] rounded-3xl flex items-center justify-center">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Products Table */}
       <div className="bg-white rounded-[32px] shadow-premium border border-border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
               <tr className="bg-slate-50/50">
+                <th className="py-5 pl-8 pr-0 border-b border-border w-10">
+                  <input 
+                    type="checkbox" 
+                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20 cursor-pointer"
+                    checked={selectedIds.length === filteredProducts.length && filteredProducts.length > 0}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedIds(filteredProducts.map(p => p.id));
+                      } else {
+                        setSelectedIds([]);
+                      }
+                    }}
+                  />
+                </th>
                 <th className="text-left text-[11px] text-text-muted py-5 border-b border-border font-black uppercase tracking-widest px-8">Produto</th>
                 <th className="text-left text-[11px] text-text-muted py-5 border-b border-border font-black uppercase tracking-widest px-6">Status</th>
                 <th className="text-left text-[11px] text-text-muted py-5 border-b border-border font-black uppercase tracking-widest px-6">Categoria</th>
@@ -470,8 +577,22 @@ export default function ProductsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {products.length > 0 ? products.map((product) => (
-                <tr key={product.id} className="group hover:bg-slate-50/50 transition-colors">
+              {filteredProducts.length > 0 ? filteredProducts.map((product) => (
+                <tr key={product.id} className={`group hover:bg-slate-50/50 transition-colors ${selectedIds.includes(product.id) ? 'bg-primary/5' : ''}`}>
+                  <td className="py-5 pl-8 pr-0">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20 cursor-pointer"
+                      checked={selectedIds.includes(product.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedIds([...selectedIds, product.id]);
+                        } else {
+                          setSelectedIds(selectedIds.filter(id => id !== product.id));
+                        }
+                      }}
+                    />
+                  </td>
                   <td className="py-5 px-8">
                     <div className="flex items-center gap-4">
                       <div className="h-14 w-14 relative rounded-2xl overflow-hidden bg-slate-100 border border-border shadow-sm group-hover:scale-105 transition-transform">
@@ -524,7 +645,7 @@ export default function ProductsPage() {
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan={6} className="py-20 text-center">
+                  <td colSpan={7} className="py-20 text-center">
                     <div className="flex flex-col items-center gap-4 text-text-muted">
                       <Package className="w-12 h-12 opacity-20" />
                       <p className="font-bold">Nenhum produto encontrado.</p>

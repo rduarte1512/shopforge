@@ -37,6 +37,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { NotificationPanel } from '@/components/dashboard/NotificationPanel';
 
 const navigation = [
   { name: 'Visão Geral', href: '/dashboard', icon: LayoutDashboard },
@@ -314,14 +315,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             <ThemeToggle />
 
-            <button className="relative p-2.5 hover:bg-gray-100 rounded-xl transition-all text-text-secondary">
-              <Bell className="w-5 h-5" />
-              {notificationCount > 0 && (
-                <span className="absolute top-2 right-2 w-4 h-4 bg-primary text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-card-bg">
-                  {notificationCount}
-                </span>
-              )}
-            </button>
+            <NotificationPanel />
             
             {currentStore && (
               <Link  

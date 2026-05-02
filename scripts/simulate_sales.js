@@ -5,21 +5,25 @@ const path = require('path');
 // Tentar carregar variáveis de ambiente do .env.local
 try {
   const envPath = path.join(__dirname, '..', '.env.local');
-  const envContent = fs.readFileSync(envPath, 'utf8');
-  envContent.split('\n').forEach(line => {
-    const match = line.match(/^([^=]+)=(.*)$/);
-    if (match) {
-      const key = match[1].trim();
-      let value = match[2].trim();
-      // Remover aspas caso existam
-      if (value.startsWith('"') && value.endsWith('"')) {
-        value = value.slice(1, -1);
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf8');
+    envContent.split(/\r?\n/).forEach(line => {
+      const trimmedLine = line.trim();
+      if (!trimmedLine || trimmedLine.startsWith('#')) return;
+      
+      const match = trimmedLine.match(/^([^=]+)=(.*)$/);
+      if (match) {
+        const key = match[1].trim();
+        let value = match[2].trim();
+        if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+          value = value.slice(1, -1);
+        }
+        process.env[key] = value;
       }
-      process.env[key] = value;
-    }
-  });
+    });
+  }
 } catch (e) {
-  console.log('Aviso: Ficheiro .env.local não encontrado ou sem acesso.');
+  // Silencioso
 }
 
 const stripeKey = process.env.STRIPE_SECRET_KEY || 'sk_test_51TSemzKHEPeRm4mFStz2UUW6nbXuZn8ISM40ursIwDCgHS9tv2FKLqzXqN9L8XyJ6aREAno9j3wKSFtKixXlCg1D005AZS3B1N';
@@ -33,18 +37,11 @@ const stripe = new Stripe(stripeKey, {
   apiVersion: '2025-02-24.acacia',
 });
 
-const PLANS = [
-  { name: 'Starter', price: 0 },
-  { name: 'Growth', price: 19 },
-  { name: 'Professional', price: 49 },
-  { name: 'Business', price: 99 },
-  { name: 'Enterprise', price: 249 }
-];
-
 const CUSTOMER_NAMES = [
   'Ana Silva', 'João Santos', 'Maria Costa', 'Pedro Almeida', 
   'Sofia Oliveira', 'Miguel Rodrigues', 'Beatriz Ferreira', 
-  'Tiago Pereira', 'Carolina Gomes', 'Rui Marques'
+  'Tiago Pereira', 'Carolina Gomes', 'Rui Marques',
+  'Ricardo Pais', 'Helena Sousa', 'Gabriel Lima', 'Daniela Cruz'
 ];
 
 function getRandomInt(min, max) {
@@ -55,78 +52,58 @@ function getRandomElement(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-async function createSimulatedSale() {
-  const plan = getRandomElement(PLANS.filter(p => p.price > 0)); // Evitar plano grátis
+async function createStripeSale() {
   const customerName = getRandomElement(CUSTOMER_NAMES);
   const email = `${customerName.toLowerCase().replace(' ', '.')}@example.com`;
+  
+  // Valor aleatório entre €15 e €250
+  const amount = getRandomInt(1500, 25000);
 
   try {
-    // Passo 1: Criar um cliente
     const customer = await stripe.customers.create({
       name: customerName,
       email: email,
     });
 
-    // Passo 2: Criar e confirmar um PaymentIntent com cartão de teste aprovado
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: plan.price * 100, // em cêntimos
+    await stripe.paymentIntents.create({
+      amount: amount,
       currency: 'eur',
       customer: customer.id,
-      payment_method: 'pm_card_visa', // Método de teste Stripe (Succeeds)
-      description: plan.name,
+      payment_method: 'pm_card_visa',
+      description: 'Venda de Teste (Simulador)',
       confirm: true,
-      automatic_payment_methods: {
-        enabled: true,
-        allow_redirects: 'never'
-      },
+      automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
     });
 
-    console.log(`✅ Venda simulada gerada: ${customerName} comprou ${plan.name} (€${plan.price}) - ID: ${paymentIntent.id}`);
+    console.log(`✅ Stripe: €${(amount / 100).toFixed(2)} - ${customerName}`);
   } catch (error) {
-    console.error(`❌ Erro ao simular venda para ${customerName}:`, error.message);
+    console.error(`❌ Erro Stripe (${customerName}):`, error.message);
   }
 }
 
 async function simulateSalesBatch() {
   const numberOfSales = getRandomInt(5, 20);
-  console.log(`\n--- A iniciar lote de ${numberOfSales} vendas simuladas às ${new Date().toLocaleTimeString()} ---`);
+  console.log(`\n[${new Date().toLocaleTimeString()}] 🚀 Gerando lote de ${numberOfSales} vendas...`);
   
-  const promises = [];
   for (let i = 0; i < numberOfSales; i++) {
-    // Pequeno atraso entre criações para não sobrecarregar a API no mesmo milissegundo
-    const delay = i * 500;
-    promises.push(
-      new Promise(resolve => setTimeout(() => resolve(createSimulatedSale()), delay))
-    );
+    await createStripeSale();
+    // Pequeno atraso entre vendas para não sobrecarregar
+    await new Promise(resolve => setTimeout(resolve, 800));
   }
   
-  await Promise.all(promises);
-  console.log(`--- Lote terminado. Próximo lote em 5 minutos. ---\n`);
+  console.log(`--- Lote finalizado. Próximo em 5 min. ---`);
 }
 
-// Executar o lote de vendas
 async function run() {
+  // Executa o primeiro lote imediatamente
   await simulateSalesBatch();
   
-  // No GitHub Actions (CI), terminamos o processo após um lote.
-  // No PC local, podemos manter o intervalo se quisermos, 
-  // mas para automação o GitHub trata do agendamento.
-  if (process.env.GITHUB_ACTIONS) {
-    console.log('🚀 Execução em CI concluída. O GitHub Actions agendará a próxima.');
-    process.exit(0);
-  } else {
-    // Configurar intervalo apenas se não estiver no GitHub Actions
-    const INTERVAL_MS = 5 * 60 * 1000;
-    setInterval(simulateSalesBatch, INTERVAL_MS);
-    console.log('🚀 Simulador de Vendas Stripe Ativo (Modo Local)!');
-    console.log('Pode parar a simulação a qualquer momento pressionando Ctrl+C');
-  }
+  // Configura o intervalo de 5 minutos
+  const INTERVAL_MS = 5 * 60 * 1000;
+  setInterval(simulateSalesBatch, INTERVAL_MS);
+  
+  console.log('\n🌟 Simulador de Vendas Stripe Ativo!');
+  console.log('Frequência: 5-20 vendas a cada 5 minutos.');
 }
 
 run();
-
-// Para garantir que o processo encerra de forma limpa quando necessário
-process.on('SIGINT', () => {
-  console.log('\n🛑 A parar o simulador de vendas...');
-  process.exit(0);
-});
