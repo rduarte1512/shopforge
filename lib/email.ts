@@ -50,7 +50,7 @@ export async function getStoreEmailSettings(storeId: string): Promise<StoreEmail
   return data;
 }
 
-export async function sendEmail({ apiKey, to, subject, html, from }: { apiKey: string, to: string, subject: string, html: string, from: string }) {
+export async function sendEmail({ apiKey, to, subject, html, from, replyTo }: { apiKey: string, to: string, subject: string, html: string, from: string, replyTo?: string }) {
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -62,7 +62,8 @@ export async function sendEmail({ apiKey, to, subject, html, from }: { apiKey: s
         from,
         to: [to],
         subject,
-        html
+        html,
+        reply_to: replyTo
       })
     });
     
