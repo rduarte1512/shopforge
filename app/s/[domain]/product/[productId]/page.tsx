@@ -23,11 +23,10 @@ export default function ProductPage() {
   
   useEffect(() => {
     async function fetchData() {
-      if (!params.domain || !params.productId) return;
-      
+      if (!params.domain || !params.productId || !supabase) return;
+
       try {
-        const { data: storeData, error: storeError } = await supabase
-          .from('stores')
+        const { data: storeData, error: storeError } = await supabase          .from('stores')
           .select('*')
           .eq('domain', params.domain)
           .single();

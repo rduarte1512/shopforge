@@ -53,11 +53,10 @@ export default function StoreCustomizePage() {
 
   useEffect(() => {
     async function fetchData() {
-      if (!id) return;
-      
+      if (!id || !supabase) return;
+
       try {
-        const { data: storeData, error: storeError } = await supabase
-          .from('stores')
+        const { data: storeData, error: storeError } = await supabase          .from('stores')
           .select('*')
           .eq('id', id)
           .single();

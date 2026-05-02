@@ -23,11 +23,10 @@ export default function ComparePage() {
 
   useEffect(() => {
     async function fetchData() {
-      if (!params.domain) return;
-      
+      if (!params.domain || !supabase) return;
+
       try {
-        const { data: storeData, error: storeError } = await supabase
-          .from('stores')
+        const { data: storeData, error: storeError } = await supabase          .from('stores')
           .select('*')
           .eq('domain', params.domain)
           .single();

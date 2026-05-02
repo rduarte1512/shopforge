@@ -34,7 +34,7 @@ export default function CartPage() {
 
   useEffect(() => {
     async function fetchData() {
-      if (!params.domain) return;
+      if (!params.domain || !supabase) return;
       
       try {
         const { data: storeData, error: storeError } = await supabase
