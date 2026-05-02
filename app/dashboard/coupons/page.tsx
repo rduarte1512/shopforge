@@ -27,7 +27,7 @@ export default function CouponsPage() {
   });
 
   const fetchData = async () => {
-    if (!user) return;
+    if (!user || !supabase) return;
     try {
       const { data: storesData, error: storesError } = await supabase
         .from('stores')
@@ -93,7 +93,7 @@ export default function CouponsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentStoreId) return;
+    if (!currentStoreId || !supabase) return;
 
     const couponData = {
       store_id: currentStoreId,
@@ -127,7 +127,7 @@ export default function CouponsPage() {
   };
 
   const handleDeleteCoupon = async (id: string) => {
-    if (!confirm('Tens a certeza que desejas eliminar este cupão?')) return;
+    if (!confirm('Tens a certeza que desejas eliminar este cupão?') || !supabase) return;
     try {
       const { error } = await supabase.from('coupons').delete().eq('id', id);
       if (error) throw error;
