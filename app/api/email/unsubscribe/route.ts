@@ -27,7 +27,9 @@ export async function GET(request: NextRequest) {
   }
   try {
     await unsubscribeEmail(storeId, email);
-    return NextResponse.html(`<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family: Arial; max-width: 500px; margin: 100px auto; text-align: center;"><h2>✅ Desinscrição completa</h2><p>Já não receberá emails de marketing.</p><a href="/">Voltar à loja</a></body></html>`);
+    return new NextResponse(`<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family: Arial; max-width: 500px; margin: 100px auto; text-align: center;"><h2>✅ Desinscrição completa</h2><p>Já não receberá emails de marketing.</p><a href="/">Voltar à loja</a></body></html>`, {
+      headers: { 'Content-Type': 'text/html' },
+    });
   } catch (error: any) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
