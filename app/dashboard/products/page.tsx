@@ -40,6 +40,10 @@ export default function ProductsPage() {
   const [newAttributeName, setNewAttributeName] = useState('');
   const [newAttributeValue, setNewAttributeValue] = useState('');
 
+  const [filterLowStock, setFilterLowStock] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -313,6 +317,31 @@ export default function ProductsPage() {
     }
   };
 
+  const handleBulkAction = async (action: string, value?: any) => {
+    if (!supabase || selectedIds.length === 0) return;
+    setBulkActionLoading(true);
+    try {
+      if (action === 'delete') {
+        const { error } = await supabase.from('products').delete().in('id', selectedIds);
+        if (error) throw error;
+      } else {
+        const updates: Record<string, any> = {};
+        if (action === 'status') updates.is_active = value;
+        if (action === 'stock') updates.stock = value;
+        if (action === 'price') updates.price = value;
+        
+        const { error } = await supabase.from('products').update(updates).in('id', selectedIds);
+        if (error) throw error;
+      }
+      setSelectedIds([]);
+      fetchData();
+    } catch (err) {
+      console.error('Bulk action error:', err);
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
   const addImageField = () => {
     setFormData({ ...formData, images: [...formData.images, ''] });
   };
@@ -386,6 +415,10 @@ export default function ProductsPage() {
       </div>
     );
   }
+
+  const filteredProducts = filterLowStock 
+    ? products.filter(p => Number(p.stock) < 5)
+    : products;
 
   return (
     <div className="space-y-8 max-w-[1600px] mx-auto">
