@@ -1,0 +1,6 @@
+{
+  "name": "ShopForge SaaS",
+  "description": "A multi-tenant e-commerce platform allowing users to create their own online stores, similar to Shopify.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

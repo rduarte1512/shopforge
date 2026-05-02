@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-sans);
+  --color-primary: #10b981;
+  --color-primary-dark: #059669;
+  --color-accent: #6366f1;
+  --color-shopify-green: #008060;
+  
+  --color-bg-main: var(--color-bg-main);
+  --color-card-bg: var(--color-card-bg);
+  --color-sidebar-bg: var(--color-sidebar-bg);
+  
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+  
+  --color-border: var(--color-border);
+  --color-border-hover: var(--color-border-hover);
+  
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-premium: 0 10px 30px -10px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+  
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+
+  --color-bg-gray: var(--color-bg-gray);
+  --color-gray-50: var(--color-gray-50);
+  --color-gray-100: var(--color-gray-100);
+}
+
+@layer base {
+  :root {
+    --color-bg-main: #f8fafc;
+    --color-card-bg: #ffffff;
+    --color-sidebar-bg: #ffffff;
+    
+    --color-text-primary: #0f172a;
+    --color-text-secondary: #475569;
+    --color-text-muted: #94a3b8;
+    
+    --color-border: #e2e8f0;
+    --color-border-hover: #cbd5e1;
+    
+    --color-bg-gray: #f8fafc;
+    --color-gray-50: #f9fafb;
+    --color-gray-100: #f3f4f6;
+  }
+
+  .dark {
+    --color-bg-main: #020617;
+    --color-card-bg: #0f172a;
+    --color-sidebar-bg: #020617;
+    
+    --color-text-primary: #f8fafc;
+    --color-text-secondary: #cbd5e1;
+    --color-text-muted: #64748b;
+    
+    --color-border: #1e293b;
+    --color-border-hover: #334155;
+    
+    --color-bg-gray: #020617;
+    --color-gray-50: #020617;
+    --color-gray-100: #0f172a;
+  }
+
+  body {
+    background-color: var(--color-bg-main);
+    color: var(--color-text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  }
+
+  * {
+    border-color: var(--color-border);
+  }
+}
