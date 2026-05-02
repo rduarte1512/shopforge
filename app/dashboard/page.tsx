@@ -141,7 +141,7 @@ export default function DashboardOverview() {
             animate={{ opacity: 1, x: 0 }}
             className="text-3xl font-black tracking-tight text-text-primary mb-2"
           >
-            Bem-vindo de volta, {user?.user_metadata?.name?.split(' ')[0] || 'Utilizador'}!
+            Bem-vindo de volta, {user?.name?.split(' ')[0] || 'Utilizador'}!
           </motion.h1>
           <motion.p 
             initial={{ opacity: 0, x: -20 }}

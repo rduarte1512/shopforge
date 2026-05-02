@@ -336,9 +336,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             
             <button className="flex items-center gap-2 p-1 pr-3 rounded-full hover:bg-gray-100 transition-all">
               <div className="w-8 h-8 bg-gradient-to-tr from-primary to-emerald-400 rounded-full flex items-center justify-center text-white font-black text-[12px] shadow-sm">
-                {activeUser?.user_metadata?.name?.charAt(0).toUpperCase() || 'U'}
+                {activeUser?.name?.charAt(0).toUpperCase() || 'U'}
               </div>
-              <span className="hidden md:block text-[13px] font-bold text-text-secondary">{activeUser?.user_metadata?.name?.split(' ')[0] || 'Conta'}</span>
+              <span className="hidden md:block text-[13px] font-bold text-text-secondary">{activeUser?.name?.split(' ')[0] || 'Conta'}</span>
             </button>
           </div>
         </header>
