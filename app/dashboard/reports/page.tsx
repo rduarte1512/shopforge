@@ -16,7 +16,7 @@ export default function ReportsPage() {
   const { currentUser } = useMockDB();
   const router = useRouter();
   const plan = SUBSCRIPTION_PLANS.find(p => p.id === currentUser?.subscriptionTier) || SUBSCRIPTION_PLANS[0];
-  const isPremium = plan.id !== 'FREE';
+  const isPremium = plan.id !== 'STARTER';
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange>({

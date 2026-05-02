@@ -18,7 +18,7 @@ export default function StoresPage() {
 
   const plan = SUBSCRIPTION_PLANS.find(p => p.id === currentUser?.subscriptionTier) || SUBSCRIPTION_PLANS[0];
   const canCreateMoreStores = stores.length < plan.limits.stores;
-  const isAiRestricted = plan.id === 'FREE';
+  const isAiRestricted = plan.id === 'STARTER';
   
   const [isCreating, setIsCreating] = useState(false);
   const [isAiMode, setIsAiMode] = useState(!isAiRestricted);

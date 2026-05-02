@@ -241,7 +241,7 @@ export const useMockDB = create<MockDBStore>()(
     (set) => ({
       users: [
         { id: '1', email: 'admin@shopforge.com', name: 'Admin', role: 'ADMIN', subscriptionTier: 'ENTERPRISE', subscriptionStatus: 'active' },
-        { id: '2', email: 'demo@demo.com', name: 'Demo User', role: 'CLIENT', subscriptionTier: 'FREE', subscriptionStatus: 'active' }
+        { id: '2', email: 'demo@demo.com', name: 'Demo User', role: 'CLIENT', subscriptionTier: 'STARTER', subscriptionStatus: 'active' }
       ],
       stores: [
         {

@@ -223,13 +223,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="flex items-center justify-between mb-3">
               <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Seu Plano</span>
               <div className="p-1 rounded-md bg-white/10">
-                {currentUser?.subscriptionTier === 'FREE' ? <Zap className="w-3 h-3" /> :
+                {currentUser?.subscriptionTier === 'STARTER' ? <Zap className="w-3 h-3" /> :
                  currentUser?.subscriptionTier === 'PRO' ? <Star className="w-3 h-3 text-amber-400" /> :
                  <Crown className="w-3 h-3 text-primary" />}
               </div>
             </div>
             <p className="text-sm font-bold mb-1">{currentUser?.subscriptionTier}</p>
-            {currentUser?.subscriptionTier === 'FREE' && (
+            {currentUser?.subscriptionTier === 'STARTER' && (
               <Link href="/dashboard/subscription" className="text-[11px] font-bold text-primary flex items-center gap-1 hover:gap-2 transition-all">
                 Fazer Upgrade <ChevronRight className="w-3 h-3" />
               </Link>
