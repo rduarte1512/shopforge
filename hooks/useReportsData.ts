@@ -136,7 +136,7 @@ export function useReportsData(dateRange?: DateRange) {
 
         const productSales: Record<string, { quantity: number, revenue: number }> = {};
         filteredOrders.forEach((o) => {
-          o.items?.forEach((item) => {
+          o.items?.forEach((item: any) => {
             if (item.productId) {
               if (!productSales[item.productId]) productSales[item.productId] = { quantity: 0, revenue: 0 };
               productSales[item.productId].quantity += item.quantity;
