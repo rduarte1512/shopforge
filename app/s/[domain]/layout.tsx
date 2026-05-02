@@ -120,7 +120,9 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!store) return notFound();
+  if (!store && !loading) {
+    return <>{children}</>;
+  }
 
   return (
     <CartProvider>

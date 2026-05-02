@@ -10,25 +10,39 @@ export function middleware(request: NextRequest) {
     'localhost:3000',
     'shopforge-saas.vercel.app',
     'shopforge.vercel.app',
-    'shopforge-saas-phi.vercel.app', // Add your specific Vercel URL here if needed
+    'shopforge-saas-phi.vercel.app',
+    'shopforge-saas-iota.vercel.app',
   ];
 
   // Also exclude paths that shouldn't be rewritten
-  const excludedPaths = ['/api', '/_next', '/favicon.ico', '/dashboard', '/login', '/register', '/s/'];
+  const excludedPaths = ['/api', '/_next', '/favicon.ico', '/dashboard', '/login', '/register', '/s/', '/_static', '/_vercel'];
 
-  const isMainHost = mainHostnames.some(h => hostname.includes(h));
   const isExcludedPath = excludedPaths.some(p => url.pathname.startsWith(p));
+  if (isExcludedPath) return NextResponse.next();
 
-  // If it's a subdomain or custom domain, and not an excluded path
-  if (!isMainHost && !isExcludedPath) {
+  // Check if it's a main host
+  // A host is main if it's in the list OR if it looks like a Vercel preview/branch URL for this project
+  const isMainHost = mainHostnames.some(h => hostname === h) || 
+                     (hostname.endsWith('.vercel.app') && 
+                      (hostname.includes('shopforge-saas') || hostname.includes('shopforge')) && 
+                      hostname.split('.').length === 3);
+
+  // If it's a subdomain or custom domain, and not the main host
+  if (!isMainHost) {
     // Extract the subdomain (e.g., "minhaloja" from "minhaloja.shopforge.vercel.app")
-    // Or use the full hostname if it's a custom domain
-    let domain = hostname.split('.')[0];
+    const parts = hostname.split('.');
+    let domain = parts[0];
     
-    // If it's a full custom domain (not a subdomain of vercel.app), you might want to use the full hostname
-    // For now, we assume [subdomain].myapp.com or [slug].localhost:3000
-    
-    // Perform the rewrite
+    // If it's a subdomain of our main domain (e.g. loja.shopforge-saas.vercel.app)
+    // the parts length will be 4.
+    if (parts.length > 3 && hostname.endsWith('.vercel.app')) {
+      domain = parts[0];
+    } else if (parts.length === 2) {
+      // custom-domain.com
+      domain = parts[0];
+    }
+
+    // Perform the rewrite to the store path
     return NextResponse.rewrite(new URL(`/s/${domain}${url.pathname}`, request.url));
   }
 
