@@ -602,7 +602,7 @@ export default function StoreCustomizePage() {
                 <header className={`${customization?.header?.sticky ? 'sticky top-0' : ''} z-40 border-b border-gray-100 px-6 py-4 transition-all`} style={{ 
                   height: `${customization?.header?.height}px`,
                   backgroundColor: `${customization?.colors?.background}CC`,
-                  backdropBlur: '10px',
+                  backdropFilter: 'blur(10px)',
                   display: 'flex',
                   alignItems: 'center'
                 }}>
