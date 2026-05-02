@@ -219,8 +219,7 @@ export default function SettingsPage() {
           <div className="pt-4 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-[13px] font-[600] text-text-dark mb-1">Alerta de Stock Baixo</label>
-                <InputField type="number" value={formData.lowStockThreshold} onChange={(e: any) => updateField('lowStockThreshold', parseInt(e.target.value) || 0)} />
+                <InputField label="Alerta de Stock Baixo" type="number" value={formData.lowStockThreshold} onChange={(e: any) => updateField('lowStockThreshold', parseInt(e.target.value) || 0)} />
                 <p className="text-[12px] text-text-muted mt-1">Notificar quando o stock atingir este valor</p>
               </div>
               <div className="flex flex-col justify-center gap-4">
