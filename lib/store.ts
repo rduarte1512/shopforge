@@ -361,10 +361,10 @@ export const useMockDB = create<MockDBStore>()(
       setCurrentUser: (user) => set({ currentUser: user }),
       updateSubscription: (userId, tier) => set((state) => {
         const updatedUsers = state.users.map(u => 
-          u.id === userId ? { ...u, subscriptionTier: tier, subscriptionStatus: 'active' } : u
+          u.id === userId ? { ...u, subscriptionTier: tier, subscriptionStatus: 'active' as SubscriptionStatus } : u
         );
         const updatedCurrentUser = state.currentUser?.id === userId 
-          ? { ...state.currentUser, subscriptionTier: tier, subscriptionStatus: 'active' } as User
+          ? { ...state.currentUser, subscriptionTier: tier, subscriptionStatus: 'active' as SubscriptionStatus } as User
           : state.currentUser;
         return { users: updatedUsers, currentUser: updatedCurrentUser };
       }),

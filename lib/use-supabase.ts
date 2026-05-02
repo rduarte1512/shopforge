@@ -191,21 +191,22 @@ export function useSupabaseDB(): UseSupabaseDBReturn {
   const addOrder = useCallback(async (order: Partial<Order>) => {
     if (!isConnected || !supabase || !selectedStoreId) return;
 
-    const { items, ...orderData } = {
+    const { items, ...orderBase } = order || {};
+    const orderData = {
       store_id: selectedStoreId,
-      customer_name: order.customer_name || '',
-      customer_email: order.customer_email || '',
-      status: order.status || 'pending',
-      total: order.total || 0,
-      subtotal: order.subtotal || 0,
-      shipping_cost: order.shipping_cost || 0,
-      discount_amount: order.discount_amount || 0,
-      coupon_id: order.coupon_id || null,
-      shipping_method_id: order.shipping_method_id || null,
-      currency: order.currency || 'EUR',
-      payment_method_id: order.payment_method_id || null,
-      payment_method_type: order.payment_method_type || null,
-      payment_instructions: order.payment_instructions || null,
+      customer_name: orderBase.customer_name || '',
+      customer_email: orderBase.customer_email || '',
+      status: orderBase.status || 'pending',
+      total: orderBase.total || 0,
+      subtotal: orderBase.subtotal || 0,
+      shipping_cost: orderBase.shipping_cost || 0,
+      discount_amount: orderBase.discount_amount || 0,
+      coupon_id: orderBase.coupon_id || null,
+      shipping_method_id: orderBase.shipping_method_id || null,
+      currency: orderBase.currency || 'EUR',
+      payment_method_id: orderBase.payment_method_id || null,
+      payment_method_type: orderBase.payment_method_type || null,
+      payment_instructions: orderBase.payment_instructions || null,
     };
 
     const { data: orderResult, error: orderError } = await supabase
