@@ -44,7 +44,10 @@ interface Commission {
   orders?: {
     customer_name: string;
     total: number;
-  };
+  } | {
+    customer_name: string;
+    total: number;
+  }[];
 }
 
 export default function AffiliatesPage() {
@@ -545,20 +548,23 @@ return (
                 <p className="text-center text-[var(--color-text-muted)] py-8">Nenhuma venda ainda</p>
               ) : (
                 <div className="space-y-2">
-                  {commissions.map((comm) => (
-                    <div key={comm.id} className="flex items-center justify-between p-3 bg-[var(--color-bg-gray)] rounded-lg">
-                      <div>
-                        <p className="font-medium text-[var(--color-text-dark)]">{comm.orders?.customer_name || 'Cliente'}</p>
-                        <p className="text-[12px] text-[var(--color-text-muted)]">
-                          Venda: €{comm.orders?.total?.toFixed(2) || '0.00'}
-                        </p>
+                  {commissions.map((comm) => {
+                    const orderData = Array.isArray(comm.orders) ? comm.orders[0] : comm.orders;
+                    return (
+                      <div key={comm.id} className="flex items-center justify-between p-3 bg-[var(--color-bg-gray)] rounded-lg">
+                        <div>
+                          <p className="font-medium text-[var(--color-text-dark)]">{orderData?.customer_name || 'Cliente'}</p>
+                          <p className="text-[12px] text-[var(--color-text-muted)]">
+                            Venda: €{orderData?.total?.toFixed(2) || '0.00'}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium text-[var(--color-shopify-green)]">+€{comm.amount.toFixed(2)}</p>
+                          <p className="text-[12px] text-[var(--color-text-muted)]">{comm.percentage_used}%</p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-medium text-[var(--color-shopify-green)]">+€{comm.amount.toFixed(2)}</p>
-                        <p className="text-[12px] text-[var(--color-text-muted)]">{comm.percentage_used}%</p>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
