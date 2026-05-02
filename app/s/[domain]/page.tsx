@@ -102,6 +102,7 @@ export default function StorefrontHomePage() {
   };
 
   const handlePromoClick = async (promoId: string) => {
+    if (!supabase) return;
     try {
       const { data } = await supabase.from('promotions').select('click_count').eq('id', promoId).single();
       if (data) {
