@@ -1,13 +1,13 @@
 'use client';
 
-import { supabase } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCart } from '@/components/CartProvider';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useComparisonStore } from '@/lib/comparison-store';
-import { Scale, X, ArrowRight, Check, Phone, ExternalLink, ShoppingCart, Loader2 } from 'lucide-react';
+import { Scale, X, ArrowRight, Check, Phone, ExternalLink, ShoppingCart, Loader2, AlertCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 export default function StorefrontHomePage() {
@@ -23,6 +23,10 @@ export default function StorefrontHomePage() {
   
   useEffect(() => {
     async function fetchData() {
+      if (!isSupabaseConfigured) {
+        setLoading(false);
+        return;
+      }
       if (!params.domain || !supabase) return;
       
       try {
@@ -64,6 +68,46 @@ export default function StorefrontHomePage() {
     
     fetchData();
   }, [params.domain]);
+
+  if (!isSupabaseConfigured) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mb-6">
+          <AlertCircle className="w-10 h-10 text-amber-500" />
+        </div>
+        <h1 className="text-2xl font-bold mb-2">Configuração Incompleta</h1>
+        <p className="text-gray-500 max-w-md mb-8">
+          As variáveis de ambiente do Supabase não foram configuradas na Vercel. Adicione `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` nas definições do projeto na Vercel.
+        </p>
+        <Link 
+          href="/"
+          className="bg-black text-white px-8 py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors"
+        >
+          Ir para a Página Inicial
+        </Link>
+      </div>
+    );
+  }
+
+  if (!store && !loading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+          <ShoppingCart className="w-10 h-10 text-gray-300" />
+        </div>
+        <h1 className="text-2xl font-bold mb-2">Loja não encontrada</h1>
+        <p className="text-gray-500 max-w-md mb-8">
+          Não conseguimos encontrar a loja que procura. Verifique o endereço ou contacte o proprietário.
+        </p>
+        <Link 
+          href="/"
+          className="bg-black text-white px-8 py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors"
+        >
+          Voltar ao ShopForge
+        </Link>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
