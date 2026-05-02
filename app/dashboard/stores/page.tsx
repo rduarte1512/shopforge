@@ -37,7 +37,7 @@ export default function StoresPage() {
   const [deleteConfirmStoreId, setDeleteConfirmStoreId] = useState<string | null>(null);
 
   const fetchStores = async () => {
-    if (!user) return;
+    if (!user || !supabase) return;
     try {
       const { data, error } = await supabase
         .from('stores')
@@ -66,7 +66,7 @@ export default function StoresPage() {
   ];
 
   const handleAiGenerate = async () => {
-    if (!aiPrompt.trim() || !user) return;
+    if (!aiPrompt.trim() || !user || !supabase) return;
     setIsGenerating(true);
     setGenerationStep(0);
     setGenerationError(null);
@@ -140,7 +140,7 @@ export default function StoresPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !supabase) return;
 
     try {
       const { data, error } = await supabase
@@ -169,6 +169,7 @@ export default function StoresPage() {
   };
 
   const handleDeleteStore = async (storeId: string) => {
+    if (!supabase) return;
     try {
       const { error } = await supabase
         .from('stores')

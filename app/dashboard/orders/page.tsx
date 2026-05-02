@@ -18,7 +18,7 @@ export default function OrdersPage() {
   const [searchTerm, setSearchTerm] = useState('');
 
   const fetchData = async () => {
-    if (!user) return;
+    if (!user || !supabase) return;
     try {
       const { data: storesData, error: storesError } = await supabase
         .from('stores')
@@ -54,6 +54,7 @@ export default function OrdersPage() {
   }, [user, selectedStoreId]);
 
   const updateStatus = async (orderId: string, status: string) => {
+    if (!supabase) return;
     try {
       const { error } = await supabase
         .from('orders')

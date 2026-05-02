@@ -29,7 +29,7 @@ export default function DashboardOverview() {
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
-    if (!user) return;
+    if (!user || !supabase) return;
     try {
       const { data: storesData, error: storesError } = await supabase
         .from('stores')

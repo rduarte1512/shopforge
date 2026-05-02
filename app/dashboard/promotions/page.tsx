@@ -115,7 +115,7 @@ export default function PromotionsPage() {
   });
 
   const fetchData = async () => {
-    if (!user) return;
+    if (!user || !supabase) return;
     try {
       const { data: storesData, error: storesError } = await supabase
         .from('stores')
@@ -232,7 +232,7 @@ export default function PromotionsPage() {
 
   const handleBannerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentStoreId) return;
+    if (!currentStoreId || !supabase) return;
 
     const bannerData = {
       store_id: currentStoreId,
@@ -271,7 +271,7 @@ export default function PromotionsPage() {
 
   const handleRuleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentStoreId) return;
+    if (!currentStoreId || !supabase) return;
 
     const ruleData = {
       store_id: currentStoreId,
@@ -313,7 +313,7 @@ export default function PromotionsPage() {
   };
 
   const handleDeleteBanner = async (id: string) => {
-    if (!confirm('Tens a certeza que desejas eliminar este banner?')) return;
+    if (!confirm('Tens a certeza que desejas eliminar este banner?') || !supabase) return;
     try {
       const { error } = await supabase.from('promotions').delete().eq('id', id);
       if (error) throw error;
@@ -324,7 +324,7 @@ export default function PromotionsPage() {
   };
 
   const handleDeleteRule = async (id: string) => {
-    if (!confirm('Tens a certeza que desejas eliminar esta regra?')) return;
+    if (!confirm('Tens a certeza que desejas eliminar esta regra?') || !supabase) return;
     try {
       const { error } = await supabase.from('promotion_rules').delete().eq('id', id);
       if (error) throw error;
@@ -335,6 +335,7 @@ export default function PromotionsPage() {
   };
 
   const handleToggleBanner = async (banner: Banner) => {
+    if (!supabase) return;
     try {
       await supabase.from('promotions').update({ active: !banner.active }).eq('id', banner.id);
       fetchData();
@@ -344,6 +345,7 @@ export default function PromotionsPage() {
   };
 
   const handleToggleRule = async (rule: PromotionRule) => {
+    if (!supabase) return;
     try {
       await supabase.from('promotion_rules').update({ active: !rule.active }).eq('id', rule.id);
       fetchData();

@@ -26,7 +26,7 @@ export default function ShippingPage() {
   });
 
   const fetchData = async () => {
-    if (!user) return;
+    if (!user || !supabase) return;
     try {
       const { data: storesData, error: storesError } = await supabase
         .from('stores')
@@ -90,7 +90,7 @@ export default function ShippingPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentStoreId) return;
+    if (!currentStoreId || !supabase) return;
 
     const methodData = {
       store_id: currentStoreId,
@@ -123,7 +123,7 @@ export default function ShippingPage() {
   };
 
   const handleDeleteMethod = async (id: string) => {
-    if (!confirm('Tens a certeza que desejas eliminar este método de envio?')) return;
+    if (!confirm('Tens a certeza que desejas eliminar este método de envio?') || !supabase) return;
     try {
       const { error } = await supabase.from('shipping_methods').delete().eq('id', id);
       if (error) throw error;
