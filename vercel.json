@@ -1,8 +1,1 @@
-{
-  "crons": [
-    {
-      "path": "/api/cron/simulate-sales",
-      "schedule": "*/5 * * * *"
-    }
-  ]
-}
+{}
