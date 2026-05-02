@@ -104,19 +104,29 @@ async function simulateSalesBatch() {
   console.log(`--- Lote terminado. Próximo lote em 5 minutos. ---\n`);
 }
 
-// Executar o primeiro lote imediatamente
-simulateSalesBatch();
+// Executar o lote de vendas
+async function run() {
+  await simulateSalesBatch();
+  
+  // No GitHub Actions (CI), terminamos o processo após um lote.
+  // No PC local, podemos manter o intervalo se quisermos, 
+  // mas para automação o GitHub trata do agendamento.
+  if (process.env.GITHUB_ACTIONS) {
+    console.log('🚀 Execução em CI concluída. O GitHub Actions agendará a próxima.');
+    process.exit(0);
+  } else {
+    // Configurar intervalo apenas se não estiver no GitHub Actions
+    const INTERVAL_MS = 5 * 60 * 1000;
+    setInterval(simulateSalesBatch, INTERVAL_MS);
+    console.log('🚀 Simulador de Vendas Stripe Ativo (Modo Local)!');
+    console.log('Pode parar a simulação a qualquer momento pressionando Ctrl+C');
+  }
+}
 
-// Configurar intervalo para executar a cada 5 minutos (300000 ms)
-const INTERVAL_MS = 5 * 60 * 1000;
-const intervalId = setInterval(simulateSalesBatch, INTERVAL_MS);
-
-console.log('🚀 Simulador de Vendas Stripe Ativo!');
-console.log('Pode parar a simulação a qualquer momento pressionando Ctrl+C');
+run();
 
 // Para garantir que o processo encerra de forma limpa quando necessário
 process.on('SIGINT', () => {
   console.log('\n🛑 A parar o simulador de vendas...');
-  clearInterval(intervalId);
   process.exit(0);
 });
