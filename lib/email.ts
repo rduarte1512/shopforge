@@ -37,6 +37,7 @@ export interface EmailTemplate {
 }
 
 export async function getStoreEmailSettings(storeId: string): Promise<StoreEmailSettings | null> {
+  if (!supabase) return null;
   const { data, error } = await supabase
     .from('store_email_settings')
     .select('*')
@@ -76,13 +77,15 @@ export async function sendEmail({ apiKey, to, subject, html, from, replyTo }: { 
 }
 
 export async function logEmail(logData: any) {
-  const { error } = await supabase
+  if (!supabase) return;
+  const { error } = await supabase!
     .from('email_logs')
     .insert([logData]);
   if (error) console.error('Error logging email:', error);
 }
 
 export async function getEmailTemplate(storeId: string, type: string): Promise<EmailTemplate | null> {
+  if (!supabase) return null;
   const { data, error } = await supabase
     .from('email_templates')
     .select('*')
@@ -96,6 +99,7 @@ export async function getEmailTemplate(storeId: string, type: string): Promise<E
 }
 
 export async function isEmailUnsubscribed(storeId: string, email: string): Promise<boolean> {
+  if (!supabase) return false;
   const { data, error } = await supabase
     .from('email_unsubscribes')
     .select('id')
@@ -107,6 +111,7 @@ export async function isEmailUnsubscribed(storeId: string, email: string): Promi
 }
 
 export async function unsubscribeEmail(storeId: string, email: string) {
+  if (!supabase) return { error: new Error('Supabase not configured') };
   const { error } = await supabase
     .from('email_unsubscribes')
     .insert([{ store_id: storeId, email }]);
