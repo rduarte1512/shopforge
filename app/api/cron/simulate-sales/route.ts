@@ -2,21 +2,15 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2025-02-24.acacia',
+  // @ts-ignore - Stripe type definitions might be outdated compared to the required version in some environments
+  apiVersion: '2026-04-22.dahlia',
 });
-
-const PLANS = [
-  { name: 'Starter', price: 0 },
-  { name: 'Growth', price: 19 },
-  { name: 'Professional', price: 49 },
-  { name: 'Business', price: 99 },
-  { name: 'Enterprise', price: 249 }
-];
 
 const CUSTOMER_NAMES = [
   'Ana Silva', 'João Santos', 'Maria Costa', 'Pedro Almeida', 
   'Sofia Oliveira', 'Miguel Rodrigues', 'Beatriz Ferreira', 
-  'Tiago Pereira', 'Carolina Gomes', 'Rui Marques'
+  'Tiago Pereira', 'Carolina Gomes', 'Rui Marques',
+  'Ricardo Pais', 'Helena Sousa', 'Gabriel Lima', 'Daniela Cruz'
 ];
 
 function getRandomInt(min: number, max: number) {
@@ -28,9 +22,9 @@ function getRandomElement<T>(arr: T[]): T {
 }
 
 async function createSimulatedSale() {
-  const plan = getRandomElement(PLANS.filter(p => p.price > 0));
   const customerName = getRandomElement(CUSTOMER_NAMES);
   const email = `${customerName.toLowerCase().replace(' ', '.')}@example.com`;
+  const amount = getRandomInt(1500, 25000); // €15 a €250
 
   try {
     const customer = await stripe.customers.create({
@@ -39,11 +33,11 @@ async function createSimulatedSale() {
     });
 
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: plan.price * 100,
+      amount: amount,
       currency: 'eur',
       customer: customer.id,
       payment_method: 'pm_card_visa',
-      description: plan.name,
+      description: 'Venda de Teste (Cron)',
       confirm: true,
       automatic_payment_methods: {
         enabled: true,
@@ -51,7 +45,7 @@ async function createSimulatedSale() {
       },
     });
 
-    return { success: true, customer: customerName, plan: plan.name, id: paymentIntent.id };
+    return { success: true, customer: customerName, amount: amount / 100, id: paymentIntent.id };
   } catch (error: any) {
     console.error(`❌ Erro ao simular venda:`, error.message);
     return { success: false, error: error.message };
@@ -61,17 +55,15 @@ async function createSimulatedSale() {
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
-  // Verificação de segurança simples para evitar que qualquer pessoa dispare vendas
   const { searchParams } = new URL(request.url);
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
 
-  // Se houver um CRON_SECRET definido no .env, validar contra o header ou query param
   if (cronSecret && authHeader !== `Bearer ${cronSecret}` && searchParams.get('key') !== cronSecret) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const numberOfSales = getRandomInt(1, 3); // Reduzi para 1-3 por chamada para ser mais rápido na API
+  const numberOfSales = getRandomInt(2, 5);
   const results = [];
 
   for (let i = 0; i < numberOfSales; i++) {
@@ -79,7 +71,7 @@ export async function GET(request: Request) {
   }
 
   return NextResponse.json({
-    message: `Simulação concluída: ${results.filter(r => r.success).length} vendas geradas.`,
+    message: `Simulação concluída: ${results.filter(r => r.success).length} vendas geradas na Stripe.`,
     results
   });
 }

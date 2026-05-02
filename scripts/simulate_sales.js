@@ -34,7 +34,7 @@ if (!stripeKey) {
 }
 
 const stripe = new Stripe(stripeKey, {
-  apiVersion: '2025-02-24.acacia',
+  apiVersion: '2026-04-22.dahlia',
 });
 
 const CUSTOMER_NAMES = [
