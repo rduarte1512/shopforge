@@ -174,7 +174,7 @@ export function useReportsData(dateRange?: DateRange) {
             sales: productSales[p.id]?.quantity || 0,
             revenue: productSales[p.id]?.revenue || 0,
             stock: p.stock,
-            status: p.stock < 10 ? 'low_stock' : 'in_stock',
+            status: (p.stock < 10 ? 'low_stock' : 'in_stock') as 'low_stock' | 'in_stock',
             image: p.imageUrl || 'https://picsum.photos/seed/prod/100/100'
           }))
           .sort((a, b) => b.sales - a.sales)
