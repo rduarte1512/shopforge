@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useMockDB, PaymentMethod } from '@/lib/store';
-import { Save, Store, Package, CreditCard, Palette, Search, Bell, ChevronDown, ChevronUp, Wallet, Building, Smartphone, CreditCard as CardIcon, Banknote } from 'lucide-react';
+import { useAuth } from '@/lib/auth-context';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { Save, Store, Package, CreditCard, Palette, Search, Bell, ChevronDown, ChevronUp, Wallet, Building, Smartphone, CreditCard as CardIcon, Banknote, Loader2 } from 'lucide-react';
 
 interface FormData {
   name: string;
@@ -75,9 +77,12 @@ const Toggle = ({ checked, onChange, label }: { checked: boolean; onChange: (v: 
 );
 
 export default function SettingsPage() {
-  const { currentUser, stores, updateStore, selectedStoreId } = useMockDB();
-  const userStores = stores.filter(s => s.userId === currentUser?.id);
-  const currentStore = selectedStoreId ? userStores.find(s => s.id === selectedStoreId) || userStores[0] : userStores[0];
+  const { user } = useAuth();
+  const { currentUser, stores: mockStores, updateStore: updateMockStore, selectedStoreId } = useMockDB();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [currentStore, setCurrentStore] = useState<any>(null);
 
   const [formData, setFormData] = useState<FormData>({
     name: '', domain: '', description: '', theme: 'light', primaryColor: '#000000',
@@ -96,52 +101,131 @@ export default function SettingsPage() {
     ]
   });
 
+  const setFormDataFromStore = (store: any) => {
+    setFormData({
+      name: store.name || '',
+      domain: store.domain || '',
+      description: store.description || '',
+      theme: store.theme || 'light',
+      primaryColor: store.primary_color || store.primaryColor || '#000000',
+      phone: store.phone || '',
+      email: store.email || '',
+      address: store.address || '',
+      businessHours: store.business_hours || store.businessHours || '',
+      currency: store.currency || 'EUR',
+      currencySymbol: store.currency_symbol || store.currencySymbol || '€',
+      baseCurrency: store.base_currency || store.baseCurrency || 'EUR',
+      returnPolicy: store.return_policy || store.returnPolicy || '',
+      termsAndConditions: store.terms_and_conditions || store.termsAndConditions || '',
+      privacyPolicy: store.privacy_policy || store.privacyPolicy || '',
+      lowStockThreshold: store.low_stock_threshold || store.lowStockThreshold || 10,
+      notifyLowStock: store.notify_low_stock ?? store.notifyLowStock ?? true,
+      logoUrl: store.logo_url || store.logoUrl || '',
+      bannerUrl: store.banner_url || store.bannerUrl || '',
+      faviconUrl: store.favicon_url || store.faviconUrl || '',
+      secondaryColor: store.secondary_color || store.secondaryColor || '#2D3748',
+      metaTitle: store.meta_title || store.metaTitle || '',
+      metaDescription: store.meta_description || store.metaDescription || '',
+      notifyNewOrder: store.notify_new_order ?? store.notifyNewOrder ?? true,
+      notifyOrderStatus: store.notify_order_status ?? store.notifyOrderStatus ?? true,
+      paymentMethods: store.payment_methods || store.paymentMethods || [
+        { id: 'pm1', type: 'multibanco', name: 'Multibanco', description: 'Pagamento via Multibanco', active: true, instructions: 'Após confirmar a encomenda, receberá uma referência Multibanco por email.' },
+        { id: 'pm2', type: 'mbway', name: 'MB WAY', description: 'Pagamento via MB WAY', active: true, instructions: 'Receberá uma notificação no seu telemóvel para confirmar o pagamento.' },
+        { id: 'pm3', type: 'paypal', name: 'PayPal', description: 'Pagamento via PayPal', active: false, instructions: 'Será redirecionado para o PayPal para completar o pagamento.' },
+        { id: 'pm4', type: 'transfer', name: 'Transferência Bancária', description: 'Transferência direta para a conta da loja', active: false, instructions: 'Após confirmar, receberá os dados bancários por email.' },
+        { id: 'pm5', type: 'cash', name: 'Pagamento à Entrega', description: 'Pagamento em dinheiro quando receber a encomenda', active: false, instructions: 'Pague em dinheiro ao receber a sua encomenda.' }
+      ]
+    });
+  };
+
   useEffect(() => {
-    if (currentStore) {
-      setFormData({
-        name: currentStore.name || '',
-        domain: currentStore.domain || '',
-        description: currentStore.description || '',
-        theme: currentStore.theme || 'light',
-        primaryColor: currentStore.primaryColor || '#000000',
-        phone: currentStore.phone || '',
-        email: currentStore.email || '',
-        address: currentStore.address || '',
-        businessHours: currentStore.businessHours || '',
-        currency: currentStore.currency || 'EUR',
-        currencySymbol: currentStore.currencySymbol || '€',
-        baseCurrency: currentStore.baseCurrency || 'EUR',
-        returnPolicy: currentStore.returnPolicy || '',
-        termsAndConditions: currentStore.termsAndConditions || '',
-        privacyPolicy: currentStore.privacyPolicy || '',
-        lowStockThreshold: currentStore.lowStockThreshold || 10,
-        notifyLowStock: currentStore.notifyLowStock ?? true,
-        logoUrl: currentStore.logoUrl || '',
-        bannerUrl: currentStore.bannerUrl || '',
-        faviconUrl: currentStore.faviconUrl || '',
-        secondaryColor: currentStore.secondaryColor || '#2D3748',
-        metaTitle: currentStore.metaTitle || '',
-        metaDescription: currentStore.metaDescription || '',
-        notifyNewOrder: currentStore.notifyNewOrder ?? true,
-        notifyOrderStatus: currentStore.notifyOrderStatus ?? true,
-        paymentMethods: currentStore.paymentMethods || [
-          { id: 'pm1', type: 'multibanco', name: 'Multibanco', description: 'Pagamento via Multibanco', active: true, instructions: 'Após confirmar a encomenda, receberá uma referência Multibanco por email.' },
-          { id: 'pm2', type: 'mbway', name: 'MB WAY', description: 'Pagamento via MB WAY', active: true, instructions: 'Receberá uma notificação no seu telemóvel para confirmar o pagamento.' },
-          { id: 'pm3', type: 'paypal', name: 'PayPal', description: 'Pagamento via PayPal', active: false, instructions: 'Será redirecionado para o PayPal para completar o pagamento.' },
-          { id: 'pm4', type: 'transfer', name: 'Transferência Bancária', description: 'Transferência direta para a conta da loja', active: false, instructions: 'Após confirmar, receberá os dados bancários por email.' },
-          { id: 'pm5', type: 'cash', name: 'Pagamento à Entrega', description: 'Pagamento em dinheiro quando receber a encomenda', active: false, instructions: 'Pague em dinheiro ao receber a sua encomenda.' }
-        ]
-      });
+    async function fetchStore() {
+      if (!isSupabaseConfigured || !supabase || !user || !selectedStoreId) {
+        // Fallback to mock DB logic
+        const userStores = mockStores.filter(s => s.userId === currentUser?.id || s.userId === user?.id);
+        const store = selectedStoreId ? userStores.find(s => s.id === selectedStoreId) || userStores[0] : userStores[0];
+        
+        if (store) {
+          setCurrentStore(store);
+          setFormDataFromStore(store);
+        }
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('stores')
+          .select('*')
+          .eq('id', selectedStoreId)
+          .single();
+
+        if (error) throw error;
+
+        if (data) {
+          setCurrentStore(data);
+          setFormDataFromStore(data);
+        }
+      } catch (err) {
+        console.error('Error fetching store in settings:', err);
+      } finally {
+        setLoading(false);
+      }
     }
-  }, [currentStore]);
 
-  const [saved, setSaved] = useState(false);
+    fetchStore();
+  }, [user, selectedStoreId, mockStores, currentUser]);
 
-  if (!currentStore) return null;
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateStore(currentStore.id, formData);
+    setSaving(true);
+
+    if (isSupabaseConfigured && supabase && currentStore?.id) {
+      try {
+        const { error } = await supabase
+          .from('stores')
+          .update({
+            name: formData.name,
+            domain: formData.domain,
+            description: formData.description,
+            theme: formData.theme,
+            primary_color: formData.primaryColor,
+            phone: formData.phone,
+            email: formData.email,
+            address: formData.address,
+            business_hours: formData.businessHours,
+            currency: formData.currency,
+            currency_symbol: formData.currencySymbol,
+            base_currency: formData.baseCurrency,
+            return_policy: formData.returnPolicy,
+            terms_and_conditions: formData.termsAndConditions,
+            privacy_policy: formData.privacyPolicy,
+            low_stock_threshold: formData.lowStockThreshold,
+            notify_low_stock: formData.notifyLowStock,
+            logo_url: formData.logoUrl,
+            banner_url: formData.bannerUrl,
+            favicon_url: formData.faviconUrl,
+            secondary_color: formData.secondaryColor,
+            meta_title: formData.metaTitle,
+            meta_description: formData.metaDescription,
+            notify_new_order: formData.notifyNewOrder,
+            notify_order_status: formData.notifyOrderStatus,
+          })
+          .eq('id', currentStore.id);
+
+        if (error) throw error;
+      } catch (err) {
+        console.error('Error updating store in Supabase:', err);
+        alert('Erro ao guardar as configurações no banco de dados.');
+      }
+    }
+
+    // Always update mock DB for consistency in local state
+    if (currentStore?.id) {
+      updateMockStore(currentStore.id, formData as any);
+    }
+    
+    setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
@@ -150,20 +234,40 @@ export default function SettingsPage() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-shopify-green" />
+      </div>
+    );
+  }
+
+  if (!currentStore) {
+    return (
+      <div className="text-center py-20 bg-white rounded-lg border border-gray-200">
+        <Store className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+        <h2 className="text-xl font-bold mb-2">Loja não encontrada</h2>
+        <p className="text-gray-500">Por favor, selecione uma loja para configurar.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-[24px] font-[600] tracking-tight text-text-dark">Configurações</h1>
-        <p className="text-[14px] text-text-muted mt-1">Gerencie todas as configurações da sua loja.</p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-[24px] font-[600] tracking-tight text-text-dark">Configurações</h1>
+          <p className="text-[14px] text-text-muted mt-1">Gerencie todas as configurações da sua loja.</p>
+        </div>
       </div>
 
       {saved && (
-        <div className="bg-success text-success-text p-4 rounded-lg flex items-center justify-between border border-success">
+        <div className="bg-emerald-50 text-emerald-700 p-4 rounded-lg flex items-center justify-between border border-emerald-200 animate-in fade-in slide-in-from-top-2">
           <span className="font-medium text-[14px]">Configurações guardadas com sucesso!</span>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4 pb-20">
         <Section title="Informações da Loja" icon={Store} defaultOpen={true}>
           <div className="pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
             <InputField label="Nome da Loja" value={formData.name} onChange={(e: any) => updateField('name', e.target.value)} />
@@ -333,9 +437,14 @@ export default function SettingsPage() {
           </div>
         </Section>
 
-        <div className="flex justify-end pt-4">
-          <button type="submit" className="bg-shopify-green text-white px-6 py-3 rounded-[4px] font-[600] text-[14px] flex items-center gap-2 hover:opacity-90 transition-opacity border-none cursor-pointer">
-            <Save className="w-[16px] h-[16px]" /> Guardar Alterações
+        <div className="fixed bottom-8 right-8 z-40">
+          <button 
+            type="submit" 
+            disabled={saving}
+            className="bg-shopify-green text-white px-8 py-4 rounded-full font-bold text-[15px] flex items-center gap-2 hover:shadow-xl hover:scale-105 active:scale-95 transition-all shadow-lg disabled:opacity-50"
+          >
+            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+            {saving ? 'A Guardar...' : 'Guardar Alterações'}
           </button>
         </div>
       </form>

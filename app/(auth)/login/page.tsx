@@ -80,10 +80,10 @@ export default function LoginPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
-        <h2 className="text-center text-3xl font-black text-slate-900 tracking-tight mb-2">
+        <h2 className="text-center text-3xl font-black text-text-primary tracking-tight mb-2">
           Bem-vindo de volta
         </h2>
-        <p className="text-center text-gray-500 text-sm mb-8">
+        <p className="text-center text-text-secondary text-sm mb-8">
           Inicie sessão para gerir a sua loja
         </p>
       </motion.div>
@@ -128,7 +128,7 @@ export default function LoginPage() {
         )}
 
         <div className="space-y-2">
-          <label htmlFor="email" className="block text-sm font-bold text-slate-700 ml-1">
+          <label htmlFor="email" className="block text-sm font-bold text-text-secondary ml-1">
             Email
           </label>
           <input
@@ -140,13 +140,13 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="seu@email.com"
-            className="appearance-none block w-full px-4 py-3 border border-gray-200 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
+            className="appearance-none block w-full px-4 py-3 bg-gray-50 dark:bg-slate-900/50 border border-border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm text-text-primary"
           />
         </div>
 
         <div className="space-y-2">
           <div className="flex items-center justify-between ml-1">
-            <label htmlFor="password" className="block text-sm font-bold text-slate-700">
+            <label htmlFor="password" className="block text-sm font-bold text-text-secondary">
               Password
             </label>
             <button
@@ -166,7 +166,7 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
-            className="appearance-none block w-full px-4 py-3 border border-gray-200 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
+            className="appearance-none block w-full px-4 py-3 bg-gray-50 dark:bg-slate-900/50 border border-border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm text-text-primary"
           />
         </div>
 
@@ -175,9 +175,9 @@ export default function LoginPage() {
             id="remember-me"
             name="remember-me"
             type="checkbox"
-            className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded-md cursor-pointer"
+            className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded-md cursor-pointer bg-card-bg"
           />
-          <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-500 cursor-pointer">
+          <label htmlFor="remember-me" className="ml-2 block text-sm text-text-muted cursor-pointer">
             Lembrar-me neste dispositivo
           </label>
         </div>
@@ -193,8 +193,8 @@ export default function LoginPage() {
         </div>
       </form>
 
-      <div className="mt-8 pt-8 border-t border-gray-100 text-center text-sm">
-        <p className="text-gray-500">
+      <div className="mt-8 pt-8 border-t border-border text-center text-sm">
+        <p className="text-text-secondary">
           Ainda não tem conta?{' '}
           <Link href="/register" className="font-bold text-primary hover:text-primary-dark transition-colors">
             Crie uma conta gratuita
