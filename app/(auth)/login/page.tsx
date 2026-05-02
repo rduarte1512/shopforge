@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth, isSupabaseConfigured } from '@/lib/auth-context';
 import { Loader2 } from 'lucide-react';
+import { motion } from "motion/react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -61,7 +62,11 @@ export default function LoginPage() {
     const error = result?.error;
 
     if (error) {
-      setError(error.message);
+      if (error.message.includes('rate limit')) {
+        setError('Limite de envio de emails atingido. Por favor, aguarde alguns minutos antes de tentar novamente.');
+      } else {
+        setError(error.message);
+      }
     } else {
       setPasswordResetSent(true);
     }
@@ -70,110 +75,129 @@ export default function LoginPage() {
 
   return (
     <>
-      <h2 className="mt-2 text-center text-3xl font-extrabold text-gray-900 mb-8">
-        Iniciar Sessão
-      </h2>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <h2 className="text-center text-3xl font-black text-slate-900 tracking-tight mb-2">
+          Bem-vindo de volta
+        </h2>
+        <p className="text-center text-gray-500 text-sm mb-8">
+          Inicie sessão para gerir a sua loja
+        </p>
+      </motion.div>
 
       {!isSupabaseConfigured && (
-        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-md">
-          <p className="text-sm text-amber-800">
-            <strong>Modo Demo:</strong> Supabase não está configurado. Use as credenciais de demo para testar.
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3 }}
+          className="mb-8 p-4 bg-primary/5 border border-primary/10 rounded-2xl"
+        >
+          <p className="text-sm text-primary-dark font-semibold">
+            Modo Demo
           </p>
-          <p className="text-xs text-amber-600 mt-1">
-            Email: demo@demo.com | Password: password
+          <p className="text-xs text-primary/70 mt-1">
+            Email: <span className="font-mono bg-white px-1 rounded">demo@demo.com</span><br/>
+            Password: <span className="font-mono bg-white px-1 rounded">password</span>
           </p>
-        </div>
+        </motion.div>
       )}
 
       <form className="space-y-6" onSubmit={handleLogin}>
         {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm border border-red-200">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-red-50 text-red-600 p-4 rounded-xl text-sm border border-red-100 flex items-center gap-3"
+          >
+            <div className="w-1.5 h-1.5 rounded-full bg-red-600" />
             {error}
-          </div>
+          </motion.div>
         )}
 
         {passwordResetSent && (
-          <div className="bg-green-50 text-green-600 p-3 rounded-md text-sm border border-green-200">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-primary/5 text-primary-dark p-4 rounded-xl text-sm border border-primary/10"
+          >
             Email de recuperação enviado! Verifique a sua caixa de entrada.
-          </div>
+          </motion.div>
         )}
 
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+        <div className="space-y-2">
+          <label htmlFor="email" className="block text-sm font-bold text-slate-700 ml-1">
             Email
           </label>
-          <div className="mt-1">
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-black focus:border-black sm:text-sm"
-            />
-          </div>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="seu@email.com"
+            className="appearance-none block w-full px-4 py-3 border border-gray-200 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
+          />
         </div>
 
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-            Password
-          </label>
-          <div className="mt-1">
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-black focus:border-black sm:text-sm"
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <input
-              id="remember-me"
-              name="remember-me"
-              type="checkbox"
-              className="h-4 w-4 text-black focus:ring-black border-gray-300 rounded"
-            />
-            <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-              Lembrar-me
+        <div className="space-y-2">
+          <div className="flex items-center justify-between ml-1">
+            <label htmlFor="password" className="block text-sm font-bold text-slate-700">
+              Password
             </label>
-          </div>
-
-          <div className="text-sm">
             <button
               type="button"
               onClick={handleForgotPassword}
-              className="font-medium text-gray-600 hover:text-black"
+              className="text-xs font-semibold text-primary hover:text-primary-dark transition-colors"
             >
               Esqueceu a password?
             </button>
           </div>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            className="appearance-none block w-full px-4 py-3 border border-gray-200 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
+          />
+        </div>
+
+        <div className="flex items-center">
+          <input
+            id="remember-me"
+            name="remember-me"
+            type="checkbox"
+            className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded-md cursor-pointer"
+          />
+          <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-500 cursor-pointer">
+            Lembrar-me neste dispositivo
+          </label>
         </div>
 
         <div>
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black disabled:opacity-50"
+            className="w-full flex justify-center items-center py-4 px-4 border border-transparent rounded-xl shadow-xl shadow-primary/20 text-sm font-bold text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all active:scale-[0.98] disabled:opacity-50"
           >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Entrar'}
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Entrar na Conta'}
           </button>
         </div>
       </form>
 
-      <div className="mt-6 text-center text-sm">
-        <p className="text-gray-600">
+      <div className="mt-8 pt-8 border-t border-gray-100 text-center text-sm">
+        <p className="text-gray-500">
           Ainda não tem conta?{' '}
-          <Link href="/register" className="font-medium text-black hover:text-gray-800">
-            Registe-se
+          <Link href="/register" className="font-bold text-primary hover:text-primary-dark transition-colors">
+            Crie uma conta gratuita
           </Link>
         </p>
       </div>

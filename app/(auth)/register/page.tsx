@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth, isSupabaseConfigured } from '@/lib/auth-context';
 import { Loader2 } from 'lucide-react';
+import { motion } from "motion/react";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -34,7 +35,13 @@ export default function RegisterPage() {
     const { error } = await signUp(email, password, name);
 
     if (error) {
-      setError(error.message);
+      if (error.message.includes('rate limit')) {
+        setError('Limite de envio de emails atingido. Por favor, aguarde alguns minutos ou use um email diferente. Se é o administrador, pode desativar a confirmação de email no Dashboard do Supabase (Authentication > Settings > Providers > Email).');
+      } else if (error.message.includes('User already registered')) {
+        setError('Este email já está registado. Tente iniciar sessão.');
+      } else {
+        setError(error.message);
+      }
       setLoading(false);
     } else {
       if (isSupabaseConfigured) {
@@ -48,100 +55,123 @@ export default function RegisterPage() {
 
   return (
     <>
-      <h2 className="mt-2 text-center text-3xl font-extrabold text-gray-900 mb-8">
-        Criar Conta
-      </h2>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <h2 className="text-center text-3xl font-black text-slate-900 tracking-tight mb-2">
+          Criar a sua conta
+        </h2>
+        <p className="text-center text-gray-500 text-sm mb-8">
+          Junte-se à ShopForge e comece a vender hoje
+        </p>
+      </motion.div>
 
       {!isSupabaseConfigured && (
-        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-md">
-          <p className="text-sm text-amber-800">
-            <strong>Modo Demo:</strong> Supabase não está configurado. O registo é simulado.
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3 }}
+          className="mb-8 p-4 bg-primary/5 border border-primary/10 rounded-2xl"
+        >
+          <p className="text-sm text-primary-dark font-semibold">
+            Modo Demo
           </p>
-        </div>
+          <p className="text-xs text-primary/70 mt-1">
+            O registo é simulado. Pode usar qualquer email para testar.
+          </p>
+        </motion.div>
       )}
 
-      <form className="space-y-6" onSubmit={handleRegister}>
+      <form className="space-y-5" onSubmit={handleRegister}>
         {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm border border-red-200">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-red-50 text-red-600 p-4 rounded-xl text-sm border border-red-100 flex items-center gap-3"
+          >
+            <div className="w-1.5 h-1.5 rounded-full bg-red-600" />
             {error}
-          </div>
+          </motion.div>
         )}
 
         {verificationSent && (
-          <div className="bg-green-50 text-green-600 p-3 rounded-md text-sm border border-green-200">
-            Email de verificação enviado! Por favor, verifique a sua caixa de entrada e clique no link para ativar a conta.
-          </div>
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-primary/5 text-primary-dark p-4 rounded-xl text-sm border border-primary/10"
+          >
+            Email de verificação enviado! Por favor, verifique a sua caixa de entrada para ativar a conta.
+          </motion.div>
         )}
 
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-            Nome
+        <div className="space-y-2">
+          <label htmlFor="name" className="block text-sm font-bold text-slate-700 ml-1">
+            Nome Completo
           </label>
-          <div className="mt-1">
-            <input
-              id="name"
-              name="name"
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-black focus:border-black sm:text-sm"
-            />
-          </div>
+          <input
+            id="name"
+            name="name"
+            type="text"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Seu nome"
+            className="appearance-none block w-full px-4 py-3 border border-gray-200 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
+          />
         </div>
 
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+        <div className="space-y-2">
+          <label htmlFor="email" className="block text-sm font-bold text-slate-700 ml-1">
             Email
           </label>
-          <div className="mt-1">
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-black focus:border-black sm:text-sm"
-            />
-          </div>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="seu@email.com"
+            className="appearance-none block w-full px-4 py-3 border border-gray-200 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
+          />
         </div>
 
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+        <div className="space-y-2">
+          <label htmlFor="password" className="block text-sm font-bold text-slate-700 ml-1">
             Password
           </label>
-          <div className="mt-1">
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-black focus:border-black sm:text-sm"
-            />
-          </div>
-          <p className="mt-1 text-xs text-gray-500">Mínimo de 6 caracteres</p>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            required
+            minLength={6}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            className="appearance-none block w-full px-4 py-3 border border-gray-200 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
+          />
+          <p className="mt-1 text-[10px] text-gray-400 ml-1">Mínimo de 6 caracteres</p>
         </div>
 
         <div>
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black disabled:opacity-50"
+            className="w-full flex justify-center items-center py-4 px-4 border border-transparent rounded-xl shadow-xl shadow-primary/20 text-sm font-bold text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all active:scale-[0.98] disabled:opacity-50"
           >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Registar e Criar Loja'}
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Criar Minha Loja Grátis'}
           </button>
         </div>
       </form>
 
-      <div className="mt-6 text-center text-sm">
-        <p className="text-gray-600">
+      <div className="mt-8 pt-8 border-t border-gray-100 text-center text-sm">
+        <p className="text-gray-500">
           Já tem conta?{' '}
-          <Link href="/login" className="font-medium text-black hover:text-gray-800">
+          <Link href="/login" className="font-bold text-primary hover:text-primary-dark transition-colors">
             Iniciar sessão
           </Link>
         </p>
