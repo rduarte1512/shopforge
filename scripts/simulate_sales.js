@@ -65,7 +65,6 @@ async function createSimulatedSale() {
     const customer = await stripe.customers.create({
       name: customerName,
       email: email,
-      description: 'Cliente Simulado',
     });
 
     // Passo 2: Criar e confirmar um PaymentIntent com cartão de teste aprovado
@@ -74,7 +73,7 @@ async function createSimulatedSale() {
       currency: 'eur',
       customer: customer.id,
       payment_method: 'pm_card_visa', // Método de teste Stripe (Succeeds)
-      description: `Subscrição Simulada - Plano ${plan.name}`,
+      description: plan.name,
       confirm: true,
       automatic_payment_methods: {
         enabled: true,
