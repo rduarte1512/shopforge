@@ -69,7 +69,7 @@ export function SalesChart({
               }}
               itemStyle={{ color: 'var(--color-text-primary)' }}
               labelStyle={{ color: 'var(--color-text-muted)' }}
-              formatter={(value: number) => [`€ ${value.toLocaleString('pt-PT', { minimumFractionDigits: 2 })}`, 'Vendas']}
+              formatter={(value: any) => [`€ ${Number(value).toLocaleString('pt-PT', { minimumFractionDigits: 2 })}`, 'Vendas']}
             />
           )}
           
