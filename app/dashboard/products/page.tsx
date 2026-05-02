@@ -61,7 +61,7 @@ export default function ProductsPage() {
   });
 
   const fetchData = async () => {
-    if (!user) return;
+    if (!user || !supabase) return;
     try {
       const { data: storesData, error: storesError } = await supabase
         .from('stores')
@@ -159,7 +159,7 @@ export default function ProductsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentStoreId) return;
+    if (!currentStoreId || !supabase) return;
 
     try {
       const productPayload = {
@@ -230,6 +230,7 @@ export default function ProductsPage() {
   };
 
   const openModal = async (product: any = null) => {
+    if (!supabase) return;
     if (product) {
       setEditingProduct(product);
       setFormData({
@@ -302,7 +303,7 @@ export default function ProductsPage() {
   };
 
   const handleDeleteProduct = async (id: string) => {
-    if (!confirm('Tem a certeza que deseja eliminar este produto?')) return;
+    if (!confirm('Tem a certeza que deseja eliminar este produto?') || !supabase) return;
     try {
       const { error } = await supabase.from('products').delete().eq('id', id);
       if (error) throw error;

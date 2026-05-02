@@ -72,7 +72,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     async function fetchStores() {
-      if (!user) return;
+      if (!user || !supabase) return;
       
       try {
         const { data, error } = await supabase
