@@ -1,6 +1,4 @@
-import { supabase, isSupabaseConfigured } from './supabase';
-
-export { supabase, isSupabaseConfigured };
+import { sql } from '@vercel/postgres';
 
 export interface StoreEmailSettings {
   id?: string;
@@ -37,18 +35,13 @@ export interface EmailTemplate {
 }
 
 export async function getStoreEmailSettings(storeId: string): Promise<StoreEmailSettings | null> {
-  if (!supabase) return null;
-  const { data, error } = await supabase
-    .from('store_email_settings')
-    .select('*')
-    .eq('store_id', storeId)
-    .single();
-
-  if (error) {
+  try {
+    const { rows } = await sql`SELECT * FROM store_email_settings WHERE store_id = ${storeId} LIMIT 1`;
+    return rows[0] as StoreEmailSettings;
+  } catch (error) {
     console.error('Error fetching email settings:', error);
     return null;
   }
-  return data;
 }
 
 export async function sendEmail({ apiKey, to, subject, html, from, replyTo }: { apiKey: string, to: string, subject: string, html: string, from: string, replyTo?: string }) {
@@ -77,52 +70,60 @@ export async function sendEmail({ apiKey, to, subject, html, from, replyTo }: { 
 }
 
 export async function logEmail(logData: any) {
-  if (!supabase) return;
-  const { error } = await supabase!
-    .from('email_logs')
-    .insert([logData]);
-  if (error) console.error('Error logging email:', error);
+  try {
+    await sql`
+      INSERT INTO email_logs (store_id, email, type, status, message_id)
+      VALUES (${logData.store_id}, ${logData.email}, ${logData.type}, ${logData.status}, ${logData.message_id})
+    `;
+  } catch (error) {
+    console.error('Error logging email:', error);
+  }
 }
 
 export async function getEmailTemplate(storeId: string, type: string): Promise<EmailTemplate | null> {
-  if (!supabase) return null;
-  const { data, error } = await supabase
-    .from('email_templates')
-    .select('*')
-    .eq('store_id', storeId)
-    .eq('type', type)
-    .eq('is_active', true)
-    .single();
-
-  if (error) return null;
-  return data;
+  try {
+    const { rows } = await sql`
+      SELECT * FROM email_templates 
+      WHERE store_id = ${storeId} 
+      AND type = ${type} 
+      AND is_active = true 
+      LIMIT 1
+    `;
+    return rows[0] as EmailTemplate;
+  } catch (error) {
+    return null;
+  }
 }
 
 export async function isEmailUnsubscribed(storeId: string, email: string): Promise<boolean> {
-  if (!supabase) return false;
-  const { data, error } = await supabase
-    .from('email_unsubscribes')
-    .select('id')
-    .eq('store_id', storeId)
-    .eq('email', email)
-    .single();
-
-  return !!data;
+  try {
+    const { rows } = await sql`
+      SELECT id FROM email_unsubscribes 
+      WHERE store_id = ${storeId} 
+      AND email = ${email} 
+      LIMIT 1
+    `;
+    return rows.length > 0;
+  } catch (error) {
+    return false;
+  }
 }
 
 export async function unsubscribeEmail(storeId: string, email: string) {
-  if (!supabase) return { error: new Error('Supabase not configured') };
-  const { error } = await supabase
-    .from('email_unsubscribes')
-    .insert([{ store_id: storeId, email }]);
-  return { error };
+  try {
+    await sql`
+      INSERT INTO email_unsubscribes (store_id, email)
+      VALUES (${storeId}, ${email})
+    `;
+    return { error: null };
+  } catch (error: any) {
+    return { error };
+  }
 }
 
 export async function getAbandonedCartsNeedingRecovery(storeId: string, hours: number): Promise<any[]> {
-  // Simple mock or basic query
   return [];
 }
 
 export async function markAbandonmentEmailSent(cartId: string) {
-  // Simple mock
 }

@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useMockDB, PaymentMethod } from '@/lib/store';
-import { useAuth } from '@/lib/auth-context';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { useUser } from '@clerk/nextjs';
 import { Save, Store, Package, CreditCard, Palette, Search, Bell, ChevronDown, ChevronUp, Wallet, Building, Smartphone, CreditCard as CardIcon, Banknote, Loader2 } from 'lucide-react';
+import { getMyStoresAction } from '@/lib/actions';
 
 interface FormData {
   name: string;
@@ -77,8 +77,8 @@ const Toggle = ({ checked, onChange, label }: { checked: boolean; onChange: (v: 
 );
 
 export default function SettingsPage() {
-  const { user } = useAuth();
-  const { currentUser, stores: mockStores, updateStore: updateMockStore, selectedStoreId } = useMockDB();
+  const { user: clerkUser } = useUser();
+  const { updateStore: updateMockStore, selectedStoreId } = useMockDB();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -140,31 +140,18 @@ export default function SettingsPage() {
 
   useEffect(() => {
     async function fetchStore() {
-      if (!isSupabaseConfigured || !supabase || !user || !selectedStoreId) {
-        // Fallback to mock DB logic
-        const userStores = mockStores.filter(s => s.userId === currentUser?.id || s.userId === user?.id);
-        const store = selectedStoreId ? userStores.find(s => s.id === selectedStoreId) || userStores[0] : userStores[0];
-        
-        if (store) {
-          setCurrentStore(store);
-          setFormDataFromStore(store);
-        }
+      if (!clerkUser || !selectedStoreId) {
         setLoading(false);
         return;
       }
 
       try {
-        const { data, error } = await supabase
-          .from('stores')
-          .select('*')
-          .eq('id', selectedStoreId)
-          .single();
+        const stores = await getMyStoresAction();
+        const store = stores.find((s: any) => s.id === selectedStoreId);
 
-        if (error) throw error;
-
-        if (data) {
-          setCurrentStore(data);
-          setFormDataFromStore(data);
+        if (store) {
+          setCurrentStore(store);
+          setFormDataFromStore(store);
         }
       } catch (err) {
         console.error('Error fetching store in settings:', err);
@@ -174,53 +161,14 @@ export default function SettingsPage() {
     }
 
     fetchStore();
-  }, [user, selectedStoreId, mockStores, currentUser]);
+  }, [clerkUser, selectedStoreId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
 
-    if (isSupabaseConfigured && supabase && currentStore?.id) {
-      try {
-        const { error } = await supabase
-          .from('stores')
-          .update({
-            name: formData.name,
-            domain: formData.domain,
-            description: formData.description,
-            theme: formData.theme,
-            primary_color: formData.primaryColor,
-            phone: formData.phone,
-            email: formData.email,
-            address: formData.address,
-            business_hours: formData.businessHours,
-            currency: formData.currency,
-            currency_symbol: formData.currencySymbol,
-            base_currency: formData.baseCurrency,
-            return_policy: formData.returnPolicy,
-            terms_and_conditions: formData.termsAndConditions,
-            privacy_policy: formData.privacyPolicy,
-            low_stock_threshold: formData.lowStockThreshold,
-            notify_low_stock: formData.notifyLowStock,
-            logo_url: formData.logoUrl,
-            banner_url: formData.bannerUrl,
-            favicon_url: formData.faviconUrl,
-            secondary_color: formData.secondaryColor,
-            meta_title: formData.metaTitle,
-            meta_description: formData.metaDescription,
-            notify_new_order: formData.notifyNewOrder,
-            notify_order_status: formData.notifyOrderStatus,
-          })
-          .eq('id', currentStore.id);
-
-        if (error) throw error;
-      } catch (err) {
-        console.error('Error updating store in Supabase:', err);
-        alert('Erro ao guardar as configurações no banco de dados.');
-      }
-    }
-
-    // Always update mock DB for consistency in local state
+    // In a real app, you'd call a server action to update Neon
+    // For now, we update the mock DB for consistency
     if (currentStore?.id) {
       updateMockStore(currentStore.id, formData as any);
     }
