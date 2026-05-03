@@ -31,12 +31,13 @@ export default async function DashboardOverview() {
     // In a server component, we can't access localStorage.
     // The client will handle the stored selection if needed, but for the initial paint
     // we use the first store.
-    selectedStoreId = stores[0].id;
+    const firstStoreId = stores[0].id;
+    selectedStoreId = firstStoreId;
 
     // Fetch store specific data in parallel
     const [storeProducts, storeOrders] = await Promise.all([
-      getStoreProductsAction(selectedStoreId),
-      getStoreOrdersAction(selectedStoreId)
+      getStoreProductsAction(firstStoreId),
+      getStoreOrdersAction(firstStoreId)
     ]);
     
     products = storeProducts;
