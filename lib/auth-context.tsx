@@ -11,6 +11,8 @@ interface AuthUser {
   email: string;
   name: string;
   role: 'ADMIN' | 'CLIENT';
+  subscriptionTier: 'STARTER' | 'GROWTH' | 'PRO' | 'BUSINESS' | 'ENTERPRISE';
+  subscriptionStatus: 'active' | 'expired' | 'trialing' | 'none';
 }
 
 interface AuthContextType {
@@ -30,34 +32,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchProfile = async (userId: string, email: string) => {
+    if (!supabase) return null;
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (error || !data) {
+      return {
+        id: userId,
+        email: email,
+        name: email.split('@')[0],
+        role: 'CLIENT' as const,
+        subscriptionTier: 'STARTER' as const,
+        subscriptionStatus: 'active' as const
+      };
+    }
+
+    return {
+      id: data.id,
+      email: data.email,
+      name: data.name || data.email.split('@')[0],
+      role: data.role,
+      subscriptionTier: data.subscription_tier,
+      subscriptionStatus: data.subscription_status
+    };
+  };
+
   useEffect(() => {
     if (!supabase) {
       setLoading(false);
       return;
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       if (session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email || '',
-          name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
-          role: 'CLIENT'
-        });
+        const profile = await fetchProfile(session.user.id, session.user.email || '');
+        setUser(profile);
       }
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       if (session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email || '',
-          name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
-          role: 'CLIENT'
-        });
+        const profile = await fetchProfile(session.user.id, session.user.email || '');
+        setUser(profile);
       } else {
         setUser(null);
       }

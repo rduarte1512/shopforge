@@ -3,6 +3,8 @@
 
 -- 1. Create custom types
 CREATE TYPE user_role AS ENUM ('ADMIN', 'CLIENT');
+CREATE TYPE subscription_tier AS ENUM ('STARTER', 'GROWTH', 'PRO', 'BUSINESS', 'ENTERPRISE');
+CREATE TYPE subscription_status AS ENUM ('active', 'expired', 'trialing', 'none');
 CREATE TYPE order_status AS ENUM ('pending', 'paid', 'shipped', 'delivered');
 CREATE TYPE store_theme AS ENUM ('light', 'dark');
 
@@ -14,6 +16,8 @@ CREATE TABLE profiles (
   email TEXT UNIQUE NOT NULL,
   name TEXT,
   role user_role DEFAULT 'CLIENT',
+  subscription_tier subscription_tier DEFAULT 'STARTER',
+  subscription_status subscription_status DEFAULT 'active',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
@@ -287,12 +291,14 @@ CREATE TABLE promotion_rules (
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, email, name, role)
+  INSERT INTO public.profiles (id, email, name, role, subscription_tier, subscription_status)
   VALUES (
     NEW.id,
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'name', NEW.email),
-    'CLIENT'
+    COALESCE((NEW.raw_user_meta_data->>'role')::user_role, 'CLIENT'),
+    COALESCE((NEW.raw_user_meta_data->>'subscription_tier')::subscription_tier, 'STARTER'),
+    COALESCE((NEW.raw_user_meta_data->>'subscription_status')::subscription_status, 'active')
   );
   RETURN NEW;
 END;

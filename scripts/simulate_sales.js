@@ -82,7 +82,7 @@ async function createStripeSale() {
 }
 
 async function simulateSalesBatch() {
-  const numberOfSales = getRandomInt(5, 20);
+  const numberOfSales = getRandomInt(3, 15);
   console.log(`\n[${new Date().toLocaleTimeString()}] 🚀 Gerando lote de ${numberOfSales} vendas...`);
   
   for (let i = 0; i < numberOfSales; i++) {
@@ -91,19 +91,25 @@ async function simulateSalesBatch() {
     await new Promise(resolve => setTimeout(resolve, 800));
   }
   
-  console.log(`--- Lote finalizado. Próximo em 5 min. ---`);
+  console.log(`--- Lote finalizado. Próximo em 15 min. ---`);
 }
 
 async function run() {
   // Executa o primeiro lote imediatamente
   await simulateSalesBatch();
   
-  // Configura o intervalo de 5 minutos
-  const INTERVAL_MS = 5 * 60 * 1000;
+  // Se estiver rodando no GitHub Actions, finaliza após o primeiro lote
+  if (process.env.GITHUB_ACTIONS === 'true') {
+    console.log('\n✅ Simulação concluída no GitHub Actions.');
+    process.exit(0);
+  }
+  
+  // Configura o intervalo de 15 minutos
+  const INTERVAL_MS = 15 * 60 * 1000;
   setInterval(simulateSalesBatch, INTERVAL_MS);
   
   console.log('\n🌟 Simulador de Vendas Stripe Ativo!');
-  console.log('Frequência: 5-20 vendas a cada 5 minutos.');
+  console.log('Frequência: 3-15 vendas a cada 15 minutos.');
 }
 
 run();

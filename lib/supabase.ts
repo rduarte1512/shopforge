@@ -19,12 +19,16 @@ if (isSupabaseConfigured) {
 export { supabase };
 
 export type UserRole = 'ADMIN' | 'CLIENT';
+export type SubscriptionTier = 'STARTER' | 'GROWTH' | 'PRO' | 'BUSINESS' | 'ENTERPRISE';
+export type SubscriptionStatus = 'active' | 'expired' | 'trialing' | 'none';
 
 export interface Profile {
   id: string;
   email: string;
   name: string | null;
   role: UserRole;
+  subscription_tier: SubscriptionTier;
+  subscription_status: SubscriptionStatus;
   created_at: string;
 }
 
