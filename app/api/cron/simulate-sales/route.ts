@@ -63,15 +63,31 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const numberOfSales = getRandomInt(2, 5);
+  const countParam = searchParams.get('count');
+  const numberOfSales = countParam ? parseInt(countParam) : getRandomInt(2, 5);
   const results = [];
 
-  for (let i = 0; i < numberOfSales; i++) {
+  for (let i = 0; i < Math.min(numberOfSales, 20); i++) {
     results.push(await createSimulatedSale());
   }
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     message: `Simulação concluída: ${results.filter(r => r.success).length} vendas geradas na Stripe.`,
     results
   });
+
+  // Enable CORS for the remote trigger
+  response.headers.set('Access-Control-Allow-Origin', '*');
+  response.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  return response;
+}
+
+export async function OPTIONS() {
+  const response = new NextResponse(null, { status: 204 });
+  response.headers.set('Access-Control-Allow-Origin', '*');
+  response.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  return response;
 }
