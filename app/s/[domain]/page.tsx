@@ -42,21 +42,18 @@ export default function StorefrontHomePage() {
         const { data: productsData, error: productsError } = await supabase
           .from('products')
           .select('*')
-          .eq('store_id', storeData.id);
+          .eq('store_id', storeData.id)
+          .limit(20);
         
         if (productsError) throw productsError;
         setProducts(productsData || []);
 
-        const now = new Date().toISOString();
         const { data: promotionsData } = await supabase
           .from('promotions')
           .select('*')
           .eq('store_id', storeData.id)
           .eq('active', true)
-          .eq('position', 'hero')
-          .or(`start_date.is.null,start_date.lte.${now}`)
-          .or(`end_date.is.null,end_date.gte.${now}`)
-          .order('priority', { ascending: true });
+          .limit(10);
         
         setPromotions(promotionsData || []);
       } catch (err) {
