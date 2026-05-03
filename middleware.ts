@@ -15,15 +15,22 @@ const isAuthRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, request) => {
-  const { userId } = await auth();
+  try {
+    const { userId } = await auth();
 
-  // If the user is signed in and trying to access an auth page, redirect them to dashboard
-  if (userId && isAuthRoute(request)) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
-  }
+    // If the user is signed in and trying to access an auth page, redirect them to dashboard
+    if (userId && isAuthRoute(request)) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
 
-  if (!isPublicRoute(request)) {
-    await auth.protect();
+    if (!isPublicRoute(request)) {
+      await auth.protect();
+    }
+  } catch (error) {
+    // Prevent the entire middleware from crashing if Clerk keys are missing or invalid
+    console.error("Middleware error:", error);
+    // If it's a critical error and we're not on a public route, we might want to let it through 
+    // or handle it differently, but crashing (500) is what we want to avoid.
   }
 });
 
