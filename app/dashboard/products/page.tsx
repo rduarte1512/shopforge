@@ -22,8 +22,8 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const plan = SUBSCRIPTION_PLANS.find(p => p.id === currentUser?.subscriptionTier) || SUBSCRIPTION_PLANS[0];
-  const isAiRestricted = plan.id === 'STARTER';
+  const plan = SUBSCRIPTION_PLANS.find(p => p.id === user?.subscriptionTier) || SUBSCRIPTION_PLANS[0];
+  const isAiRestricted = plan.id === 'STARTER' || plan.id === 'GROWTH';
   const canCreateMoreProducts = products.length < (plan?.limits?.products || 50);
   
   const [isModalOpen, setIsModalOpen] = useState(false);

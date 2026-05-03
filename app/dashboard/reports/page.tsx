@@ -9,13 +9,15 @@ import { useState } from 'react';
 import { subDays, endOfDay, startOfDay } from 'date-fns';
 import { useReportsData } from '@/hooks/useReportsData';
 import { useMockDB, SUBSCRIPTION_PLANS } from '@/lib/store';
+import { useAuth } from '@/lib/auth-context';
 import { Lock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function ReportsPage() {
+  const { user } = useAuth();
   const { currentUser } = useMockDB();
   const router = useRouter();
-  const plan = SUBSCRIPTION_PLANS.find(p => p.id === currentUser?.subscriptionTier) || SUBSCRIPTION_PLANS[0];
+  const plan = SUBSCRIPTION_PLANS.find(p => p.id === user?.subscriptionTier) || SUBSCRIPTION_PLANS[0];
   const isPremium = plan.id !== 'STARTER';
 
   const [isRefreshing, setIsRefreshing] = useState(false);

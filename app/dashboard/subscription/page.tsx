@@ -3,16 +3,18 @@
 import { useState } from 'react';
 import { Check, Zap, Star, Crown, Rocket, Building2, ShieldCheck, ArrowRight, Sparkles, Globe, Headphones, BarChart3 } from 'lucide-react';
 import { useMockDB, SUBSCRIPTION_PLANS, SubscriptionTier } from '@/lib/store';
+import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function SubscriptionPage() {
+  const { user } = useAuth();
   const { currentUser } = useMockDB();
   const router = useRouter();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
 
   const handleSelectPlan = (tier: SubscriptionTier) => {
-    if (tier === currentUser?.subscriptionTier) return;
+    if (tier === user?.subscriptionTier) return;
     router.push(`/dashboard/subscription/checkout?plan=${tier}`);
   };
 
@@ -92,7 +94,7 @@ export default function SubscriptionPage() {
       {/* Plans Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
         {SUBSCRIPTION_PLANS.map((plan, index) => {
-          const isCurrent = currentUser?.subscriptionTier === plan.id;
+          const isCurrent = user?.subscriptionTier === plan.id;
           const isPro = plan.id === 'PRO';
           const displayedPrice = billingCycle === 'yearly' ? Math.floor(plan.price * 0.8) : plan.price;
 
