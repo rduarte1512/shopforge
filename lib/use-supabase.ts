@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './auth-context';
-import { supabase, isSupabaseConfigured, type Store, type Product, type Order, type Coupon, type ShippingMethod } from './supabase';
+import { supabase, isSupabaseConfigured } from './supabase';
+import { type Store, type Product, type Order, type Coupon, type ShippingMethod } from './supabase';
 
 interface UseSupabaseDBReturn {
   stores: Store[];
@@ -11,6 +12,8 @@ interface UseSupabaseDBReturn {
   coupons: Coupon[];
   shippingMethods: ShippingMethod[];
   loading: boolean;
+  storesLoading: boolean;
+  dataLoading: boolean;
   selectedStoreId: string | null;
   setSelectedStore: (id: string | null) => void;
   addStore: (store: Partial<Store>) => Promise<void>;
@@ -27,172 +30,204 @@ interface UseSupabaseDBReturn {
   addShippingMethod: (method: Partial<ShippingMethod>) => Promise<void>;
   updateShippingMethod: (id: string, data: Partial<ShippingMethod>) => Promise<void>;
   deleteShippingMethod: (id: string) => Promise<void>;
+  refreshData: () => Promise<void>;
 }
 
 export function useSupabaseDB(): UseSupabaseDBReturn {
-  const { user, session } = useAuth();
+  const { user } = useAuth();
   const [stores, setStores] = useState<Store[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [shippingMethods, setShippingMethods] = useState<ShippingMethod[]>([]);
-  const [loading, setLoading] = useState(true);
+  
+  const [storesLoading, setStoresLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(false);
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
 
-  const isConnected = isSupabaseConfigured && session !== null;
+  const isConnected = isSupabaseConfigured && !!supabase;
+  const storeFetchedRef = useRef(false);
 
+  // Fetch Stores Function
+  const fetchStores = useCallback(async () => {
+    if (!isConnected || !user) return;
+    
+    try {
+      const { data, error } = await supabase!
+        .from('stores')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const storesData = data as Store[];
+      setStores(storesData);
+    } catch (err) {
+      console.error("Error fetching stores:", err);
+    } finally {
+      setStoresLoading(false);
+    }
+  }, [isConnected, user?.id]); // Only depend on user.id
+
+  // Fetch Store Data Function
+  const fetchStoreData = useCallback(async (storeId: string) => {
+    if (!isConnected || !storeId) return;
+    
+    try {
+      const [
+        { data: pData },
+        { data: oData },
+        { data: cData },
+        { data: sData }
+      ] = await Promise.all([
+        supabase!.from('products').select('*').eq('store_id', storeId).order('created_at', { ascending: false }),
+        supabase!.from('orders').select('*, items:order_items(*)').eq('store_id', storeId).order('created_at', { ascending: false }),
+        supabase!.from('coupons').select('*').eq('store_id', storeId).order('created_at', { ascending: false }),
+        supabase!.from('shipping_methods').select('*').eq('store_id', storeId).order('created_at', { ascending: false })
+      ]);
+
+      setProducts(pData as Product[] || []);
+      setOrders(oData as Order[] || []);
+      setCoupons(cData as Coupon[] || []);
+      setShippingMethods(sData as ShippingMethod[] || []);
+    } catch (err) {
+      console.error("Error fetching store data:", err);
+    } finally {
+      setDataLoading(false);
+    }
+  }, [isConnected]);
+
+  // Initial Load
   useEffect(() => {
-    if (!isConnected) {
-      setLoading(false);
-      return;
+    if (isConnected && user?.id && !storeFetchedRef.current) {
+      fetchStores();
+      storeFetchedRef.current = true;
+    }
+  }, [isConnected, user?.id, fetchStores]);
+
+  // Load Data when store changes
+  const lastStoreIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (selectedStoreId && selectedStoreId !== lastStoreIdRef.current) {
+      setDataLoading(true);
+      fetchStoreData(selectedStoreId);
+      lastStoreIdRef.current = selectedStoreId;
+    } else if (!selectedStoreId) {
+      setProducts([]);
+      setOrders([]);
+      setCoupons([]);
+      setShippingMethods([]);
+      lastStoreIdRef.current = null;
+    }
+  }, [selectedStoreId, fetchStoreData]);
+
+  // Realtime Subscriptions (Simplified to avoid loops)
+  useEffect(() => {
+    if (!isConnected || !user?.id) return;
+
+    const storesChannel = supabase!
+      .channel(`stores_${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'stores', filter: `user_id=eq.${user.id}` }, () => {
+        // Use a slight delay or simple fetch without state dependency
+        supabase!.from('stores').select('*').eq('user_id', user.id).then(({ data }) => {
+          if (data) setStores(data as Store[]);
+        });
+      })
+      .subscribe();
+
+    let detailsChannel: any = null;
+    if (selectedStoreId) {
+      detailsChannel = supabase!
+        .channel(`details_${selectedStoreId}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'products', filter: `store_id=eq.${selectedStoreId}` }, () => fetchStoreData(selectedStoreId))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `store_id=eq.${selectedStoreId}` }, () => fetchStoreData(selectedStoreId))
+        .subscribe();
     }
 
-    async function loadData() {
-      if (!supabase || !user) return;
-
-      try {
-        const [storesRes, productsRes, ordersRes, couponsRes, shippingRes] = await Promise.all([
-          supabase.from('stores').select('*').eq('user_id', user.id),
-          supabase.from('products').select('*'),
-          supabase.from('orders').select('*'),
-          supabase.from('coupons').select('*'),
-          supabase.from('shipping_methods').select('*'),
-        ]);
-
-        if (storesRes.data) setStores(storesRes.data);
-        if (productsRes.data) setProducts(productsRes.data);
-        if (ordersRes.data) setOrders(ordersRes.data);
-        if (couponsRes.data) setCoupons(couponsRes.data);
-        if (shippingRes.data) setShippingMethods(shippingRes.data);
-
-        if (storesRes.data && storesRes.data.length > 0 && !selectedStoreId) {
-          setSelectedStoreId(storesRes.data[0].id);
-        }
-      } catch (error) {
-        console.error('Error loading data:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadData();
-  }, [user, session, isConnected]);
+    return () => {
+      supabase?.removeChannel(storesChannel);
+      if (detailsChannel) supabase?.removeChannel(detailsChannel);
+    };
+  }, [isConnected, user?.id, selectedStoreId]); // Stable dependencies
 
   const setSelectedStore = useCallback((id: string | null) => {
     setSelectedStoreId(id);
     if (id) {
       localStorage.setItem('selectedStoreId', id);
+    } else {
+      localStorage.removeItem('selectedStoreId');
     }
   }, []);
 
-  const addStore = useCallback(async (store: Partial<Store>) => {
-    if (!isConnected || !supabase || !user) return;
+  const refreshData = useCallback(async () => {
+    if (selectedStoreId) {
+      await fetchStoreData(selectedStoreId);
+    }
+    await fetchStores();
+  }, [selectedStoreId, fetchStoreData, fetchStores]);
 
-    const newStore = {
+  // Mutation functions (add, update, delete)
+  const addStore = useCallback(async (store: Partial<Store>) => {
+    if (!isConnected || !user) return;
+    const { error } = await supabase!.from('stores').insert([{
       user_id: user.id,
       name: store.name || 'Nova Loja',
       domain: store.domain || `loja-${Date.now()}`,
       description: store.description || '',
       theme: store.theme || 'light',
       primary_color: store.primary_color || '#008060',
-      phone: store.phone || '',
-      email: store.email || user.email,
-      address: store.address || '',
-      business_hours: store.business_hours || '',
-      currency: store.currency || 'EUR',
-      currency_symbol: store.currency_symbol || '€',
       base_currency: store.base_currency || 'EUR',
-      return_policy: store.return_policy || '',
-      terms_and_conditions: store.terms_and_conditions || '',
-      privacy_policy: store.privacy_policy || '',
-      low_stock_threshold: store.low_stock_threshold || 10,
-      notify_low_stock: store.notify_low_stock ?? true,
-      logo_url: store.logo_url || '',
-      banner_url: store.banner_url || '',
-      favicon_url: store.favicon_url || '',
-      secondary_color: store.secondary_color || '#2D3748',
-      meta_title: store.meta_title || '',
-      meta_description: store.meta_description || '',
-      notify_new_order: store.notify_new_order ?? true,
-      notify_order_status: store.notify_order_status ?? true,
-    };
-
-    const { data, error } = await supabase.from('stores').insert(newStore).select().single();
-    if (error) throw error;
-    if (data) setStores(prev => [...prev, data]);
+    }]);
+    if (error) console.error("Error adding store:", error);
   }, [isConnected, user]);
 
   const updateStore = useCallback(async (id: string, data: Partial<Store>) => {
-    if (!isConnected || !supabase) return;
-
-    const { error } = await supabase.from('stores').update(data).eq('id', id);
-    if (error) throw error;
-    setStores(prev => prev.map(s => s.id === id ? { ...s, ...data } : s));
+    if (!isConnected) return;
+    const { error } = await supabase!.from('stores').update(data).eq('id', id);
+    if (error) console.error("Error updating store:", error);
   }, [isConnected]);
 
   const deleteStore = useCallback(async (id: string) => {
-    if (!isConnected || !supabase) return;
-
-    const { error } = await supabase.from('stores').delete().eq('id', id);
-    if (error) throw error;
-    setStores(prev => prev.filter(s => s.id !== id));
-    if (selectedStoreId === id) setSelectedStoreId(null);
+    if (!isConnected) return;
+    const { error } = await supabase!.from('stores').delete().eq('id', id);
+    if (error) {
+      console.error("Error deleting store:", error);
+    } else if (selectedStoreId === id) {
+      setSelectedStore(null);
+    }
   }, [isConnected, selectedStoreId, setSelectedStore]);
 
   const addProduct = useCallback(async (product: Partial<Product>) => {
-    if (!isConnected || !supabase || !selectedStoreId) return;
-
-    const newProduct = {
+    if (!isConnected || !selectedStoreId) return;
+    const { error } = await supabase!.from('products').insert([{
       store_id: selectedStoreId,
       name: product.name || 'Novo Produto',
       description: product.description || '',
-      short_description: product.short_description || '',
       price: product.price || 0,
-      compare_at_price: product.compare_at_price || null,
-      cost_per_item: product.cost_per_item || null,
       stock: product.stock || 0,
-      sku: product.sku || `PRD-${Date.now()}`,
-      barcode: product.barcode || null,
-      weight: product.weight || null,
       image_url: product.image_url || 'https://picsum.photos/seed/product/400/500',
-      images: product.images || [],
       category: product.category || 'Geral',
-      tags: product.tags || [],
-      material: product.material || null,
-      brand: product.brand || null,
-      specifications: product.specifications || null,
-      is_active: product.is_active ?? true,
-      is_featured: product.is_featured ?? false,
-      track_inventory: product.track_inventory ?? true,
-      allow_out_of_stock_purchase: product.allow_out_of_stock_purchase ?? false,
-    };
-
-    const { data, error } = await supabase.from('products').insert(newProduct).select().single();
-    if (error) throw error;
-    if (data) setProducts(prev => [...prev, data]);
+    }]);
+    if (error) console.error("Error adding product:", error);
   }, [isConnected, selectedStoreId]);
 
   const updateProduct = useCallback(async (id: string, data: Partial<Product>) => {
-    if (!isConnected || !supabase) return;
-
-    const { error } = await supabase.from('products').update(data).eq('id', id);
-    if (error) throw error;
-    setProducts(prev => prev.map(p => p.id === id ? { ...p, ...data } : p));
+    if (!isConnected) return;
+    const { error } = await supabase!.from('products').update(data).eq('id', id);
+    if (error) console.error("Error updating product:", error);
   }, [isConnected]);
 
   const deleteProduct = useCallback(async (id: string) => {
-    if (!isConnected || !supabase) return;
-
-    const { error } = await supabase.from('products').delete().eq('id', id);
-    if (error) throw error;
-    setProducts(prev => prev.filter(p => p.id !== id));
+    if (!isConnected) return;
+    const { error } = await supabase!.from('products').delete().eq('id', id);
+    if (error) console.error("Error deleting product:", error);
   }, [isConnected]);
 
   const addOrder = useCallback(async (order: Partial<Order>) => {
-    if (!isConnected || !supabase || !selectedStoreId) return;
-
+    if (!isConnected || !selectedStoreId) return;
     const { items, ...orderBase } = order || {};
-    const orderData = {
+    const { data: newOrder, error: orderError } = await supabase!.from('orders').insert([{
       store_id: selectedStoreId,
       customer_name: orderBase.customer_name || '',
       customer_email: orderBase.customer_email || '',
@@ -201,89 +236,61 @@ export function useSupabaseDB(): UseSupabaseDBReturn {
       subtotal: orderBase.subtotal || 0,
       shipping_cost: orderBase.shipping_cost || 0,
       discount_amount: orderBase.discount_amount || 0,
-      coupon_id: orderBase.coupon_id || null,
-      shipping_method_id: orderBase.shipping_method_id || null,
       currency: orderBase.currency || 'EUR',
-      payment_method_id: orderBase.payment_method_id || null,
-      payment_method_type: orderBase.payment_method_type || null,
-      payment_instructions: orderBase.payment_instructions || null,
-    };
+    }]).select().single();
 
-    const { data: orderResult, error: orderError } = await supabase
-      .from('orders')
-      .insert(orderData)
-      .select()
-      .single();
+    if (orderError) {
+      console.error("Error adding order:", orderError);
+      return;
+    }
 
-    if (orderError) throw orderError;
-
-    if (orderResult && items && items.length > 0) {
-      const itemsToInsert = items.map(item => ({
-        order_id: orderResult.id,
-        product_id: item.product_id,
+    if (items && items.length > 0) {
+      const orderItems = items.map(item => ({
+        order_id: newOrder.id,
+        product_id: item.productId,
         quantity: item.quantity,
         price: item.price
       }));
-
-      const { error: itemsError } = await supabase.from('order_items').insert(itemsToInsert);
-      if (itemsError) throw itemsError;
-      
-      // Update local state with items
-      const completeOrder = { ...orderResult, items };
-      setOrders(prev => [...prev, completeOrder as Order]);
-    } else if (orderResult) {
-      setOrders(prev => [...prev, orderResult as Order]);
+      const { error: itemsError } = await supabase!.from('order_items').insert(orderItems);
+      if (itemsError) console.error("Error adding order items:", itemsError);
     }
   }, [isConnected, selectedStoreId]);
 
   const updateOrderStatus = useCallback(async (id: string, status: Order['status']) => {
-    if (!isConnected || !supabase) return;
-
-    const { error } = await supabase.from('orders').update({ status }).eq('id', id);
-    if (error) throw error;
-    setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
+    if (!isConnected) return;
+    const { error } = await supabase!.from('orders').update({ status }).eq('id', id);
+    if (error) console.error("Error updating order status:", error);
   }, [isConnected]);
 
   const addCoupon = useCallback(async (coupon: Partial<Coupon>) => {
-    if (!isConnected || !supabase || !selectedStoreId) return;
-
-    const newCoupon = {
+    if (!isConnected || !selectedStoreId) return;
+    const { error } = await supabase!.from('coupons').insert([{
       store_id: selectedStoreId,
       code: coupon.code || '',
       discount_type: coupon.discount_type || 'percentage',
       discount_value: coupon.discount_value || 0,
       min_purchase: coupon.min_purchase || 0,
       max_uses: coupon.max_uses || null,
-      used_count: 0,
-      expiry_date: coupon.expiry_date || null,
       active: coupon.active ?? true,
-    };
-
-    const { data, error } = await supabase.from('coupons').insert(newCoupon).select().single();
-    if (error) throw error;
-    if (data) setCoupons(prev => [...prev, data]);
+    }]);
+    if (error) console.error("Error adding coupon:", error);
   }, [isConnected, selectedStoreId]);
 
   const updateCoupon = useCallback(async (id: string, data: Partial<Coupon>) => {
-    if (!isConnected || !supabase) return;
-
-    const { error } = await supabase.from('coupons').update(data).eq('id', id);
-    if (error) throw error;
-    setCoupons(prev => prev.map(c => c.id === id ? { ...c, ...data } : c));
+    if (!isConnected) return;
+    const { error } = await supabase!.from('coupons').update(data).eq('id', id);
+    if (error) console.error("Error updating coupon:", error);
   }, [isConnected]);
 
   const deleteCoupon = useCallback(async (id: string) => {
-    if (!isConnected || !supabase) return;
-
-    const { error } = await supabase.from('coupons').delete().eq('id', id);
-    if (error) throw error;
-    setCoupons(prev => prev.filter(c => c.id !== id));
+    if (!isConnected) return;
+    const { error } = await supabase!.from('coupons').delete().eq('id', id);
+    if (error) console.error("Error deleting coupon:", error);
   }, [isConnected]);
 
   const addShippingMethod = useCallback(async (method: Partial<ShippingMethod>) => {
-    if (!isConnected || !supabase || !selectedStoreId) return;
-
-    const newMethod = {
+    if (!isConnected || !selectedStoreId) return;
+    const { error } = await supabase!.from('shipping_methods').insert([{
       store_id: selectedStoreId,
       name: method.name || '',
       description: method.description || '',
@@ -291,27 +298,20 @@ export function useSupabaseDB(): UseSupabaseDBReturn {
       min_order_for_free: method.min_order_for_free || null,
       delivery_time: method.delivery_time || '',
       active: method.active ?? true,
-    };
-
-    const { data, error } = await supabase.from('shipping_methods').insert(newMethod).select().single();
-    if (error) throw error;
-    if (data) setShippingMethods(prev => [...prev, data]);
+    }]);
+    if (error) console.error("Error adding shipping method:", error);
   }, [isConnected, selectedStoreId]);
 
   const updateShippingMethod = useCallback(async (id: string, data: Partial<ShippingMethod>) => {
-    if (!isConnected || !supabase) return;
-
-    const { error } = await supabase.from('shipping_methods').update(data).eq('id', id);
-    if (error) throw error;
-    setShippingMethods(prev => prev.map(m => m.id === id ? { ...m, ...data } : m));
+    if (!isConnected) return;
+    const { error } = await supabase!.from('shipping_methods').update(data).eq('id', id);
+    if (error) console.error("Error updating shipping method:", error);
   }, [isConnected]);
 
   const deleteShippingMethod = useCallback(async (id: string) => {
-    if (!isConnected || !supabase) return;
-
-    const { error } = await supabase.from('shipping_methods').delete().eq('id', id);
-    if (error) throw error;
-    setShippingMethods(prev => prev.filter(m => m.id !== id));
+    if (!isConnected) return;
+    const { error } = await supabase!.from('shipping_methods').delete().eq('id', id);
+    if (error) console.error("Error deleting shipping method:", error);
   }, [isConnected]);
 
   return {
@@ -320,7 +320,9 @@ export function useSupabaseDB(): UseSupabaseDBReturn {
     orders,
     coupons,
     shippingMethods,
-    loading,
+    loading: storesLoading || dataLoading,
+    storesLoading,
+    dataLoading,
     selectedStoreId,
     setSelectedStore,
     addStore,
@@ -337,5 +339,8 @@ export function useSupabaseDB(): UseSupabaseDBReturn {
     addShippingMethod,
     updateShippingMethod,
     deleteShippingMethod,
+    refreshData,
   };
 }
+
+

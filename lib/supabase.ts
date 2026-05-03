@@ -1,19 +1,35 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseKey);
+// Clean URL: remove trailing slash and /rest/v1 suffix if present
+if (supabaseUrl.endsWith('/')) supabaseUrl = supabaseUrl.slice(0, -1);
+if (supabaseUrl.endsWith('/rest/v1')) supabaseUrl = supabaseUrl.replace('/rest/v1', '');
+
+// Debugging logs (only in development)
+if (process.env.NODE_ENV === 'development') {
+  console.log('Supabase URL configured:', !!supabaseUrl, supabaseUrl);
+  console.log('Supabase Key configured:', !!supabaseKey);
+}
+
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseUrl.startsWith('https://') && supabaseKey);
 
 let supabase: SupabaseClient | null = null;
 
 if (isSupabaseConfigured) {
-  supabase = createClient(supabaseUrl, supabaseKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-    }
-  });
+  try {
+    supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+      }
+    });
+  } catch (err) {
+    console.error('Failed to initialize Supabase client:', err);
+  }
+} else {
+  console.warn('Supabase is NOT configured. Check your environment variables.');
 }
 
 export { supabase };

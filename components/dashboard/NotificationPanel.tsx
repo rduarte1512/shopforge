@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Bell, Package, AlertCircle, ShoppingCart, CheckCircle, X, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/auth-context';
+import { getStoreProductsAction } from '@/lib/actions';
 import { useMockDB } from '@/lib/store';
 import Link from 'next/link';
 
@@ -19,25 +18,19 @@ interface Notification {
 }
 
 export function NotificationPanel() {
-  const { user } = useAuth();
   const { selectedStoreId } = useMockDB();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchLowStockNotifications = async () => {
-    if (!user || !supabase || !selectedStoreId) return [];
+    if (!selectedStoreId) return [];
 
     try {
-      const { data: products, error } = await supabase
-        .from('products')
-        .select('id, name, stock')
-        .eq('store_id', selectedStoreId)
-        .lt('stock', 5); // Default threshold of 5
+      const products = await getStoreProductsAction(selectedStoreId);
+      const lowStockProducts = (products || []).filter((p: any) => p.stock < 5);
 
-      if (error) throw error;
-
-      return (products || []).map(p => ({
+      return lowStockProducts.map((p: any) => ({
         id: `low-stock-${p.id}`,
         type: 'low_stock' as const,
         title: 'Stock Baixo',
@@ -56,8 +49,7 @@ export function NotificationPanel() {
     setLoading(true);
     const lowStock = await fetchLowStockNotifications();
     
-    // In a real app, we would fetch from a notifications table
-    // For now, we'll combine low stock with some mock system notifications
+    // In a real app, we would fetch from a notifications table in Neon
     const mockNotifications: Notification[] = [
       {
         id: 'welcome',

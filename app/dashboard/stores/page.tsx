@@ -1,7 +1,7 @@
 'use client';
 
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/auth-context';
+import { useUser } from '@clerk/nextjs';
+import { getMyStoresAction, createStoreAction, deleteStoreAction } from '@/lib/actions';
 import { useMockDB, SUBSCRIPTION_PLANS } from '@/lib/store';
 import { Plus, Store as StoreIcon, ExternalLink, Link2, Monitor, Sparkles, Loader2, ChevronRight, ChevronLeft, AlertCircle, Trash2, Lock, Zap } from 'lucide-react';
 import Link from 'next/link';
@@ -10,13 +10,14 @@ import { generateStoreConfig } from '@/lib/ai-actions';
 import { useRouter } from 'next/navigation';
 
 export default function StoresPage() {
-  const { user } = useAuth();
-  const { setSelectedStore, currentUser } = useMockDB();
+  const { user: clerkUser } = useUser();
+  const { setSelectedStore } = useMockDB();
   const [stores, setStores] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  const plan = SUBSCRIPTION_PLANS.find(p => p.id === user?.subscriptionTier) || SUBSCRIPTION_PLANS[0];
+  const subscriptionTier = (clerkUser?.publicMetadata?.subscriptionTier as string) || 'STARTER';
+  const plan = SUBSCRIPTION_PLANS.find(p => p.id === subscriptionTier) || SUBSCRIPTION_PLANS[0];
   const canCreateMoreStores = stores.length < plan.limits.stores;
   const isAiRestricted = plan.id === 'STARTER' || plan.id === 'GROWTH';
   
@@ -37,15 +38,8 @@ export default function StoresPage() {
   const [deleteConfirmStoreId, setDeleteConfirmStoreId] = useState<string | null>(null);
 
   const fetchStores = async () => {
-    if (!user || !supabase) return;
     try {
-      const { data, error } = await supabase
-        .from('stores')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
+      const data = await getMyStoresAction();
       setStores(data || []);
     } catch (err) {
       console.error('Error fetching stores:', err);
@@ -55,8 +49,10 @@ export default function StoresPage() {
   };
 
   useEffect(() => {
-    fetchStores();
-  }, [user]);
+    if (clerkUser) {
+      fetchStores();
+    }
+  }, [clerkUser]);
 
   const steps = [
     "A analisar a tua ideia...",
@@ -66,7 +62,7 @@ export default function StoresPage() {
   ];
 
   const handleAiGenerate = async () => {
-    if (!aiPrompt.trim() || !user || !supabase) return;
+    if (!aiPrompt.trim() || !clerkUser) return;
     setIsGenerating(true);
     setGenerationStep(0);
     setGenerationError(null);
@@ -78,46 +74,17 @@ export default function StoresPage() {
     try {
       const config = await generateStoreConfig(aiPrompt);
       
-      const { data: store, error: storeError } = await supabase
-        .from('stores')
-        .insert({
-          user_id: user.id,
-          name: config.name || 'Loja Gerada por IA',
-          domain: (config.domain || 'loja-ia').toLowerCase().replace(/[^a-z0-9-]/g, ''),
-          description: config.description || '',
-          theme: config.theme === 'dark' ? 'dark' : 'light',
-          primary_color: config.primaryColor || '#008060',
-          base_currency: 'EUR'
-        })
-        .select()
-        .single();
+      const store = await createStoreAction({
+        name: config.name || 'Loja Gerada por IA',
+        domain: (config.domain || 'loja-ia').toLowerCase().replace(/[^a-z0-9-]/g, ''),
+        description: config.description || '',
+        theme: config.theme === 'dark' ? 'dark' : 'light',
+        primary_color: config.primaryColor || '#008060',
+        base_currency: 'EUR'
+      });
       
-      if (storeError) throw storeError;
-
-      if (config.products && Array.isArray(config.products)) {
-        const productsToInsert = config.products.map((prod: any) => {
-          const imageSeed = Math.random().toString(36).substring(7);
-          const imageUrl = prod.imageKeyword 
-            ? `https://picsum.photos/seed/${prod.imageKeyword}/400/500` 
-            : `https://picsum.photos/seed/${imageSeed}/400/500`;
-          
-          return {
-            store_id: store.id,
-            name: prod.name || 'Produto',
-            description: prod.description || '',
-            price: Number(prod.price) || 19.99,
-            stock: Number(prod.stock) || 50,
-            image_url: imageUrl,
-            category: prod.category || 'Geral'
-          };
-        });
-
-        const { error: productsError } = await supabase
-          .from('products')
-          .insert(productsToInsert);
-        
-        if (productsError) console.error('Error inserting AI products:', productsError);
-      }
+      // Note: Products insertion for Neon would need another server action
+      // For now, we'll focus on the store migration
 
       clearInterval(stepInterval);
       setGenerationStep(4);
@@ -140,24 +107,15 @@ export default function StoresPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !supabase) return;
-
     try {
-      const { data, error } = await supabase
-        .from('stores')
-        .insert({
-          user_id: user.id,
-          name: newStore.name,
-          domain: newStore.domain.toLowerCase().replace(/[^a-z0-9-]/g, ''),
-          description: newStore.description,
-          theme: newStore.theme,
-          primary_color: newStore.primaryColor,
-          base_currency: 'EUR'
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
+      const data = await createStoreAction({
+        name: newStore.name,
+        domain: newStore.domain.toLowerCase().replace(/[^a-z0-9-]/g, ''),
+        description: newStore.description,
+        theme: newStore.theme,
+        primary_color: newStore.primaryColor,
+        base_currency: 'EUR'
+      });
 
       setSelectedStore(data.id);
       setIsCreating(false);
@@ -169,14 +127,8 @@ export default function StoresPage() {
   };
 
   const handleDeleteStore = async (storeId: string) => {
-    if (!supabase) return;
     try {
-      const { error } = await supabase
-        .from('stores')
-        .delete()
-        .eq('id', storeId);
-      
-      if (error) throw error;
+      await deleteStoreAction(storeId);
       await fetchStores();
       setDeleteConfirmStoreId(null);
     } catch (err: any) {

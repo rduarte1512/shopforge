@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/auth-context';
+import { useUser } from '@clerk/nextjs';
 import { useMockDB } from '@/lib/store';
 import { Package, Loader2, Eye, CheckCircle2, Truck, Check, X, Search, Filter, MoreHorizontal } from 'lucide-react';
 import { StatusBadge } from '@/components/dashboard';
+import { getMyStoresAction, getStoreOrdersAction, updateOrderStatusAction } from '@/lib/actions';
 
 export default function OrdersPage() {
-  const { user } = useAuth();
+  const { user: clerkUser } = useUser();
   const { selectedStoreId } = useMockDB();
   const [stores, setStores] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
@@ -18,28 +18,16 @@ export default function OrdersPage() {
   const [searchTerm, setSearchTerm] = useState('');
 
   const fetchData = async () => {
-    if (!user || !supabase) return;
     try {
-      const { data: storesData, error: storesError } = await supabase
-        .from('stores')
-        .select('*')
-        .eq('user_id', user.id);
-      
-      if (storesError) throw storesError;
+      const storesData = await getMyStoresAction();
       setStores(storesData || []);
 
       const currentStore = selectedStoreId 
-        ? storesData?.find(s => s.id === selectedStoreId) || storesData?.[0]
+        ? storesData?.find((s: any) => s.id === selectedStoreId) || storesData?.[0]
         : storesData?.[0];
 
       if (currentStore) {
-        const { data: ordersData, error: ordersError } = await supabase
-          .from('orders')
-          .select('*, items:order_items(*, product:products(*))')
-          .eq('store_id', currentStore.id)
-          .order('created_at', { ascending: false });
-        
-        if (ordersError) throw ordersError;
+        const ordersData = await getStoreOrdersAction(currentStore.id);
         setOrders(ordersData || []);
       }
     } catch (err) {
@@ -50,18 +38,14 @@ export default function OrdersPage() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, [user, selectedStoreId]);
+    if (clerkUser) {
+      fetchData();
+    }
+  }, [clerkUser, selectedStoreId]);
 
   const updateStatus = async (orderId: string, status: string) => {
-    if (!supabase) return;
     try {
-      const { error } = await supabase
-        .from('orders')
-        .update({ status })
-        .eq('id', orderId);
-      
-      if (error) throw error;
+      await updateOrderStatusAction(orderId, status);
       
       if (status === 'paid') {
         fetch('/api/affiliates/commission', {

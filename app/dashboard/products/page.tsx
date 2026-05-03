@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/auth-context';
-import { useMockDB, SUBSCRIPTION_PLANS } from '@/lib/store';
+import { useUser } from '@clerk/nextjs';
+import { getStoreProductsAction, addProductAction, updateProductAction, deleteProductAction, getMyStoresAction } from '@/lib/actions';
+import { SUBSCRIPTION_PLANS } from '@/lib/store';
 import { 
   Plus, Edit2, Trash2, X, Sparkles, Loader2, Package, Image as ImageIcon, 
   Wand2, Save, AlertCircle, LayoutGrid, Tag, Truck, Eye, CheckCircle2, 
@@ -16,13 +16,19 @@ import { motion, AnimatePresence } from 'motion/react';
 
 export default function ProductsPage() {
   const router = useRouter();
-  const { user } = useAuth();
-  const { selectedStoreId, currentUser } = useMockDB();
+  const { user: clerkUser } = useUser();
+  
   const [stores, setStores] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
+  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const plan = SUBSCRIPTION_PLANS.find(p => p.id === user?.subscriptionTier) || SUBSCRIPTION_PLANS[0];
+  // Simple manual user profile mapping for compatibility with existing UI logic
+  const userProfile = clerkUser ? {
+    subscriptionTier: (clerkUser.publicMetadata?.subscriptionTier as string) || 'STARTER'
+  } : null;
+
+  const plan = SUBSCRIPTION_PLANS.find(p => p.id === userProfile?.subscriptionTier) || SUBSCRIPTION_PLANS[0];
   const isAiRestricted = plan.id === 'STARTER' || plan.id === 'GROWTH';
   const canCreateMoreProducts = products.length < (plan?.limits?.products || 50);
   
@@ -64,50 +70,51 @@ export default function ProductsPage() {
     has_variants: false
   });
 
-  const fetchData = async () => {
-    if (!user || !supabase) return;
-    try {
-      const { data: storesData, error: storesError } = await supabase
-        .from('stores')
-        .select('*')
-        .eq('user_id', user.id);
-      
-      if (storesError) throw storesError;
-      setStores(storesData || []);
-
-      const currentStore = selectedStoreId 
-        ? storesData?.find(s => s.id === selectedStoreId) || storesData?.[0]
-        : storesData?.[0];
-
-      if (currentStore) {
-        const { data: productsData, error: productsError } = await supabase
-          .from('products')
-          .select('*')
-          .eq('store_id', currentStore.id)
-          .order('created_at', { ascending: false });
-        
-        if (productsError) throw productsError;
-        setProducts(productsData || []);
-      }
-    } catch (err) {
-      console.error('Error fetching data:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, [user, selectedStoreId]);
-
-  const currentStoreId = selectedStoreId || stores[0]?.id;
-
   const steps = [
     "A analisar os detalhes do produto...",
     "A criar descrições atrativas...",
     "A gerar imagens e atributos...",
     "A finalizar o produto..."
   ];
+
+  // Initial Data Fetching
+  useEffect(() => {
+    async function loadInitialData() {
+      setLoading(true);
+      try {
+        const myStores = await getMyStoresAction();
+        setStores(myStores);
+        if (myStores.length > 0) {
+          const storedStoreId = localStorage.getItem('selectedStoreId');
+          const initialStoreId = storedStoreId && myStores.find(s => s.id === storedStoreId) 
+            ? storedStoreId 
+            : myStores[0].id;
+          
+          setSelectedStoreId(initialStoreId);
+          const storeProducts = await getStoreProductsAction(initialStoreId);
+          setProducts(storeProducts);
+        }
+      } catch (err) {
+        console.error("Load Error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadInitialData();
+  }, []);
+
+  // Handle store change
+  const handleStoreChange = async (id: string) => {
+    setSelectedStoreId(id);
+    localStorage.setItem('selectedStoreId', id);
+    setLoading(true);
+    try {
+      const storeProducts = await getStoreProductsAction(id);
+      setProducts(storeProducts);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAiGenerate = async () => {
     if (!aiPrompt.trim()) return;
@@ -145,8 +152,6 @@ export default function ProductsPage() {
     try {
       const productsList = await generateMultipleProducts(aiPrompt, 4);
       if (productsList && productsList.length > 0) {
-        // Para simplificar, vamos inserir logo na DB ou mostrar o primeiro e sugerir os outros
-        // Aqui vamos apenas salvar o primeiro e fechar o modo AI
         const first = productsList[0];
         setFormData({
           ...formData,
@@ -163,11 +168,11 @@ export default function ProductsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentStoreId || !supabase) return;
+    if (!selectedStoreId) return;
 
     try {
       const productPayload = {
-        store_id: currentStoreId,
+        store_id: selectedStoreId,
         name: formData.name,
         description: formData.description,
         short_description: formData.short_description,
@@ -185,56 +190,22 @@ export default function ProductsPage() {
         has_variants: formData.has_variants
       };
 
-      let productId = editingProduct?.id;
-
       if (editingProduct) {
-        const { error } = await supabase
-          .from('products')
-          .update(productPayload)
-          .eq('id', editingProduct.id);
-        if (error) throw error;
+        await updateProductAction(editingProduct.id, productPayload);
       } else {
-        const { data, error } = await supabase
-          .from('products')
-          .insert([productPayload])
-          .select();
-        if (error) throw error;
-        productId = data[0].id;
+        await addProductAction(productPayload);
       }
 
-      // Handle variants if any
-      if (formData.has_variants && productVariants.length > 0 && productId) {
-        // Delete old variants if editing
-        if (editingProduct) {
-          await supabase.from('product_variants').delete().eq('product_id', productId);
-        }
-
-        const variantsToInsert = productVariants.map(v => ({
-          product_id: productId,
-          name: v.name,
-          sku: v.sku,
-          price: v.price,
-          stock: v.stock,
-          attributes: v.attributes,
-          is_active: true
-        }));
-
-        const { error: variantError } = await supabase
-          .from('product_variants')
-          .insert(variantsToInsert);
-        
-        if (variantError) throw variantError;
-      }
-
+      // Refresh list
+      const updatedProducts = await getStoreProductsAction(selectedStoreId);
+      setProducts(updatedProducts);
       setIsModalOpen(false);
-      fetchData();
     } catch (err) {
       console.error('Error saving product:', err);
     }
   };
 
   const openModal = async (product: any = null) => {
-    if (!supabase) return;
     if (product) {
       setEditingProduct(product);
       setFormData({
@@ -257,25 +228,8 @@ export default function ProductsPage() {
         has_variants: product.has_variants || false
       });
 
-      // Fetch variants if they exist
-      const { data: variantData } = await supabase
-        .from('product_variants')
-        .select('*')
-        .eq('product_id', product.id);
-      
-      if (variantData) {
-        setProductVariants(variantData);
-        // Tentar reconstruir attributes do primeiro item
-        if (variantData[0]?.attributes) {
-          const attrs: Record<string, string[]> = {};
-          variantData.forEach(v => {
-            Object.entries(v.attributes).forEach(([k, val]) => {
-              if (!attrs[k]) attrs[k] = [];
-              if (!attrs[k].includes(val as string)) attrs[k].push(val as string);
-            });
-          });
-          setVariantAttributes(attrs);
-        }
+      if (product.variants) {
+        setProductVariants(product.variants);
       }
     } else {
       setEditingProduct(null);
@@ -307,34 +261,35 @@ export default function ProductsPage() {
   };
 
   const handleDeleteProduct = async (id: string) => {
-    if (!confirm('Tem a certeza que deseja eliminar este produto?') || !supabase) return;
+    if (!confirm('Tem a certeza que deseja eliminar este produto?')) return;
     try {
-      const { error } = await supabase.from('products').delete().eq('id', id);
-      if (error) throw error;
-      fetchData();
+      await deleteProductAction(id);
+      setProducts(products.filter(p => p.id !== id));
     } catch (err) {
       console.error('Error deleting product:', err);
     }
   };
 
   const handleBulkAction = async (action: string, value?: any) => {
-    if (!supabase || selectedIds.length === 0) return;
+    if (selectedIds.length === 0) return;
     setBulkActionLoading(true);
     try {
-      if (action === 'delete') {
-        const { error } = await supabase.from('products').delete().in('id', selectedIds);
-        if (error) throw error;
-      } else {
-        const updates: Record<string, any> = {};
-        if (action === 'status') updates.is_active = value;
-        if (action === 'stock') updates.stock = value;
-        if (action === 'price') updates.price = value;
-        
-        const { error } = await supabase.from('products').update(updates).in('id', selectedIds);
-        if (error) throw error;
+      for (const id of selectedIds) {
+        if (action === 'delete') {
+          await deleteProductAction(id);
+        } else {
+          const updates: Record<string, any> = {};
+          if (action === 'status') updates.is_active = value;
+          if (action === 'stock') updates.stock = value;
+          if (action === 'price') updates.price = value;
+          await updateProductAction(id, updates);
+        }
+      }
+      if (selectedStoreId) {
+        const updatedProducts = await getStoreProductsAction(selectedStoreId);
+        setProducts(updatedProducts);
       }
       setSelectedIds([]);
-      fetchData();
     } catch (err) {
       console.error('Bulk action error:', err);
     } finally {
@@ -410,8 +365,9 @@ export default function ProductsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="flex flex-col items-center justify-center py-20 gap-4">
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+        <p className="text-text-secondary font-medium animate-pulse">A carregar os teus produtos...</p>
       </div>
     );
   }

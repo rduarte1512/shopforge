@@ -1,63 +1,37 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
-export function middleware(request: NextRequest) {
-  const url = request.nextUrl;
-  const hostname = request.headers.get('host') || '';
+const isPublicRoute = createRouteMatcher([
+  "/",
+  "/login(.*)",
+  "/register(.*)",
+  "/api/webhook(.*)",
+  "/s/(.*)", // Public store pages
+]);
 
-  // Define hostnames to exclude (main landing page, dashboard, etc.)
-  const mainHostnames = [
-    'localhost:3000',
-    'shopforge-saas.vercel.app',
-    'shopforge.vercel.app',
-    'shopforge-saas-phi.vercel.app',
-    'shopforge-saas-iota.vercel.app',
-  ];
+const isAuthRoute = createRouteMatcher([
+  "/login(.*)",
+  "/register(.*)",
+]);
 
-  // Also exclude paths that shouldn't be rewritten
-  const excludedPaths = ['/api', '/_next', '/favicon.ico', '/dashboard', '/login', '/register', '/s/', '/_static', '/_vercel'];
+export default clerkMiddleware(async (auth, request) => {
+  const { userId } = await auth();
 
-  const isExcludedPath = excludedPaths.some(p => url.pathname.startsWith(p));
-  if (isExcludedPath) return NextResponse.next();
-
-  // Check if it's a main host
-  // A host is main if it's in the list OR if it looks like a Vercel preview/branch URL for this project
-  const isMainHost = mainHostnames.some(h => hostname === h) || 
-                     (hostname.endsWith('.vercel.app') && 
-                      (hostname.includes('shopforge-saas') || hostname.includes('shopforge')) && 
-                      hostname.split('.').length === 3);
-
-  // If it's a subdomain or custom domain, and not the main host
-  if (!isMainHost) {
-    // Extract the subdomain (e.g., "minhaloja" from "minhaloja.shopforge.vercel.app")
-    const parts = hostname.split('.');
-    let domain = parts[0];
-    
-    // If it's a subdomain of our main domain (e.g. loja.shopforge-saas.vercel.app)
-    // the parts length will be 4.
-    if (parts.length > 3 && hostname.endsWith('.vercel.app')) {
-      domain = parts[0];
-    } else if (parts.length === 2) {
-      // custom-domain.com
-      domain = parts[0];
-    }
-
-    // Perform the rewrite to the store path
-    return NextResponse.rewrite(new URL(`/s/${domain}${url.pathname}`, request.url));
+  // If the user is signed in and trying to access an auth page, redirect them to dashboard
+  if (userId && isAuthRoute(request)) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  return NextResponse.next();
-}
+  if (!isPublicRoute(request)) {
+    await auth.protect();
+  }
+});
 
 export const config = {
   matcher: [
-    /*
-     * Match all paths except for:
-     * 1. /api routes
-     * 2. /_next (Next.js internals)
-     * 3. /_static (inside /public)
-     * 4. all root files inside /public (e.g. /favicon.ico)
-     */
-    '/((?!api|_next|_static|_vercel|[\\w-]+\\.\\w+).*)',
+    // Skip Next.js internals and all static files, unless found in search params
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!m)|jsx?|cfg|icon|zip|webp|mul|png|jpg|jpeg|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|rar|7z)).*)',
+    // Always run for API routes
+    '/(api|trpc)(.*)',
   ],
 };

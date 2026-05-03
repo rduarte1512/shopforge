@@ -1,9 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { useMockDB, Order } from '@/lib/store';
+import { useMockDB, Order as MockOrder } from '@/lib/store';
 import { DateRange } from '@/components/dashboard/DateRangeFilter';
 import { subDays, startOfDay, endOfDay } from 'date-fns';
+import { getStoreProductsAction, getMyStoresAction, getStoreOrdersAction } from '@/lib/actions';
 
 interface ReportMetrics {
   totalRevenue: number;
@@ -119,7 +119,6 @@ export function useReportsData(dateRange?: DateRange) {
 
         filteredOrders.forEach((order) => {
           const orderDate = new Date(order.createdAt);
-          // Use YYYY-MM-DD in local time to match our 'dates' array
           const dateStr = orderDate.toLocaleDateString('en-CA');
           
           if (salesByDate[dateStr]) {
@@ -200,59 +199,31 @@ export function useReportsData(dateRange?: DateRange) {
         dayNames.push(days[date.getDay()]);
       }
 
-      if (supabase && isSupabaseConfigured) {
-        try {
-          let storeId = selectedStoreId;
-          if (!storeId) {
-            const { data: stores } = await supabase.from('stores').select('id').limit(1);
-            if (stores && stores.length > 0) storeId = stores[0].id;
-          }
-
-          if (!storeId) {
-            setLoading(false);
-            return;
-          }
-
-          const { data: orders, error: ordersError } = await supabase
-            .from('orders')
-            .select('*, items:order_items(*)')
-            .eq('store_id', storeId)
-            .gte('created_at', startDate.toISOString())
-            .lte('created_at', endDate.toISOString());
-          
-          if (ordersError) throw ordersError;
-
-          const { data: products, error: productsError } = await supabase
-            .from('products')
-            .select('*')
-            .eq('store_id', storeId);
-
-          if (productsError) throw productsError;
-
-          const result = processOrders(orders || [], products || [], startDate, endDate, dates, dayNames);
-          setMetrics(result.metrics);
-          setSalesData(result.salesData);
-          setCategoryData(result.categoryData);
-          setTopProducts(result.topProducts);
-
-        } catch (err: any) {
-          console.error('Error fetching reports data:', err);
-          setError(err.message);
-        } finally {
-          setLoading(false);
+      try {
+        let storeId = selectedStoreId;
+        if (!storeId) {
+          const stores = await getMyStoresAction();
+          if (stores && stores.length > 0) storeId = stores[0].id;
         }
-      } else {
-        const { orders, products } = useMockDB.getState();
-        const storeId = selectedStoreId || '1';
-        
-        const storeOrders = orders.filter((o: Order) => o.storeId === storeId);
-        const storeProducts = products.filter((p: any) => p.storeId === storeId);
-        
-        const result = processOrders(storeOrders, storeProducts, startDate, endDate, dates, dayNames);
+
+        if (!storeId) {
+          setLoading(false);
+          return;
+        }
+
+        const orders = await getStoreOrdersAction(storeId, startDate.toISOString(), endDate.toISOString());
+        const products = await getStoreProductsAction(storeId);
+
+        const result = processOrders(orders || [], products || [], startDate, endDate, dates, dayNames);
         setMetrics(result.metrics);
         setSalesData(result.salesData);
         setCategoryData(result.categoryData);
         setTopProducts(result.topProducts);
+
+      } catch (err: any) {
+        console.error('Error fetching reports data:', err);
+        setError(err.message);
+      } finally {
         setLoading(false);
       }
     }

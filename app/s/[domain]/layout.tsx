@@ -1,6 +1,6 @@
 'use client';
 
-import { supabase } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { notFound, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ShoppingCart, Loader2 } from 'lucide-react';
@@ -18,11 +18,6 @@ function StoreLayoutInner({ children, store }: { children: ReactNode, store: any
     if (ref) {
       setRefCode(ref);
       sessionStorage.setItem('affiliate_ref', ref);
-      fetch('/api/affiliates/track', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: ref, storeId: store.id }),
-      }).catch(console.error);
       
       const url = new URL(window.location.href);
       url.searchParams.delete('ref');
@@ -77,33 +72,25 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
   
   useEffect(() => {
     async function fetchStore() {
-      if (!params.domain) return;
+      if (!params.domain || !isSupabaseConfigured) {
+        setLoading(false);
+        return;
+      }
       
       try {
-        console.log('Tentando procurar loja com domínio:', params.domain);
-        
-        if (!supabase) {
-          console.error('Supabase client is NULL. Verifica as variáveis de ambiente.');
-          setLoading(false);
-          return;
-        }
-
-        const { data, error } = await supabase
+        const { data, error } = await supabase!
           .from('stores')
           .select('*')
           .eq('domain', params.domain)
           .single();
         
-        if (error) {
-          console.error('Erro detalhado do Supabase:', JSON.stringify(error, null, 2));
-          console.error('Mensagem de erro:', error.message);
-          setStore(null);
-        } else {
-          console.log('Loja encontrada:', data.name);
+        if (data) {
           setStore(data);
+        } else {
+          setStore(null);
         }
       } catch (err: any) {
-        console.error('Erro inesperado na execução:', err?.message || err);
+        console.error('Error fetching store:', err?.message || err);
       } finally {
         setLoading(false);
       }
@@ -132,3 +119,4 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
     </CartProvider>
   );
 }
+

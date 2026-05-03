@@ -1,6 +1,7 @@
 "use client";
 
 import Link from 'next/link';
+import { useAuth } from '@clerk/nextjs';
 import { 
   ShoppingBag, 
   ArrowRight, 
@@ -16,6 +17,8 @@ import { motion } from "motion/react";
 import { FeatureCard, PricingCard, HeroMockup } from '@/components/landing/LandingComponents';
 
 export default function Home() {
+  const { isSignedIn } = useAuth();
+
   return (
     <div className="min-h-screen bg-white text-slate-900 selection:bg-primary/20">
       {/* Navbar */}
@@ -35,12 +38,20 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-4">
-            <Link href="/login" className="px-5 py-2.5 text-sm font-semibold hover:bg-primary/5 rounded-xl transition-all text-primary">
-              Entrar
-            </Link>
-            <Link href="/register" className="px-5 py-2.5 text-sm font-semibold bg-primary text-white rounded-xl hover:bg-primary-dark transition-all shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98]">
-              Começar Grátis
-            </Link>
+            {isSignedIn ? (
+              <Link href="/dashboard" className="px-5 py-2.5 text-sm font-semibold bg-primary text-white rounded-xl hover:bg-primary-dark transition-all shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98]">
+                Ir para o Painel
+              </Link>
+            ) : (
+              <>
+                <Link href="/login" className="px-5 py-2.5 text-sm font-semibold hover:bg-primary/5 rounded-xl transition-all text-primary">
+                  Entrar
+                </Link>
+                <Link href="/register" className="px-5 py-2.5 text-sm font-semibold bg-primary text-white rounded-xl hover:bg-primary-dark transition-all shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98]">
+                  Começar Grátis
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </nav>
@@ -67,14 +78,16 @@ export default function Home() {
             </p>
             <div className="flex flex-col sm:flex-row items-center gap-4">
               <Link 
-                href="/register" 
+                href={isSignedIn ? "/dashboard" : "/register"} 
                 className="w-full sm:w-auto px-8 py-5 bg-primary text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-primary-dark transition-all group shadow-xl shadow-primary/20"
               >
-                Criar Minha Loja <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                {isSignedIn ? "Ver o meu Painel" : "Criar Minha Loja"} <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
-              <p className="text-sm text-gray-400">
-                Teste gratuito de 14 dias • Sem cartão
-              </p>
+              {!isSignedIn && (
+                <p className="text-sm text-gray-400">
+                  Teste gratuito de 14 dias • Sem cartão
+                </p>
+              )}
             </div>
           </motion.div>
 
@@ -244,18 +257,29 @@ export default function Home() {
             <p className="text-xl opacity-90 mb-12 max-w-2xl mx-auto relative z-10">Junte-se a milhares de empreendedores que já estão a vender com a ShopForge.</p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-6 relative z-10">
-              <Link 
-                href="/register" 
-                className="w-full sm:w-auto px-10 py-6 bg-white text-primary rounded-2xl font-bold text-lg hover:bg-gray-50 transition-all shadow-xl"
-              >
-                Criar Conta Grátis
-              </Link>
-              <Link 
-                href="/login" 
-                className="w-full sm:w-auto px-10 py-6 bg-white/10 text-white border border-white/20 rounded-2xl font-bold text-lg hover:bg-white/20 transition-all"
-              >
-                Ver Demonstração
-              </Link>
+              {isSignedIn ? (
+                <Link 
+                  href="/dashboard" 
+                  className="w-full sm:w-auto px-10 py-6 bg-white text-primary rounded-2xl font-bold text-lg hover:bg-gray-50 transition-all shadow-xl"
+                >
+                  Ir para o Painel
+                </Link>
+              ) : (
+                <>
+                  <Link 
+                    href="/register" 
+                    className="w-full sm:w-auto px-10 py-6 bg-white text-primary rounded-2xl font-bold text-lg hover:bg-gray-50 transition-all shadow-xl"
+                  >
+                    Criar Conta Grátis
+                  </Link>
+                  <Link 
+                    href="/login" 
+                    className="w-full sm:w-auto px-10 py-6 bg-white/10 text-white border border-white/20 rounded-2xl font-bold text-lg hover:bg-white/20 transition-all"
+                  >
+                    Fazer Login
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </section>

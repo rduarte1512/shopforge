@@ -20,42 +20,65 @@ export default function StorefrontHomePage() {
   const { addItem } = useCart();
   const { formatPrice, currency, setCurrency, availableCurrencies } = useCurrency();
   const { productIds: comparisonIds, addProduct, removeProduct, isInComparison, clearComparison } = useComparisonStore();
+  const fetchedRef = useRef(false);
   
   useEffect(() => {
     async function fetchData() {
-      if (!isSupabaseConfigured) {
-        setLoading(false);
+      if (!params.domain || !isSupabaseConfigured || fetchedRef.current) {
         return;
       }
-      if (!params.domain || !supabase) return;
       
+      // Try to get from cache first for preview stability
+      const cacheKey = `store_data_${params.domain}`;
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        try {
+          const { store: s, products: p, promotions: pr } = JSON.parse(cached);
+          setStore(s);
+          setProducts(p);
+          setPromotions(pr);
+          setLoading(false);
+          fetchedRef.current = true;
+          return;
+        } catch (e) {
+          sessionStorage.removeItem(cacheKey);
+        }
+      }
+
       try {
-        const { data: storeData, error: storeError } = await supabase
+        fetchedRef.current = true;
+        const { data: storeData, error: storeError } = await supabase!
           .from('stores')
           .select('*')
           .eq('domain', params.domain)
           .single();
         
-        if (storeError) throw storeError;
+        if (storeError || !storeData) {
+          setLoading(false);
+          return;
+        }
+
         setStore(storeData);
 
-        const { data: productsData, error: productsError } = await supabase
-          .from('products')
-          .select('*')
-          .eq('store_id', storeData.id)
-          .limit(20);
-        
-        if (productsError) throw productsError;
-        setProducts(productsData || []);
+        // Parallel fetch with limit to avoid DB stress
+        const [productsRes, promosRes] = await Promise.all([
+          supabase!.from('products').select('*').eq('store_id', storeData.id).eq('is_active', true).limit(12),
+          supabase!.from('promotions').select('*').eq('store_id', storeData.id).eq('active', true).limit(5)
+        ]);
 
-        const { data: promotionsData } = await supabase
-          .from('promotions')
-          .select('*')
-          .eq('store_id', storeData.id)
-          .eq('active', true)
-          .limit(10);
-        
-        setPromotions(promotionsData || []);
+        const pData = productsRes.data || [];
+        const prData = promosRes.data || [];
+
+        setProducts(pData);
+        setPromotions(prData);
+
+        // Save to cache
+        sessionStorage.setItem(cacheKey, JSON.stringify({ 
+          store: storeData, 
+          products: pData, 
+          promotions: prData 
+        }));
+
       } catch (err) {
         console.error('Error fetching data:', err);
       } finally {
@@ -63,28 +86,10 @@ export default function StorefrontHomePage() {
       }
     }
     
-    fetchData();
-  }, [params.domain]);
-
-  if (!isSupabaseConfigured) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mb-6">
-          <AlertCircle className="w-10 h-10 text-amber-500" />
-        </div>
-        <h1 className="text-2xl font-bold mb-2">Configuração Incompleta</h1>
-        <p className="text-gray-500 max-w-md mb-8">
-          As variáveis de ambiente do Supabase não foram configuradas na Vercel. Adicione `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` nas definições do projeto na Vercel.
-        </p>
-        <Link 
-          href="/"
-          className="bg-black text-white px-8 py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors"
-        >
-          Ir para a Página Inicial
-        </Link>
-      </div>
-    );
-  }
+    // Slight delay to prevent rapid fire
+    const timer = setTimeout(fetchData, 100);
+    return () => clearTimeout(timer);
+  }, [params.domain]); // Only depend on the domain change
 
   if (!store && !loading) {
     return (
@@ -119,17 +124,20 @@ export default function StorefrontHomePage() {
   const storeProducts = products;
   const comparedProducts = products.filter(p => comparisonIds.includes(p.id));
 
-  const customization = store.customization || {
-    header: { sticky: true, logoPosition: 'left', height: 70 },
-    hero: { height: 400, textAlign: 'center', showOverlay: true, overlayOpacity: 0.1, title: store.name, subtitle: store.description },
-    products: { columns: 4, gap: 30, aspectRatio: 'portrait', showPrice: true, showStock: true },
-    colors: { background: '#ffffff', text: '#000000', accent: store.primary_color, muted: '#9ca3af', primary: store.primary_color },
-    fonts: { heading: 'Inter', body: 'Inter' },
-    sections: [
-      { id: 'hero-1', type: 'hero', content: { title: store.name, subtitle: store.description, buttonText: 'Ver Coleção' }, styles: { height: 400, textAlign: 'center' } },
-      { id: 'products-1', type: 'products', content: { title: 'Produtos em Destaque' }, styles: { columns: 4 } }
-    ]
+  const customization = store.customization || {};
+  const colors = customization.colors || { 
+    background: '#ffffff', 
+    text: '#000000', 
+    accent: store.primary_color || '#008060', 
+    muted: '#9ca3af', 
+    primary: store.primary_color || '#008060' 
   };
+  const fonts = customization.fonts || { heading: 'Inter', body: 'Inter' };
+  const header = customization.header || { sticky: true, logoPosition: 'left', height: 70 };
+  const sections = customization.sections || [
+    { id: 'hero-1', type: 'hero', content: { title: store.name, subtitle: store.description, buttonText: 'Ver Coleção' }, styles: { height: 400, textAlign: 'center' } },
+    { id: 'products-1', type: 'products', content: { title: 'Produtos em Destaque' }, styles: { columns: 4 } }
+  ];
 
   const handleButtonAction = (action: string, url: string) => {
     if (action === 'link') {
@@ -143,12 +151,8 @@ export default function StorefrontHomePage() {
   };
 
   const handlePromoClick = async (promoId: string) => {
-    if (!supabase) return;
     try {
-      const { data } = await supabase.from('promotions').select('click_count').eq('id', promoId).single();
-      if (data) {
-        await supabase.from('promotions').update({ click_count: (data.click_count || 0) + 1 }).eq('id', promoId);
-      }
+      await supabase!.rpc('increment_promo_clicks', { promo_id: promoId });
     } catch (err) {
       console.log('Click tracking not available');
     }
@@ -157,11 +161,11 @@ export default function StorefrontHomePage() {
   const bannerPromos = promotions.filter(p => p.position === 'banner');
 
   return (
-    <div className="min-h-screen pb-20" style={{ backgroundColor: customization.colors.background, color: customization.colors.text, fontFamily: customization.fonts.body }}>
+    <div className="min-h-screen pb-20" style={{ backgroundColor: colors.background, color: colors.text, fontFamily: fonts.body }}>
       {/* Header */}
-      <header className={`${customization.header.sticky ? 'fixed top-0' : 'relative'} left-0 right-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 py-4 transition-all`} style={{ height: `${customization.header.height}px`, display: 'flex', alignItems: 'center' }}>
+      <header className={`${header.sticky ? 'fixed top-0' : 'relative'} left-0 right-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 py-4 transition-all`} style={{ height: `${header.height}px`, display: 'flex', alignItems: 'center' }}>
         <div className="max-w-7xl mx-auto w-full flex justify-between items-center">
-          <div className={`flex items-center gap-8 ${customization.header.logoPosition === 'center' ? 'flex-1 justify-center' : ''}`}>
+          <div className={`flex items-center gap-8 ${header.logoPosition === 'center' ? 'flex-1 justify-center' : ''}`}>
             <Link href={`/s/${store.domain}`} className="text-xl font-bold tracking-tight">
               {store.name}
             </Link>
@@ -184,8 +188,8 @@ export default function StorefrontHomePage() {
       </header>
 
       {/* Dynamic Sections */}
-      <main className={`${customization.header.sticky ? 'pt-[70px]' : ''}`}>
-        {customization.sections.map((section: any) => {
+      <main className={`${header.sticky ? 'pt-[70px]' : ''}`}>
+        {sections.map((section: any) => {
           if (section.type === 'hero') {
             const activePromo = promotions.length > 0 ? promotions[0] : null;
             return (
@@ -193,9 +197,9 @@ export default function StorefrontHomePage() {
                 key={section.id}
                 className="py-24 px-6 flex flex-col justify-center transition-all relative overflow-hidden" 
                 style={{ 
-                  minHeight: `${section.styles.height || 400}px`,
-                  backgroundColor: activePromo ? '#000000' : `${customization.colors.accent}08`,
-                  textAlign: section.styles.textAlign as any
+                  minHeight: `${section.styles?.height || 400}px`,
+                  backgroundColor: activePromo ? '#000000' : `${colors.accent}08`,
+                  textAlign: (section.styles?.textAlign as any) || 'center'
                 }}
               >
                 {activePromo && activePromo.image_url && (
@@ -216,7 +220,7 @@ export default function StorefrontHomePage() {
                       <p className="text-sm font-bold text-white/60 tracking-widest mb-4 uppercase">Promoção</p>
                       <h1 className="text-6xl font-black mb-6 tracking-tight text-white">{activePromo.title}</h1>
                       {activePromo.subtitle && (
-                        <p className="text-xl opacity-80 font-medium mb-10 max-w-2xl text-white/90" style={{ marginInline: section.styles.textAlign === 'center' ? 'auto' : '0' }}>{activePromo.subtitle}</p>
+                        <p className="text-xl opacity-80 font-medium mb-10 max-w-2xl text-white/90" style={{ marginInline: section.styles?.textAlign === 'center' ? 'auto' : '0' }}>{activePromo.subtitle}</p>
                       )}
                       {activePromo.description && (
                         <p className="text-lg opacity-70 mb-8 max-w-xl text-white/70">{activePromo.description}</p>
@@ -232,12 +236,12 @@ export default function StorefrontHomePage() {
                     </>
                   ) : (
                     <>
-                      <h1 className="text-6xl font-black mb-6 tracking-tight" style={{ color: customization.colors.accent }}>{section.content.title}</h1>
-                      <p className="text-xl opacity-60 font-medium mb-10 max-w-2xl mx-auto" style={{ marginInline: section.styles.textAlign === 'center' ? 'auto' : '0' }}>{section.content.subtitle}</p>
-                      {section.content.buttonText && (
+                      <h1 className="text-6xl font-black mb-6 tracking-tight" style={{ color: colors.accent }}>{section.content?.title}</h1>
+                      <p className="text-xl opacity-60 font-medium mb-10 max-w-2xl mx-auto" style={{ marginInline: section.styles?.textAlign === 'center' ? 'auto' : '0' }}>{section.content?.subtitle}</p>
+                      {section.content?.buttonText && (
                         <button 
                           className="px-10 py-4 rounded-2xl font-black text-lg text-white transition-all shadow-2xl hover:scale-105 active:scale-95" 
-                          style={{ backgroundColor: customization.colors.accent }}
+                          style={{ backgroundColor: colors.accent }}
                         >
                           {section.content.buttonText}
                         </button>
@@ -254,7 +258,7 @@ export default function StorefrontHomePage() {
               <section key={section.id} className="max-w-7xl mx-auto px-6 py-24">
                  <div className="flex justify-between items-end mb-12">
                    <div>
-                     <h2 className="text-3xl font-bold tracking-tight">{section.content.title}</h2>
+                     <h2 className="text-3xl font-bold tracking-tight">{section.content?.title || 'Produtos'}</h2>
                    </div>
                  </div>
 
@@ -266,7 +270,7 @@ export default function StorefrontHomePage() {
                    <div 
                      className="grid gap-10"
                      style={{ 
-                       gridTemplateColumns: `repeat(${section.styles.columns || customization.products.columns}, minmax(0, 1fr))` 
+                       gridTemplateColumns: `repeat(${section.styles?.columns || 4}, minmax(0, 1fr))` 
                      }}
                    >
                       {storeProducts.map(product => (
@@ -322,9 +326,9 @@ export default function StorefrontHomePage() {
 
           if (section.type === 'text') {
             return (
-              <section key={section.id} className="max-w-7xl mx-auto px-6 py-16" style={{ textAlign: section.styles.textAlign as any }}>
+              <section key={section.id} className="max-w-7xl mx-auto px-6 py-16" style={{ textAlign: (section.styles?.textAlign as any) || 'left' }}>
                 <div className="max-w-3xl mx-auto">
-                  <p className="text-xl leading-relaxed whitespace-pre-wrap opacity-80">{section.content.text}</p>
+                  <p className="text-xl leading-relaxed whitespace-pre-wrap opacity-80">{section.content?.text}</p>
                 </div>
               </section>
             );
@@ -332,16 +336,16 @@ export default function StorefrontHomePage() {
 
           if (section.type === 'button') {
             return (
-              <section key={section.id} className="max-w-7xl mx-auto px-6 py-8" style={{ textAlign: section.styles.textAlign as any }}>
+              <section key={section.id} className="max-w-7xl mx-auto px-6 py-8" style={{ textAlign: (section.styles?.textAlign as any) || 'center' }}>
                 <button 
-                  onClick={() => handleButtonAction(section.content.action, section.content.url)}
+                  onClick={() => handleButtonAction(section.content?.action, section.content?.url)}
                   className="px-10 py-5 rounded-2xl font-black text-lg text-white transition-all shadow-2xl hover:scale-105 active:scale-95 flex items-center gap-3 inline-flex" 
-                  style={{ backgroundColor: customization.colors.accent }}
+                  style={{ backgroundColor: colors.accent }}
                 >
-                  {section.content.text}
-                  {section.content.action === 'whatsapp' && <Phone className="w-5 h-5" />}
-                  {section.content.action === 'link' && <ExternalLink className="w-5 h-5" />}
-                  {section.content.action === 'checkout' && <ShoppingCart className="w-5 h-5" />}
+                  {section.content?.text}
+                  {section.content?.action === 'whatsapp' && <Phone className="w-5 h-5" />}
+                  {section.content?.action === 'link' && <ExternalLink className="w-5 h-5" />}
+                  {section.content?.action === 'checkout' && <ShoppingCart className="w-5 h-5" />}
                 </button>
               </section>
             );
@@ -351,14 +355,14 @@ export default function StorefrontHomePage() {
             return (
               <section key={section.id} className="max-w-7xl mx-auto px-6 py-12">
                 <div className="rounded-[40px] overflow-hidden shadow-2xl border border-gray-100 group">
-                  <img src={section.content.url} alt={section.content.alt} className="w-full h-auto group-hover:scale-105 transition-transform duration-1000" />
+                  <img src={section.content?.url} alt={section.content?.alt} className="w-full h-auto group-hover:scale-105 transition-transform duration-1000" />
                 </div>
               </section>
             );
           }
 
           if (section.type === 'spacer') {
-            return <div key={section.id} style={{ height: `${section.styles.height || 40}px` }} />;
+            return <div key={section.id} style={{ height: `${section.styles?.height || 40}px` }} />;
           }
 
           return null;
@@ -445,3 +449,4 @@ export default function StorefrontHomePage() {
     </div>
   );
 }
+
