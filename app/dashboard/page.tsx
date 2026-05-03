@@ -5,6 +5,7 @@ import {
   getStoreProductsAction, 
   getStoreOrdersAction 
 } from '@/lib/actions';
+import { getSelectedStoreId } from '@/lib/dashboard-actions';
 import DashboardClient from './DashboardClient';
 import { redirect } from 'next/navigation';
 
@@ -17,27 +18,25 @@ export default async function DashboardOverview() {
   }
 
   // Fetch initial data in parallel on the server
-  // 1. Sync user and 2. Get stores
-  const [_, stores] = await Promise.all([
+  const [_, stores, cookieStoreId] = await Promise.all([
     syncUserAction(),
-    getMyStoresAction()
+    getMyStoresAction(),
+    getSelectedStoreId()
   ]);
 
   let products: any[] = [];
   let orders: any[] = [];
-  let selectedStoreId: string | null = null;
+  let selectedStoreId: string | null = cookieStoreId;
 
   if (stores.length > 0) {
-    // In a server component, we can't access localStorage.
-    // The client will handle the stored selection if needed, but for the initial paint
-    // we use the first store.
-    const firstStoreId = stores[0].id;
-    selectedStoreId = firstStoreId;
+    // Determine which store to load data for
+    const activeStoreId = stores.find(s => s.id === selectedStoreId)?.id || stores[0].id;
+    selectedStoreId = activeStoreId;
 
     // Fetch store specific data in parallel
     const [storeProducts, storeOrders] = await Promise.all([
-      getStoreProductsAction(firstStoreId),
-      getStoreOrdersAction(firstStoreId)
+      getStoreProductsAction(activeStoreId),
+      getStoreOrdersAction(activeStoreId)
     ]);
     
     products = storeProducts;

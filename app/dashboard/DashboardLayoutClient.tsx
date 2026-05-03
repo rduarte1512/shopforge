@@ -52,6 +52,8 @@ const navigation = [
   { name: 'Configurações', href: '/dashboard/settings', icon: Settings },
 ];
 
+import { setSelectedStoreCookie } from '@/lib/dashboard-actions';
+
 interface DashboardLayoutClientProps {
   children: React.ReactNode;
   user: any;
@@ -69,13 +71,30 @@ export default function DashboardLayoutClient({ children, user, initialStores }:
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    const storedId = localStorage.getItem('selectedStoreId');
-    if (storedId && stores.some((s: any) => s.id === storedId)) {
-      setSelectedStoreId(storedId);
-    } else if (stores.length > 0) {
-      setSelectedStoreId(stores[0].id);
-    }
+    const syncStore = async () => {
+      const storedId = localStorage.getItem('selectedStoreId');
+      if (storedId && stores.some((s: any) => s.id === storedId)) {
+        setSelectedStoreId(storedId);
+        await setSelectedStoreCookie(storedId);
+      } else if (stores.length > 0) {
+        setSelectedStoreId(stores[0].id);
+        localStorage.setItem('selectedStoreId', stores[0].id);
+        await setSelectedStoreCookie(stores[0].id);
+      }
+    };
+    
+    syncStore();
   }, [stores]);
+
+  const handleStoreChange = async (storeId: string) => {
+    setSelectedStoreId(storeId);
+    localStorage.setItem('selectedStoreId', storeId);
+    await setSelectedStoreCookie(storeId);
+    setStoreDropdownOpen(false);
+    
+    // Refresh the current route to fetch new data on the server
+    router.refresh();
+  };
 
   const currentStore = selectedStoreId ? stores.find(s => s.id === selectedStoreId) || stores[0] : stores[0];
   const subscriptionTier = (user.publicMetadata?.subscriptionTier as string) || 'STARTER';
@@ -125,12 +144,7 @@ export default function DashboardLayoutClient({ children, user, initialStores }:
                 {stores.map(store => (
                   <button
                     key={store.id}
-                    onClick={() => {
-                      setSelectedStoreId(store.id);
-                      localStorage.setItem('selectedStoreId', store.id);
-                      setStoreDropdownOpen(false);
-                      if (pathname !== '/dashboard') router.push('/dashboard');
-                    }}
+                    onClick={() => handleStoreChange(store.id)}
                     className={`flex items-center justify-between w-full px-4 py-2.5 text-[13px] transition-all ${
                       currentStore?.id === store.id 
                         ? 'bg-primary text-white font-bold' 

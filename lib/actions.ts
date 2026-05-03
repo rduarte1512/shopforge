@@ -1,5 +1,6 @@
 'use server';
 
+import { cache } from 'react';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { 
   createProfile, 
@@ -16,7 +17,7 @@ import {
 import { revalidatePath } from 'next/cache';
 
 // PROFILE ACTIONS
-export async function syncUserAction() {
+export const syncUserAction = cache(async () => {
   const user = await currentUser();
   if (!user) return null;
 
@@ -30,10 +31,10 @@ export async function syncUserAction() {
     console.error('Error syncing user:', error);
     return null;
   }
-}
+});
 
 // STORE ACTIONS
-export async function getMyStoresAction() {
+export const getMyStoresAction = cache(async () => {
   const { userId } = await auth();
   if (!userId) return [];
   try {
@@ -42,7 +43,7 @@ export async function getMyStoresAction() {
     console.error('Error getting stores:', error);
     return [];
   }
-}
+});
 
 export async function createStoreAction(formData: any) {
   const { userId } = await auth();
@@ -543,11 +544,9 @@ export async function getStorefrontProductsBulkAction(productIds: string[]) {
     const { sql } = await import('@vercel/postgres');
     if (productIds.length === 0) return [];
     
-    const rows: any[] = [];
-    for (const id of productIds) {
-      const result = await sql`SELECT * FROM products WHERE id = ${id}`;
-      if (result.rows[0]) rows.push(result.rows[0]);
-    }
+    const placeholders = productIds.map((_, i) => `$${i + 1}`).join(', ');
+    const query = `SELECT * FROM products WHERE id IN (${placeholders})`;
+    const { rows } = await sql.query(query, productIds);
     return rows;
   } catch (error) {
     console.error('Error getting storefront products bulk:', error);
