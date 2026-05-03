@@ -1,8 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { useMockDB } from '@/lib/store';
+import { 
+  getAffiliateLinksAction, 
+  createAffiliateLinkAction, 
+  deleteAffiliateLinkAction, 
+  toggleAffiliateLinkAction, 
+  getAffiliateCommissionsAction,
+  getMyStoresAction
+} from '@/lib/actions';
 import { useAuth } from '@/lib/auth-context';
 import { 
   Link as LinkIcon, 
@@ -70,18 +76,12 @@ export default function AffiliatesPage() {
 
   useEffect(() => {
     async function fetchStores() {
-      if (!user || !supabase) return;
+      if (!user) return;
       
-      const { data, error } = await supabase
-        .from('stores')
-        .select('*')
-        .eq('user_id', user.id);
-      
-      if (!error && data) {
-        setStores(data);
-        if (data.length > 0 && !selectedStoreId) {
-          setSelectedStoreId(data[0].id);
-        }
+      const data = await getMyStoresAction();
+      setStores(data);
+      if (data.length > 0 && !selectedStoreId) {
+        setSelectedStoreId(data[0].id);
       }
       setStoresLoading(false);
     }
@@ -90,29 +90,22 @@ export default function AffiliatesPage() {
   }, [user]);
 
   useEffect(() => {
-    if (selectedStoreId && isSupabaseConfigured) {
+    if (selectedStoreId) {
       fetchLinks();
     }
   }, [selectedStoreId]);
 
   const fetchLinks = async () => {
-    if (!supabase || !selectedStoreId) return;
+    if (!selectedStoreId) return;
     
     setLoading(true);
-    const { data, error } = await supabase
-      .from('affiliate_links')
-      .select('*')
-      .eq('store_id', selectedStoreId)
-      .order('created_at', { ascending: false });
-
-    if (!error && data) {
-      setLinks(data);
-    }
+    const data = await getAffiliateLinksAction(selectedStoreId) as AffiliateLink[];
+    setLinks(data);
     setLoading(false);
   };
 
   const createLink = async () => {
-    if (!supabase || !selectedStoreId || !newLinkName.trim()) return;
+    if (!selectedStoreId || !newLinkName.trim()) return;
 
     setCreating(true);
     
@@ -123,23 +116,23 @@ export default function AffiliatesPage() {
       code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
 
-    const { data, error } = await supabase
-      .from('affiliate_links')
-      .insert({
+    try {
+      const data = await createAffiliateLinkAction({
         store_id: selectedStoreId,
         name: newLinkName.trim(),
         percentage: newLinkPercentage,
         code: code,
         active: true,
-      })
-      .select()
-      .single();
+      });
 
-    if (!error && data) {
-      setLinks([data, ...links]);
-      setShowModal(false);
-      setNewLinkName('');
-      setNewLinkPercentage(10);
+      if (data) {
+        setLinks([data as AffiliateLink, ...links]);
+        setShowModal(false);
+        setNewLinkName('');
+        setNewLinkPercentage(10);
+      }
+    } catch (err) {
+      console.error('Error creating link:', err);
     }
     setCreating(false);
   };
@@ -153,54 +146,29 @@ export default function AffiliatesPage() {
   };
 
   const deleteLink = async (id: string) => {
-    if (!supabase || !confirm('Tens a certeza que queres eliminar este link?')) return;
+    if (!confirm('Tens a certeza que queres eliminar este link?')) return;
 
-    const { error } = await supabase
-      .from('affiliate_links')
-      .delete()
-      .eq('id', id);
-
-    if (!error) {
+    try {
+      await deleteAffiliateLinkAction(id);
       setLinks(links.filter(l => l.id !== id));
+    } catch (err) {
+      console.error('Error deleting link:', err);
     }
   };
 
   const toggleActive = async (link: AffiliateLink) => {
-    if (!supabase) return;
-
-    await supabase
-      .from('affiliate_links')
-      .update({ active: !link.active })
-      .eq('id', link.id);
-
-    setLinks(links.map(l => l.id === link.id ? { ...l, active: !l.active } : l));
+    try {
+      await toggleAffiliateLinkAction(link.id, !link.active);
+      setLinks(links.map(l => l.id === link.id ? { ...l, active: !l.active } : l));
+    } catch (err) {
+      console.error('Error toggling link:', err);
+    }
   };
 
   const fetchCommissions = async (linkId: string) => {
-    if (!supabase) return;
-    
     setLoadingCommissions(true);
-    const { data, error } = await supabase
-      .from('affiliate_commissions')
-      .select(`
-        id,
-        affiliate_link_id,
-        order_id,
-        amount,
-        percentage_used,
-        status,
-        created_at,
-        orders (
-          customer_name,
-          total
-        )
-      `)
-      .eq('affiliate_link_id', linkId)
-      .order('created_at', { ascending: false });
-
-    if (!error && data) {
-      setCommissions(data);
-    }
+    const data = await getAffiliateCommissionsAction(linkId);
+    setCommissions(data as Commission[]);
     setLoadingCommissions(false);
   };
 

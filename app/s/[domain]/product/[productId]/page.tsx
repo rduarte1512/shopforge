@@ -1,6 +1,6 @@
 'use client';
 
-import { supabase } from '@/lib/supabase';
+import { getStorefrontDataAction, getStorefrontProductAction } from '@/lib/actions';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import { useCart } from '@/components/CartProvider';
@@ -23,45 +23,27 @@ export default function ProductPage() {
   
   useEffect(() => {
     async function fetchData() {
-      if (!params.domain || !params.productId || !supabase) return;
+      if (!params.domain || !params.productId) return;
 
       try {
-        const { data: storeData, error: storeError } = await supabase          .from('stores')
-          .select('*')
-          .eq('domain', params.domain)
-          .single();
-        
-        if (storeError) throw storeError;
-        setStore(storeData);
+        const storefrontData = await getStorefrontDataAction(params.domain);
+        if (!storefrontData) throw new Error('Store not found');
+        setStore(storefrontData.store);
 
-        const { data: productData, error: productError } = await supabase
-          .from('products')
-          .select('*')
-          .eq('id', params.productId)
-          .eq('store_id', storeData.id)
-          .single();
+        const productData = await getStorefrontProductAction(params.productId);
         
-        if (productError) {
-           console.error('Product not found or error:', productError);
+        if (!productData || productData.store_id !== storefrontData.store.id) {
            setProduct(null);
         } else {
            setProduct(productData);
            setActiveImage(productData.image_url);
            
-           if (productData.has_variants) {
-             const { data: variantsData } = await supabase
-               .from('product_variants')
-               .select('*')
-               .eq('product_id', params.productId)
-               .eq('is_active', true);
-             
-             if (variantsData && variantsData.length > 0) {
-               setVariants(variantsData);
-               setSelectedVariant(variantsData[0]);
-               setSelectedAttributes(variantsData[0].attributes || {});
-               if (variantsData[0].image_url) {
-                 setActiveImage(variantsData[0].image_url);
-               }
+           if (productData.variants && productData.variants.length > 0) {
+             setVariants(productData.variants);
+             setSelectedVariant(productData.variants[0]);
+             setSelectedAttributes(productData.variants[0].attributes || {});
+             if (productData.variants[0].image_url) {
+               setActiveImage(productData.variants[0].image_url);
              }
            }
         }

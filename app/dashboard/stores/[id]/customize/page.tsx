@@ -1,8 +1,12 @@
 'use client';
 
-import { supabase } from '@/lib/supabase';
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
+import { 
+  getStoreProductsAction,
+  updateStoreCustomizationAction,
+  getMyStoresAction
+} from '@/lib/actions';
 import { 
   Sparkles, 
   Send, 
@@ -53,22 +57,16 @@ export default function StoreCustomizePage() {
 
   useEffect(() => {
     async function fetchData() {
-      if (!id || !supabase) return;
+      if (!id) return;
 
       try {
-        const { data: storeData, error: storeError } = await supabase          .from('stores')
-          .select('*')
-          .eq('id', id)
-          .single();
+        const stores = await getMyStoresAction();
+        const storeData = stores.find(s => s.id === id);
         
-        if (storeError) throw storeError;
+        if (!storeData) throw new Error('Store not found');
         setStore(storeData);
 
-        const { data: productsData } = await supabase
-          .from('products')
-          .select('*')
-          .eq('store_id', id);
-        
+        const productsData = await getStoreProductsAction(id);
         setStoreProducts(productsData || []);
 
         if (storeData) {
@@ -120,15 +118,9 @@ export default function StoreCustomizePage() {
   };
 
   const handleSave = async () => {
-    if (!supabase) return;
     setIsSaving(true);
     try {
-      const { error } = await supabase
-        .from('stores')
-        .update({ customization })
-        .eq('id', id);
-      
-      if (error) throw error;
+      await updateStoreCustomizationAction(id, customization);
     } catch (err) {
       console.error('Error saving customization:', err);
       alert('Erro ao guardar as alterações.');

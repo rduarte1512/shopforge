@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth, isSupabaseConfigured } from '@/lib/auth-context';
+import { useAuth } from '@/lib/auth-context';
 import { Loader2 } from 'lucide-react';
 
 export default function UpdatePasswordPage() {
@@ -28,25 +28,13 @@ export default function UpdatePasswordPage() {
       return;
     }
 
-    if (!isSupabaseConfigured) {
-      setError('Funcionalidade não disponível. Supabase não configurado.');
-      return;
-    }
-
     setLoading(true);
 
     try {
-      const { supabase } = await import('@/lib/supabase');
-      const { error } = await supabase!.auth.updateUser({ password });
-
-      if (error) {
-        setError(error.message);
-      } else {
-        setSuccess(true);
-        setTimeout(() => router.push('/dashboard'), 2000);
-      }
+      // Functionalidade de alteração de password deve ser feita via Clerk
+      setError('A alteração de password deve ser feita através do perfil do utilizador no Clerk.');
     } catch (err) {
-      setError('Erro ao atualizar password.');
+      setError('Erro ao processar pedido.');
     }
 
     setLoading(false);

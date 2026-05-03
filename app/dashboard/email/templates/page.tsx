@@ -4,17 +4,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Mail, Eye, Save, Loader2, X, Settings } from 'lucide-react';
-import { supabase, isSupabaseConfigured } from '@/lib/email';
 import { useMockDB } from '@/lib/store';
-
-interface EmailTemplate {
-  id?: string;
-  store_id: string;
-  type: string;
-  subject: string;
-  preview_text: string;
-  html_content: string;
-}
+import { getEmailTemplatesAction, upsertEmailTemplateAction } from '@/lib/actions';
+import { EmailTemplate } from '@/lib/email';
 
 const TEMPLATE_TYPES = [
   { value: 'order_confirmation', label: 'Confirmação de Encomenda' },
@@ -41,22 +33,21 @@ export default function EmailTemplatesPage() {
   }, [currentStore?.id]);
 
   async function loadTemplates() {
-    if (!isSupabaseConfigured || !supabase) {
+    if (!currentStore?.id) return;
+    try {
+      const data = await getEmailTemplatesAction(currentStore.id);
+      if (data) {
+        const templateMap: Record<string, EmailTemplate> = {};
+        data.forEach((t) => {
+          templateMap[t.type] = t;
+        });
+        setTemplates(templateMap);
+      }
+    } catch (error) {
+      console.error('Error loading templates:', error);
+    } finally {
       setLoading(false);
-      return;
     }
-    const { data } = await supabase
-      .from('email_templates')
-      .select('*')
-      .eq('store_id', currentStore.id);
-    if (data) {
-      const templateMap: Record<string, EmailTemplate> = {};
-      data.forEach((t) => {
-        templateMap[t.type] = t;
-      });
-      setTemplates(templateMap);
-    }
-    setLoading(false);
   }
 
   function getTemplate(type: string): EmailTemplate {
@@ -66,7 +57,7 @@ export default function EmailTemplatesPage() {
       subject: '',
       preview_text: '',
       html_content: '',
-    };
+    } as EmailTemplate;
   }
 
   function updateTemplate(type: string, field: keyof EmailTemplate, value: string) {
@@ -77,18 +68,21 @@ export default function EmailTemplatesPage() {
   }
 
   async function saveTemplate() {
-    if (!currentStore?.id || !supabase) return;
+    if (!currentStore?.id) return;
     setSaving(true);
     setMessage(null);
-    const template = getTemplate(selectedType);
-    const { error } = await supabase
-      .from('email_templates')
-      .upsert({ ...template, store_id: currentStore.id }, { onConflict: 'store_id,type' });
-    setSaving(false);
-    if (error) {
+    try {
+      const template = getTemplate(selectedType);
+      const { error } = await upsertEmailTemplateAction({ ...template, store_id: currentStore.id });
+      if (error) {
+        setMessage({ type: 'error', text: 'Erro ao guardar template' });
+      } else {
+        setMessage({ type: 'success', text: 'Template guardado com sucesso!' });
+      }
+    } catch (error) {
       setMessage({ type: 'error', text: 'Erro ao guardar template' });
-    } else {
-      setMessage({ type: 'success', text: 'Template guardado com sucesso!' });
+    } finally {
+      setSaving(false);
     }
   }
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { syncUserAction, getMyStoresAction, getStoreProductsAction } from '@/lib/actions';
+import { syncUserAction, getMyStoresAction, getStoreProductsAction, getStoreOrdersAction } from '@/lib/actions';
 import { 
   ShoppingBag, 
   Package, 
@@ -48,11 +48,13 @@ export default function DashboardOverview() {
           setSelectedStoreId(currentStoreId);
 
           // 3. Fetch store specific data
-          const storeProducts = await getStoreProductsAction(currentStoreId);
-          setProducts(storeProducts);
+          const [storeProducts, storeOrders] = await Promise.all([
+            getStoreProductsAction(currentStoreId),
+            getStoreOrdersAction(currentStoreId)
+          ]);
           
-          // Orders would be fetched here too, using another action if needed
-          setOrders([]); 
+          setProducts(storeProducts);
+          setOrders(storeOrders);
         }
       } catch (err) {
         console.error('Dashboard Init Error:', err);

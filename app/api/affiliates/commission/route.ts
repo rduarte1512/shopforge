@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { sql } from '@vercel/postgres';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,26 +12,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!isSupabaseConfigured || !supabase) {
-      return NextResponse.json(
-        { error: 'Database not configured' },
-        { status: 500 }
-      );
-    }
+    const { rows: orders } = await sql`
+      SELECT id, total, affiliate_link_id, store_id, status 
+      FROM orders 
+      WHERE id = ${orderId} 
+      LIMIT 1
+    `;
+    
+    const order = orders[0];
 
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .select(`
-        id,
-        total,
-        affiliate_link_id,
-        store_id,
-        status
-      `)
-      .eq('id', orderId)
-      .single();
-
-    if (orderError || !order) {
+    if (!order) {
       return NextResponse.json(
         { error: 'Order not found' },
         { status: 404 }
@@ -46,36 +36,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Order not paid yet' });
     }
 
-    const { data: link, error: linkError } = await supabase
-      .from('affiliate_links')
-      .select('percentage, conversion_count, total_commission')
-      .eq('id', order.affiliate_link_id)
-      .single();
+    const { rows: links } = await sql`
+      SELECT percentage, conversion_count, total_commission 
+      FROM affiliate_links 
+      WHERE id = ${order.affiliate_link_id} 
+      LIMIT 1
+    `;
+    
+    const link = links[0];
 
-    if (linkError || !link) {
+    if (!link) {
       return NextResponse.json(
         { error: 'Affiliate link not found' },
         { status: 404 }
       );
     }
 
-    const commissionAmount = (order.total * link.percentage) / 100;
+    const commissionAmount = (Number(order.total) * Number(link.percentage)) / 100;
 
-    await supabase.from('affiliate_commissions').insert({
-      affiliate_link_id: order.affiliate_link_id,
-      order_id: order.id,
-      amount: commissionAmount,
-      percentage_used: link.percentage,
-      status: 'pending',
-    });
+    await sql`
+      INSERT INTO affiliate_commissions (affiliate_link_id, order_id, amount, percentage_used, status)
+      VALUES (${order.affiliate_link_id}, ${order.id}, ${commissionAmount}, ${link.percentage}, 'pending')
+      ON CONFLICT (order_id) DO NOTHING
+    `;
 
-    await supabase
-      .from('affiliate_links')
-      .update({
-        conversion_count: (link.conversion_count || 0) + 1,
-        total_commission: (link.total_commission || 0) + commissionAmount,
-      })
-      .eq('id', order.affiliate_link_id);
+    await sql`
+      UPDATE affiliate_links 
+      SET 
+        conversion_count = COALESCE(conversion_count, 0) + 1,
+        total_commission = COALESCE(total_commission, 0) + ${commissionAmount}
+      WHERE id = ${order.affiliate_link_id}
+    `;
 
     return NextResponse.json({
       success: true,

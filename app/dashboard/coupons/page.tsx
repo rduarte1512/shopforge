@@ -1,14 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { 
+  getCouponsAction, 
+  createCouponAction, 
+  updateCouponAction, 
+  deleteCouponAction,
+  getMyStoresAction
+} from '@/lib/actions';
 import { useAuth } from '@/lib/auth-context';
 import { useMockDB } from '@/lib/store';
 import { Plus, Edit2, Trash2, X, Ticket, Calendar, Percent, DollarSign, Loader2 } from 'lucide-react';
 
 export default function CouponsPage() {
   const { user } = useAuth();
-  const { selectedStoreId } = useMockDB();
+  const { selectedStoreId, setSelectedStore } = useMockDB();
   const [stores, setStores] = useState<any[]>([]);
   const [coupons, setCoupons] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,28 +33,17 @@ export default function CouponsPage() {
   });
 
   const fetchData = async () => {
-    if (!user || !supabase) return;
+    if (!user) return;
     try {
-      const { data: storesData, error: storesError } = await supabase
-        .from('stores')
-        .select('*')
-        .eq('user_id', user.id);
-      
-      if (storesError) throw storesError;
+      const storesData = await getMyStoresAction();
       setStores(storesData || []);
 
-      const currentStore = selectedStoreId 
-        ? storesData?.find(s => s.id === selectedStoreId) || storesData?.[0]
-        : storesData?.[0];
+      const currentStoreId = selectedStoreId 
+        ? storesData?.find(s => s.id === selectedStoreId)?.id || storesData?.[0]?.id
+        : storesData?.[0]?.id;
 
-      if (currentStore) {
-        const { data: couponsData, error: couponsError } = await supabase
-          .from('coupons')
-          .select('*')
-          .eq('store_id', currentStore.id)
-          .order('created_at', { ascending: false });
-        
-        if (couponsError) throw couponsError;
+      if (currentStoreId) {
+        const couponsData = await getCouponsAction(currentStoreId);
         setCoupons(couponsData || []);
       }
     } catch (err) {
@@ -93,7 +88,7 @@ export default function CouponsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentStoreId || !supabase) return;
+    if (!currentStoreId) return;
 
     const couponData = {
       store_id: currentStoreId,
@@ -108,16 +103,9 @@ export default function CouponsPage() {
 
     try {
       if (editingCoupon) {
-        const { error } = await supabase
-          .from('coupons')
-          .update(couponData)
-          .eq('id', editingCoupon.id);
-        if (error) throw error;
+        await updateCouponAction(editingCoupon.id, couponData);
       } else {
-        const { error } = await supabase
-          .from('coupons')
-          .insert(couponData);
-        if (error) throw error;
+        await createCouponAction(couponData);
       }
       setIsModalOpen(false);
       fetchData();
@@ -127,10 +115,9 @@ export default function CouponsPage() {
   };
 
   const handleDeleteCoupon = async (id: string) => {
-    if (!confirm('Tens a certeza que desejas eliminar este cupão?') || !supabase) return;
+    if (!confirm('Tens a certeza que desejas eliminar este cupão?')) return;
     try {
-      const { error } = await supabase.from('coupons').delete().eq('id', id);
-      if (error) throw error;
+      await deleteCouponAction(id);
       fetchData();
     } catch (err: any) {
       alert(`Erro ao eliminar cupão: ${err.message}`);

@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Mail, Send, Bell, ShoppingCart, Palette, Settings, ChevronDown, ChevronUp, Save, Loader2, Eye, RotateCcw } from 'lucide-react';
-import { supabase, isSupabaseConfigured } from '@/lib/email';
 import { StoreEmailSettings } from '@/lib/email';
 import { useMockDB } from '@/lib/store';
+import { getStoreEmailSettingsAction, updateStoreEmailSettingsAction } from '@/lib/actions';
 
 interface SectionProps {
   title: string;
@@ -90,31 +90,32 @@ export default function EmailSettingsPage() {
   }, [currentStore?.id]);
 
   async function loadSettings() {
-    if (!isSupabaseConfigured || !supabase) {
+    if (!currentStore?.id) return;
+    try {
+      const data = await getStoreEmailSettingsAction(currentStore.id);
+      if (data) setSettings({ ...settings, ...data });
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    } finally {
       setLoading(false);
-      return;
     }
-    const { data } = await supabase
-      .from('store_email_settings')
-      .select('*')
-      .eq('store_id', currentStore.id)
-      .single();
-    if (data) setSettings({ ...settings, ...data });
-    setLoading(false);
   }
 
   async function saveSettings() {
-    if (!currentStore?.id || !supabase) return;
+    if (!currentStore?.id) return;
     setSaving(true);
     setMessage(null);
-    const { error } = await supabase
-      .from('store_email_settings')
-      .upsert({ ...settings, store_id: currentStore.id }, { onConflict: 'store_id' });
-    setSaving(false);
-    if (error) {
+    try {
+      const { error } = await updateStoreEmailSettingsAction({ ...settings, store_id: currentStore.id });
+      if (error) {
+        setMessage({ type: 'error', text: 'Erro ao guardar configurações' });
+      } else {
+        setMessage({ type: 'success', text: 'Configurações guardadas com sucesso!' });
+      }
+    } catch (error) {
       setMessage({ type: 'error', text: 'Erro ao guardar configurações' });
-    } else {
-      setMessage({ type: 'success', text: 'Configurações guardadas com sucesso!' });
+    } finally {
+      setSaving(false);
     }
   }
 

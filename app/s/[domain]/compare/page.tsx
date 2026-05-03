@@ -1,6 +1,6 @@
 'use client';
 
-import { supabase } from '@/lib/supabase';
+import { getStorefrontDataAction, getStorefrontProductsBulkAction } from '@/lib/actions';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -23,24 +23,15 @@ export default function ComparePage() {
 
   useEffect(() => {
     async function fetchData() {
-      if (!params.domain || !supabase) return;
+      if (!params.domain) return;
 
       try {
-        const { data: storeData, error: storeError } = await supabase          .from('stores')
-          .select('*')
-          .eq('domain', params.domain)
-          .single();
-        
-        if (storeError) throw storeError;
-        setStore(storeData);
+        const storefrontData = await getStorefrontDataAction(params.domain);
+        if (!storefrontData) throw new Error('Store not found');
+        setStore(storefrontData.store);
 
         if (productIds.length > 0) {
-          const { data: productsData, error: productsError } = await supabase
-            .from('products')
-            .select('*')
-            .in('id', productIds);
-          
-          if (productsError) throw productsError;
+          const productsData = await getStorefrontProductsBulkAction(productIds);
           setProducts(productsData || []);
         }
       } catch (err) {

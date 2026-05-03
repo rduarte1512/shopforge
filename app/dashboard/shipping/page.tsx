@@ -1,7 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { 
+  getShippingMethodsAction, 
+  createShippingMethodAction, 
+  updateShippingMethodAction, 
+  deleteShippingMethodAction,
+  getMyStoresAction
+} from '@/lib/actions';
 import { useAuth } from '@/lib/auth-context';
 import { useMockDB } from '@/lib/store';
 import { Plus, Edit2, Trash2, X, Truck, Clock, Euro, ShieldCheck, Loader2 } from 'lucide-react';
@@ -26,29 +32,18 @@ export default function ShippingPage() {
   });
 
   const fetchData = async () => {
-    if (!user || !supabase) return;
+    if (!user) return;
     try {
-      const { data: storesData, error: storesError } = await supabase
-        .from('stores')
-        .select('*')
-        .eq('user_id', user.id);
-      
-      if (storesError) throw storesError;
+      const storesData = await getMyStoresAction();
       setStores(storesData || []);
 
-      const currentStore = selectedStoreId 
-        ? storesData?.find(s => s.id === selectedStoreId) || storesData?.[0]
-        : storesData?.[0];
+      const currentStoreId = selectedStoreId 
+        ? storesData?.find(s => s.id === selectedStoreId)?.id || storesData?.[0]?.id
+        : storesData?.[0]?.id;
 
-      if (currentStore) {
-        const { data: shippingData, error: shippingError } = await supabase
-          .from('shipping_methods')
-          .select('*')
-          .eq('store_id', currentStore.id)
-          .order('created_at', { ascending: false });
-        
-        if (shippingError) throw shippingError;
-        setShippingMethods(shippingData || []);
+      if (currentStoreId) {
+        const data = await getShippingMethodsAction(currentStoreId);
+        setShippingMethods(data || []);
       }
     } catch (err) {
       console.error('Error fetching shipping data:', err);
@@ -90,7 +85,7 @@ export default function ShippingPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentStoreId || !supabase) return;
+    if (!currentStoreId) return;
 
     const methodData = {
       store_id: currentStoreId,
@@ -104,34 +99,28 @@ export default function ShippingPage() {
 
     try {
       if (editingMethod) {
-        const { error } = await supabase
-          .from('shipping_methods')
-          .update(methodData)
-          .eq('id', editingMethod.id);
-        if (error) throw error;
+        await updateShippingMethodAction(editingMethod.id, methodData);
       } else {
-        const { error } = await supabase
-          .from('shipping_methods')
-          .insert(methodData);
-        if (error) throw error;
+        await createShippingMethodAction(methodData);
       }
       setIsModalOpen(false);
       fetchData();
     } catch (err: any) {
-      alert(`Erro ao guardar método de envio: ${err.message}`);
+      alert(`Erro ao guardar método: ${err.message}`);
     }
   };
 
+
   const handleDeleteMethod = async (id: string) => {
-    if (!confirm('Tens a certeza que desejas eliminar este método de envio?') || !supabase) return;
+    if (!confirm('Tens a certeza que desejas eliminar este método de envio?')) return;
     try {
-      const { error } = await supabase.from('shipping_methods').delete().eq('id', id);
-      if (error) throw error;
+      await deleteShippingMethodAction(id);
       fetchData();
     } catch (err: any) {
-      alert(`Erro ao eliminar método de envio: ${err.message}`);
+      alert(`Erro ao eliminar método: ${err.message}`);
     }
   };
+
 
   if (loading) {
     return (

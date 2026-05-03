@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { sql } from '@vercel/postgres';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,23 +12,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!isSupabaseConfigured || !supabase) {
-      return NextResponse.json(
-        { error: 'Database not configured' },
-        { status: 500 }
-      );
-    }
-
     // Buscar o link de afiliado
-    const { data: link, error: linkError } = await supabase
-      .from('affiliate_links')
-      .select('id, store_id, name, active, click_count')
-      .eq('code', code.toUpperCase())
-      .eq('store_id', storeId)
-      .eq('active', true)
-      .single();
+    const { rows: links } = await sql`
+      SELECT id, store_id, name, active, click_count 
+      FROM affiliate_links 
+      WHERE code = ${code.toUpperCase()} 
+      AND store_id = ${storeId} 
+      AND active = true 
+      LIMIT 1
+    `;
+    
+    const link = links[0];
 
-    if (linkError || !link) {
+    if (!link) {
       return NextResponse.json(
         { error: 'Invalid affiliate code' },
         { status: 404 }
@@ -36,24 +32,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Incrementar click_count
-    const { error: updateError } = await supabase
-      .from('affiliate_links')
-      .update({ click_count: (link.click_count || 0) + 1 })
-      .eq('id', link.id);
-
-    if (updateError) {
-      console.error('Error updating click count:', updateError);
-    }
+    await sql`
+      UPDATE affiliate_links 
+      SET click_count = COALESCE(click_count, 0) + 1 
+      WHERE id = ${link.id}
+    `;
 
     // Registrar clique
     const userAgent = request.headers.get('user-agent') || '';
     const referer = request.headers.get('referer') || '';
 
-    await supabase.from('affiliate_clicks').insert({
-      affiliate_link_id: link.id,
-      user_agent: userAgent,
-      referrer: referer,
-    });
+    await sql`
+      INSERT INTO affiliate_clicks (affiliate_link_id, user_agent, referrer)
+      VALUES (${link.id}, ${userAgent}, ${referer})
+    `;
 
     return NextResponse.json({
       success: true,

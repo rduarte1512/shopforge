@@ -1,6 +1,6 @@
 'use client';
 
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { getStorefrontDataAction } from '@/lib/actions';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -8,7 +8,7 @@ import { useCart } from '@/components/CartProvider';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useComparisonStore } from '@/lib/comparison-store';
 import { Scale, X, ArrowRight, Check, Phone, ExternalLink, ShoppingCart, Loader2, AlertCircle } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export default function StorefrontHomePage() {
   const params = useParams() as { domain: string };
@@ -24,7 +24,7 @@ export default function StorefrontHomePage() {
   
   useEffect(() => {
     async function fetchData() {
-      if (!params.domain || !isSupabaseConfigured || fetchedRef.current) {
+      if (!params.domain || fetchedRef.current) {
         return;
       }
       
@@ -47,37 +47,19 @@ export default function StorefrontHomePage() {
 
       try {
         fetchedRef.current = true;
-        const { data: storeData, error: storeError } = await supabase!
-          .from('stores')
-          .select('*')
-          .eq('domain', params.domain)
-          .single();
+        const data = await getStorefrontDataAction(params.domain);
         
-        if (storeError || !storeData) {
+        if (!data) {
           setLoading(false);
           return;
         }
 
-        setStore(storeData);
-
-        // Parallel fetch with limit to avoid DB stress
-        const [productsRes, promosRes] = await Promise.all([
-          supabase!.from('products').select('*').eq('store_id', storeData.id).eq('is_active', true).limit(12),
-          supabase!.from('promotions').select('*').eq('store_id', storeData.id).eq('active', true).limit(5)
-        ]);
-
-        const pData = productsRes.data || [];
-        const prData = promosRes.data || [];
-
-        setProducts(pData);
-        setPromotions(prData);
+        setStore(data.store);
+        setProducts(data.products);
+        setPromotions(data.promotions);
 
         // Save to cache
-        sessionStorage.setItem(cacheKey, JSON.stringify({ 
-          store: storeData, 
-          products: pData, 
-          promotions: prData 
-        }));
+        sessionStorage.setItem(cacheKey, JSON.stringify(data));
 
       } catch (err) {
         console.error('Error fetching data:', err);
@@ -89,7 +71,9 @@ export default function StorefrontHomePage() {
     // Slight delay to prevent rapid fire
     const timer = setTimeout(fetchData, 100);
     return () => clearTimeout(timer);
-  }, [params.domain]); // Only depend on the domain change
+  }, [params.domain]);
+
+  // ... (rest of the component)
 
   if (!store && !loading) {
     return (
@@ -151,11 +135,8 @@ export default function StorefrontHomePage() {
   };
 
   const handlePromoClick = async (promoId: string) => {
-    try {
-      await supabase!.rpc('increment_promo_clicks', { promo_id: promoId });
-    } catch (err) {
-      console.log('Click tracking not available');
-    }
+    // Tracking temporarily disabled or should use a new server action
+    console.log('Promo click tracking temporarily disabled');
   };
 
   const bannerPromos = promotions.filter(p => p.position === 'banner');

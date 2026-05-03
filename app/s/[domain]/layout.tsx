@@ -1,6 +1,6 @@
 'use client';
 
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { getStorefrontDataAction } from '@/lib/actions';
 import { notFound, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ShoppingCart, Loader2 } from 'lucide-react';
@@ -72,20 +72,15 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
   
   useEffect(() => {
     async function fetchStore() {
-      if (!params.domain || !isSupabaseConfigured) {
+      if (!params.domain) {
         setLoading(false);
         return;
       }
       
       try {
-        const { data, error } = await supabase!
-          .from('stores')
-          .select('*')
-          .eq('domain', params.domain)
-          .single();
-        
-        if (data) {
-          setStore(data);
+        const data = await getStorefrontDataAction(params.domain);
+        if (data && data.store) {
+          setStore(data.store);
         } else {
           setStore(null);
         }
