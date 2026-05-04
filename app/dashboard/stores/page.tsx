@@ -400,7 +400,7 @@ export default function StoresPage() {
                 <Link2 className="w-4 h-4" /> shopforge.com/s/{store.domain}
               </p>
               
-              <div className="mt-6 flex gap-3">
+              <div className="mt-6 flex gap-2 flex-wrap sm:flex-nowrap">
                 <button 
                   onClick={() => {
                     setSelectedStore(store.id);
@@ -412,7 +412,7 @@ export default function StoresPage() {
                 </button>
                 <Link 
                   href={`/dashboard/stores/${store.id}/customize`}
-                  className="bg-shopify-green text-white px-4 py-2 rounded-[4px] font-[600] text-[13px] hover:opacity-90 transition-opacity text-center flex-1 flex items-center justify-center gap-2"
+                  className="bg-shopify-green text-white px-4 py-2 rounded-[4px] font-[600] text-[13px] hover:opacity-90 transition-opacity text-center flex-1 flex items-center justify-center gap-2 min-w-[120px]"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   Customizar
@@ -420,7 +420,7 @@ export default function StoresPage() {
                 <Link 
                   href={`/s/${store.domain}`}
                   target="_blank"
-                  className="flex items-center justify-center gap-2 bg-text-dark text-white px-4 py-2 rounded-[4px] font-[600] text-[13px] hover:opacity-90 transition-opacity"
+                  className="flex-1 flex items-center justify-center gap-2 bg-text-dark text-white px-4 py-2 rounded-[4px] font-[600] text-[13px] hover:opacity-90 transition-opacity min-w-[80px]"
                 >
                   Ver <ExternalLink className="w-3.5 h-3.5" />
                 </Link>
