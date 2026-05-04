@@ -406,13 +406,13 @@ export default function StoresPage() {
                     setSelectedStore(store.id);
                     router.push('/dashboard');
                   }}
-                  className="bg-white border border-[var(--color-border)] text-center text-text-dark px-4 py-2 rounded-[4px] font-[600] text-[13px] hover:bg-gray-50 transition-colors"
+                  className="bg-white border border-[var(--color-border)] text-text-dark px-3 py-2 rounded-[4px] font-[600] text-[13px] hover:bg-gray-50 transition-colors"
                 >
                   Gerir
                 </button>
                 <Link 
                   href={`/dashboard/stores/${store.id}/customize`}
-                  className="bg-shopify-green text-white px-4 py-2 rounded-[4px] font-[600] text-[13px] hover:opacity-90 transition-opacity text-center flex-1 flex items-center justify-center gap-2 min-w-[120px]"
+                  className="bg-shopify-green text-white px-3 py-2 rounded-[4px] font-[600] text-[13px] hover:opacity-90 transition-opacity flex-1 flex items-center justify-center gap-1.5 whitespace-nowrap"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   Customizar
@@ -420,7 +420,7 @@ export default function StoresPage() {
                 <Link 
                   href={`/s/${store.domain}`}
                   target="_blank"
-                  className="flex-1 flex items-center justify-center gap-2 bg-text-dark text-white px-4 py-2 rounded-[4px] font-[600] text-[13px] hover:opacity-90 transition-opacity min-w-[80px]"
+                  className="bg-emerald-600 text-white px-3 py-2 rounded-[4px] font-[600] text-[13px] hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 min-w-[80px]"
                 >
                   Ver <ExternalLink className="w-3.5 h-3.5" />
                 </Link>
