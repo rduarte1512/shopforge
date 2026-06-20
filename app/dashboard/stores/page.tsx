@@ -1,41 +1,117 @@
 'use client';
 
 import { useUser } from '@clerk/nextjs';
-import { getMyStoresAction, createStoreAction, deleteStoreAction } from '@/lib/actions';
-import { useMockDB, SUBSCRIPTION_PLANS } from '@/lib/store';
-import { Plus, Store as StoreIcon, ExternalLink, Link2, Monitor, Sparkles, Loader2, ChevronRight, ChevronLeft, AlertCircle, Trash2, Lock, Zap } from 'lucide-react';
+import {
+  addProductAction,
+  createStoreAction,
+  deleteStoreAction,
+  getMyStoresAction,
+  updateStoreCustomizationAction,
+} from '@/lib/actions';
+import { SUBSCRIPTION_PLANS, useMockDB } from '@/lib/store';
+import { useAuth } from '@/lib/auth-context';
+import {
+  AlertCircle,
+  ExternalLink,
+  Loader2,
+  Lock,
+  Plus,
+  Sparkles,
+  Store as StoreIcon,
+  Trash2,
+  Wand2,
+  Zap,
+} from 'lucide-react';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { generateStoreConfig } from '@/lib/ai-actions';
 import { useRouter } from 'next/navigation';
 
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 42) || 'loja-online';
+}
+
+function buildDefaultCustomization(store: any) {
+  const accent = store.primary_color || store.primaryColor || '#008060';
+
+  return {
+    header: { sticky: true, logoPosition: 'left', height: 72 },
+    hero: { height: 460, textAlign: 'center', showOverlay: true, overlayOpacity: 0.1, title: store.name, subtitle: store.description },
+    products: { columns: 4, gap: 28, aspectRatio: 'portrait', showPrice: true, showStock: true },
+    colors: { background: '#ffffff', text: '#0f172a', accent, muted: '#64748b', primary: accent },
+    fonts: { heading: 'Inter', body: 'Inter' },
+    sections: [
+      {
+        id: 'hero-1',
+        type: 'hero',
+        content: { title: store.name, subtitle: store.description || 'Uma loja moderna, rápida e pronta para publicar.', buttonText: 'Ver coleção' },
+        styles: { height: 460, textAlign: 'center' },
+      },
+      {
+        id: 'products-1',
+        type: 'products',
+        content: { title: 'Produtos em destaque' },
+        styles: { columns: 4, textAlign: 'left' },
+      },
+    ],
+  };
+}
+
+function normalizeCustomization(config: any, store: any) {
+  const fallback = buildDefaultCustomization(store);
+  const hasSections = Array.isArray(config?.sections) && config.sections.length > 0;
+
+  return {
+    ...fallback,
+    ...(config || {}),
+    header: { ...fallback.header, ...(config?.header || {}) },
+    hero: { ...fallback.hero, ...(config?.hero || {}) },
+    products: { ...fallback.products, ...(config?.products || {}) },
+    colors: { ...fallback.colors, ...(config?.colors || {}) },
+    fonts: { ...fallback.fonts, ...(config?.fonts || {}) },
+    sections: hasSections ? config.sections : fallback.sections,
+  };
+}
+
 export default function StoresPage() {
   const { user: clerkUser } = useUser();
+  const { user } = useAuth();
   const { setSelectedStore } = useMockDB();
   const [stores, setStores] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
-
-  const subscriptionTier = (clerkUser?.publicMetadata?.subscriptionTier as string) || 'STARTER';
-  const plan = SUBSCRIPTION_PLANS.find(p => p.id === subscriptionTier) || SUBSCRIPTION_PLANS[0];
-  const canCreateMoreStores = stores.length < plan.limits.stores;
-  const isAiRestricted = plan.id === 'STARTER' || plan.id === 'GROWTH';
-  
   const [isCreating, setIsCreating] = useState(false);
-  const [isAiMode, setIsAiMode] = useState(!isAiRestricted);
-  const [aiPrompt, setAiPrompt] = useState('');
+  const [isAiMode, setIsAiMode] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('Cria uma loja incrível, moderna, bonita e pronta para publicar.');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [newStore, setNewStore] = useState({ 
-    name: '', 
-    domain: '', 
-    description: '',
-    theme: 'light' as 'light' | 'dark',
-    primaryColor: '#008060'
-  });
-
   const [generationStep, setGenerationStep] = useState(0);
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [deleteConfirmStoreId, setDeleteConfirmStoreId] = useState<string | null>(null);
+  const [newStore, setNewStore] = useState({
+    name: '',
+    domain: '',
+    description: '',
+    theme: 'light' as 'light' | 'dark',
+    primaryColor: '#008060',
+  });
+  const router = useRouter();
+
+  const subscriptionTier = user?.subscriptionTier || 'STARTER';
+  const plan = useMemo(() => SUBSCRIPTION_PLANS.find((item) => item.id === subscriptionTier) || SUBSCRIPTION_PLANS[0], [subscriptionTier]);
+  const canCreateMoreStores = stores.length < plan.limits.stores;
+  const isAiRestricted = plan.id === 'STARTER' || plan.id === 'GROWTH';
+
+  const steps = [
+    'A escolher um conceito de marca...',
+    'A criar a identidade visual...',
+    'A preparar produtos iniciais...',
+    'A montar o layout da loja...',
+  ];
 
   const fetchStores = async () => {
     try {
@@ -49,75 +125,102 @@ export default function StoresPage() {
   };
 
   useEffect(() => {
-    if (clerkUser) {
-      fetchStores();
-    }
+    if (clerkUser) void fetchStores();
   }, [clerkUser]);
 
-  const steps = [
-    "A analisar a tua ideia...",
-    "A criar o branding perfeito...",
-    "A gerar os produtos e imagens...",
-    "A finalizar a loja pronta a escalar..."
-  ];
+  const createProductsForStore = async (storeId: string, products: any[]) => {
+    await Promise.all(
+      products.slice(0, 8).map(async (product, index) => {
+        try {
+          const seed = slugify(product.imageKeyword || product.name || `produto-${index}`);
+          await addProductAction({
+            store_id: storeId,
+            name: product.name || `Produto ${index + 1}`,
+            description: product.description || 'Produto criado automaticamente pela IA.',
+            price: Number(product.price) || 29.9,
+            stock: Number(product.stock) || 50,
+            image_url: `https://picsum.photos/seed/${seed}/800/1000`,
+            category: product.category || 'Destaques',
+          });
+        } catch (error) {
+          console.error('Error creating AI product:', error);
+        }
+      })
+    );
+  };
 
   const handleAiGenerate = async () => {
-    if (!aiPrompt.trim() || !clerkUser) return;
+    if (isAiRestricted || !canCreateMoreStores) {
+      router.push('/dashboard/subscription');
+      return;
+    }
+
     setIsGenerating(true);
     setGenerationStep(0);
     setGenerationError(null);
 
     const stepInterval = setInterval(() => {
-      setGenerationStep(prev => (prev < 3 ? prev + 1 : prev));
-    }, 2000);
+      setGenerationStep((previous) => (previous < 3 ? previous + 1 : previous));
+    }, 1600);
 
     try {
-      const config = await generateStoreConfig(aiPrompt);
-      
-      const store = await createStoreAction({
+      const config = await generateStoreConfig(aiPrompt.trim() || 'Cria uma loja incrível e perfeita.');
+      const storePayload = {
         name: config.name || 'Loja Gerada por IA',
-        domain: (config.domain || 'loja-ia').toLowerCase().replace(/[^a-z0-9-]/g, ''),
-        description: config.description || '',
+        domain: slugify(config.domain || config.name || `loja-ia-${Date.now()}`),
+        description: config.description || 'Loja criada automaticamente com IA.',
         theme: config.theme === 'dark' ? 'dark' : 'light',
         primary_color: config.primaryColor || '#008060',
-        base_currency: 'EUR'
-      });
-      
-      // Note: Products insertion for Neon would need another server action
-      // For now, we'll focus on the store migration
+        base_currency: 'EUR',
+      };
+
+      const store = await createStoreAction(storePayload);
+      const customization = normalizeCustomization(config.customization, { ...storePayload, ...store });
+
+      await updateStoreCustomizationAction(store.id, customization);
+      await createProductsForStore(store.id, config.products || []);
 
       clearInterval(stepInterval);
       setGenerationStep(4);
-      
       await fetchStores();
 
+      setSelectedStore(store.id);
       setTimeout(() => {
-        setSelectedStore(store.id);
         setIsGenerating(false);
         setIsCreating(false);
-        setAiPrompt('');
-      }, 1500);
-
+        setIsAiMode(false);
+        setAiPrompt('Cria uma loja incrível, moderna, bonita e pronta para publicar.');
+      }, 900);
     } catch (error: any) {
       clearInterval(stepInterval);
-      console.error("Erro detalhado da IA:", error);
-      setGenerationError(error.message || "Erro inesperado ao gerar a loja.");
+      console.error('Erro detalhado da IA:', error);
+      setGenerationError(error.message || 'Erro inesperado ao gerar a loja.');
+      setIsGenerating(false);
     }
   };
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreate = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!canCreateMoreStores) {
+      router.push('/dashboard/subscription');
+      return;
+    }
+
     try {
-      const data = await createStoreAction({
+      const storePayload = {
         name: newStore.name,
-        domain: newStore.domain.toLowerCase().replace(/[^a-z0-9-]/g, ''),
+        domain: slugify(newStore.domain || newStore.name),
         description: newStore.description,
         theme: newStore.theme,
         primary_color: newStore.primaryColor,
-        base_currency: 'EUR'
-      });
+        base_currency: 'EUR',
+      };
 
-      setSelectedStore(data.id);
+      const store = await createStoreAction(storePayload);
+      await updateStoreCustomizationAction(store.id, buildDefaultCustomization(storePayload));
+
+      setSelectedStore(store.id);
       setIsCreating(false);
       setNewStore({ name: '', domain: '', description: '', theme: 'light', primaryColor: '#008060' });
       await fetchStores();
@@ -148,327 +251,195 @@ export default function StoresPage() {
     <div className="space-y-8">
       <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
-          <h1 className="text-[24px] font-[600] tracking-tight text-text-dark">Minhas Lojas</h1>
-          <p className="text-[14px] text-text-muted mt-1">Gerencie as suas lojas ou crie uma nova.</p>
+          <h1 className="text-[24px] font-[700] tracking-tight text-text-dark">Minhas Lojas</h1>
+          <p className="text-[14px] text-text-muted mt-1">Gere as suas lojas ou crie uma nova com IA.</p>
         </div>
-        <button 
-          onClick={() => {
-            if (canCreateMoreStores) {
-              setIsCreating(true);
-            } else {
-              router.push('/dashboard/subscription');
-            }
-          }}
-          className={`${canCreateMoreStores ? 'bg-shopify-green' : 'bg-orange-500'} text-white px-[16px] py-[8px] rounded-[4px] font-[600] text-[13px] border-none cursor-pointer flex items-center gap-2 hover:opacity-90 transition-opacity`}
+        <button
+          onClick={() => canCreateMoreStores ? setIsCreating(true) : router.push('/dashboard/subscription')}
+          className={`${canCreateMoreStores ? 'bg-shopify-green' : 'bg-orange-500'} text-white px-4 py-2 rounded-lg font-bold text-[13px] border-none cursor-pointer flex items-center gap-2 hover:opacity-90 transition-opacity`}
         >
-          {canCreateMoreStores ? (
-            <>
-              <Plus className="w-[18px] h-[18px]" /> Criar Nova Loja
-            </>
-          ) : (
-            <>
-              <Zap className="w-[18px] h-[18px]" /> Fazer Upgrade para Criar Mais
-            </>
-          )}
+          {canCreateMoreStores ? <Plus className="w-4 h-4" /> : <Zap className="w-4 h-4" />}
+          {canCreateMoreStores ? 'Criar nova loja' : 'Fazer upgrade'}
         </button>
       </div>
 
-      {!canCreateMoreStores && !isCreating && (
-        <div className="bg-orange-50 border border-orange-200 p-4 rounded-lg flex items-center justify-between">
+      {!canCreateMoreStores && (
+        <div className="bg-orange-50 border border-orange-200 p-4 rounded-2xl flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <AlertCircle className="text-orange-600 w-5 h-5" />
-            <p className="text-[14px] text-orange-800 font-medium">
-              Atingiu o limite de lojas do seu plano <span className="font-bold">{plan.name}</span> ({stores.length}/{plan.limits.stores}).
+            <p className="text-sm text-orange-800 font-medium">
+              Atingiu o limite de lojas do plano <span className="font-bold">{plan.name}</span> ({stores.length}/{plan.limits.stores}).
             </p>
           </div>
-          <Link href="/dashboard/subscription" className="text-[13px] font-bold text-orange-700 hover:underline">
-            Ver Planos →
+          <Link href="/dashboard/subscription" className="text-sm font-black text-orange-700 hover:underline whitespace-nowrap">
+            Ver planos →
           </Link>
         </div>
       )}
 
       {isCreating && (
-        <div className="bg-white rounded-[8px] shadow-[var(--shadow-card)] border border-[var(--color-border)] p-6 mb-8">
+        <div className="bg-white rounded-3xl shadow-[var(--shadow-card)] border border-[var(--color-border)] p-6 mb-8">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-[18px] font-bold flex items-center gap-2">
+            <h2 className="text-lg font-black flex items-center gap-2">
               {isAiMode ? <Sparkles className="w-5 h-5 text-shopify-green" /> : <Plus className="w-5 h-5" />}
-              {isAiMode ? 'Gerar Loja Completa com IA' : 'Configuração Manual'}
+              {isAiMode ? 'Gerar loja completa com IA' : 'Configuração manual'}
             </h2>
             <button onClick={() => setIsCreating(false)} className="text-text-muted hover:text-text-dark border-none bg-transparent cursor-pointer">Esc</button>
           </div>
 
-          <div className="flex gap-4 mb-6 border-b border-[var(--color-border)] pb-4">
-            <button 
-              onClick={() => {
-                if (!isAiRestricted) {
-                  setIsAiMode(true);
-                }
-              }}
-              className={`relative px-4 py-2 text-[13px] font-[600] rounded-[4px] transition-colors ${isAiMode ? 'bg-shopify-green text-white' : 'hover:bg-gray-100 text-text-muted'} ${isAiRestricted ? 'opacity-50 cursor-not-allowed' : ''}`}
+          <div className="flex gap-3 mb-6 border-b border-[var(--color-border)] pb-4">
+            <button
+              onClick={() => !isAiRestricted && setIsAiMode(true)}
+              className={`relative px-4 py-2 text-[13px] font-bold rounded-lg transition-colors ${isAiMode ? 'bg-shopify-green text-white' : 'hover:bg-gray-100 text-text-muted'} ${isAiRestricted ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              Automação IA (Loja Pronta)
+              <span className="inline-flex items-center gap-2"><Wand2 className="w-4 h-4" /> IA completa</span>
               {isAiRestricted && <Lock className="w-3 h-3 absolute -top-1 -right-1 text-orange-500" />}
             </button>
-            <button 
+            <button
               onClick={() => setIsAiMode(false)}
-              className={`px-4 py-2 text-[13px] font-[600] rounded-[4px] transition-colors ${!isAiMode ? 'bg-shopify-green text-white' : 'hover:bg-gray-100 text-text-muted'}`}
+              className={`px-4 py-2 text-[13px] font-bold rounded-lg transition-colors ${!isAiMode ? 'bg-shopify-green text-white' : 'hover:bg-gray-100 text-text-muted'}`}
             >
-              Configuração Manual
+              Manual
             </button>
           </div>
 
-          {isAiMode && !isAiRestricted ? (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-[13px] font-[600] text-text-dark mb-2">Descreve a tua ideia de negócio. A IA vai criar os produtos, descrições, imagens, cores e banners automaticamente!</label>
-                <textarea 
-                  rows={4} 
+          {isAiMode ? (
+            isAiRestricted ? (
+              <div className="text-center py-10 space-y-4">
+                <Sparkles className="w-12 h-12 text-orange-500 mx-auto" />
+                <div>
+                  <h3 className="font-black text-text-dark">Funcionalidade exclusiva PRO</h3>
+                  <p className="text-sm text-text-muted mt-1">A criação automática com IA está disponível nos planos Pro, Business e Enterprise.</p>
+                </div>
+                <button onClick={() => router.push('/dashboard/subscription')} className="bg-shopify-green text-white px-6 py-2 rounded-lg font-bold text-sm border-none cursor-pointer">
+                  Fazer upgrade agora
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-5">
+                <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4">
+                  <p className="text-sm text-emerald-900 font-bold">Podes escrever algo simples.</p>
+                  <p className="text-sm text-emerald-700 mt-1">Exemplo: “cria uma loja incrível e perfeita”. A IA escolhe nicho, estilo, produtos, cores e layout.</p>
+                </div>
+
+                <textarea
                   value={aiPrompt}
-                  onChange={e => setAiPrompt(e.target.value)}
-                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[4px] focus:outline-none focus:border-shopify-green text-[14px]" 
-                  placeholder="Ex: Uma loja de roupa streetwear para jovens, estilo urbano e minimalista. Quero t-shirts oversize, hoodies e acessórios. Cores principais: preto e branco..."
+                  onChange={(event) => setAiPrompt(event.target.value)}
+                  rows={5}
+                  className="w-full px-4 py-3 border border-[var(--color-border)] rounded-2xl focus:outline-none focus:border-shopify-green text-sm resize-none"
+                  placeholder="Ex: cria uma loja incrível e perfeita"
                 />
+
+                {isGenerating && (
+                  <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-3">
+                    {steps.map((step, index) => (
+                      <div key={step} className={`flex items-center gap-3 text-sm ${index <= generationStep ? 'text-shopify-green font-bold' : 'text-slate-400'}`}>
+                        {index <= generationStep ? <Sparkles className="w-4 h-4" /> : <Loader2 className="w-4 h-4" />}
+                        {step}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {generationError && <div className="bg-red-50 border border-red-100 text-red-700 rounded-2xl p-4 text-sm font-bold">{generationError}</div>}
+
+                <button
+                  onClick={handleAiGenerate}
+                  disabled={isGenerating}
+                  className="w-full bg-text-dark text-white py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                  {isGenerating ? 'A criar loja completa...' : 'Criar loja com IA'}
+                </button>
               </div>
-              <button 
-                onClick={handleAiGenerate}
-                disabled={isGenerating || !aiPrompt.trim()}
-                className="w-full bg-text-dark text-white py-3 rounded-[4px] font-[600] text-[14px] flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50"
-              >
-                <Sparkles className="w-4 h-4" /> Criar Loja Pronta a Vender
-              </button>
-            </div>
-          ) : isAiMode && isAiRestricted ? (
-            <div className="text-center py-8 space-y-4">
-              <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mx-auto">
-                <Sparkles className="w-8 h-8 text-orange-500" />
-              </div>
-              <div className="space-y-2">
-                <h3 className="font-bold text-text-dark">Funcionalidade Exclusiva PRO</h3>
-                <p className="text-[14px] text-text-muted max-w-sm mx-auto">
-                  A criação de lojas automáticas com IA está disponível apenas para subscritores dos planos Pro e Enterprise.
-                </p>
-              </div>
-              <button 
-                onClick={() => router.push('/dashboard/subscription')}
-                className="bg-shopify-green text-white px-6 py-2 rounded-lg font-bold text-[14px] border-none cursor-pointer"
-              >
-                Fazer Upgrade Agora
-              </button>
-            </div>
+            )
           ) : (
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[13px] font-[600] text-text-dark mb-1">Nome da Loja</label>
-                  <input required type="text" value={newStore.name} onChange={e => setNewStore({...newStore, name: e.target.value})} className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[4px] focus:outline-none focus:border-shopify-green text-[14px]" placeholder="Ex: Minha Loja Fantástica" />
+                  <label className="block text-[13px] font-bold text-text-dark mb-1">Nome da loja</label>
+                  <input required type="text" value={newStore.name} onChange={(event) => setNewStore({ ...newStore, name: event.target.value })} className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:outline-none focus:border-shopify-green text-sm" placeholder="Ex: Éclat Joias" />
                 </div>
                 <div>
-                  <label className="block text-[13px] font-[600] text-text-dark mb-1">Domínio</label>
+                  <label className="block text-[13px] font-bold text-text-dark mb-1">Domínio</label>
                   <div className="flex">
-                    <span className="inline-flex items-center px-3 rounded-l-[4px] border border-r-0 border-[var(--color-border)] bg-bg-gray text-text-muted text-[13px]">
-                      /s/
-                    </span>
-                    <input required type="text" value={newStore.domain} onChange={e => setNewStore({...newStore, domain: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')})} className="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-[4px] border border-[var(--color-border)] focus:outline-none focus:border-shopify-green text-[14px]" placeholder="minha-loja" />
+                    <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-[var(--color-border)] bg-bg-gray text-text-muted text-sm">/s/</span>
+                    <input required type="text" value={newStore.domain} onChange={(event) => setNewStore({ ...newStore, domain: slugify(event.target.value) })} className="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-lg border border-[var(--color-border)] focus:outline-none focus:border-shopify-green text-sm" placeholder="minha-loja" />
                   </div>
                 </div>
               </div>
-
               <div>
-                <label className="block text-[13px] font-[600] text-text-dark mb-1">Descrição</label>
-                <textarea rows={2} value={newStore.description} onChange={e => setNewStore({...newStore, description: e.target.value})} className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[4px] focus:outline-none focus:border-shopify-green text-[14px]" placeholder="Breve descrição da loja..." />
+                <label className="block text-[13px] font-bold text-text-dark mb-1">Descrição</label>
+                <textarea rows={3} value={newStore.description} onChange={(event) => setNewStore({ ...newStore, description: event.target.value })} className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:outline-none focus:border-shopify-green text-sm resize-none" placeholder="Breve descrição da loja..." />
               </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[13px] font-[600] text-text-dark mb-1">Tema</label>
-                  <select 
-                    value={newStore.theme}
-                    onChange={e => setNewStore({...newStore, theme: e.target.value as 'light' | 'dark'})}
-                    className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[4px] focus:outline-none focus:border-shopify-green text-[14px]"
-                  >
+                  <label className="block text-[13px] font-bold text-text-dark mb-1">Tema</label>
+                  <select value={newStore.theme} onChange={(event) => setNewStore({ ...newStore, theme: event.target.value as 'light' | 'dark' })} className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:outline-none focus:border-shopify-green text-sm">
                     <option value="light">Claro</option>
                     <option value="dark">Escuro</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[13px] font-[600] text-text-dark mb-1">Cor Principal</label>
-                  <div className="flex gap-2">
-                    <input 
-                      type="color" 
-                      value={newStore.primaryColor}
-                      onChange={e => setNewStore({...newStore, primaryColor: e.target.value})}
-                      className="h-9 w-12 p-1 border border-[var(--color-border)] rounded-[4px] cursor-pointer"
-                    />
-                    <input 
-                      type="text" 
-                      value={newStore.primaryColor}
-                      onChange={e => setNewStore({...newStore, primaryColor: e.target.value})}
-                      className="flex-1 px-3 py-2 border border-[var(--color-border)] rounded-[4px] focus:outline-none focus:border-shopify-green text-[14px]"
-                    />
-                  </div>
+                  <label className="block text-[13px] font-bold text-text-dark mb-1">Cor principal</label>
+                  <input type="color" value={newStore.primaryColor} onChange={(event) => setNewStore({ ...newStore, primaryColor: event.target.value })} className="w-full h-10 border border-[var(--color-border)] rounded-lg" />
                 </div>
               </div>
-
-              <div className="flex justify-between items-center pt-4">
-                <button type="button" onClick={() => setIsAiMode(true)} className="flex items-center gap-2 text-[13px] text-shopify-green font-[600] hover:underline">
-                  <ChevronLeft className="w-4 h-4" /> Voltar para o Assistente
-                </button>
-                <div className="flex gap-3">
-                  <button type="button" onClick={() => setIsCreating(false)} className="px-4 py-2 text-[14px] font-medium text-text-dark hover:bg-gray-50 border border-transparent rounded-[4px]">
-                    Cancelar
-                  </button>
-                  <button type="submit" className="bg-shopify-green text-white px-[16px] py-[8px] rounded-[4px] font-[600] text-[13px] border-none cursor-pointer">
-                    Criar Loja
-                  </button>
-                </div>
-              </div>
+              <button type="submit" className="w-full bg-shopify-green text-white py-3 rounded-xl font-black text-sm hover:opacity-90 transition-opacity">
+                Criar loja manualmente
+              </button>
             </form>
           )}
         </div>
       )}
 
-      {isGenerating && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md p-8 shadow-2xl border border-gray-100 text-center animate-in fade-in zoom-in duration-300">
-            {!generationError ? (
-              <>
-                <div className="mb-6 relative">
-                  <div className="w-20 h-20 border-4 border-gray-100 border-t-shopify-green rounded-full animate-spin mx-auto"></div>
-                  <Sparkles className="w-8 h-8 text-shopify-green absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                </div>
-                
-                <h3 className="text-xl font-bold mb-2">A magia está a acontecer...</h3>
-                <p className="text-text-muted mb-8 text-[14px]">{steps[generationStep] || "A finalizar a tua loja..."}</p>
-                
-                <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden mb-2">
-                  <div 
-                    className="bg-shopify-green h-full transition-all duration-500 ease-out" 
-                    style={{ width: `${((generationStep + 1) / 4) * 100}%` }}
-                  />
-                </div>
-                <p className="text-[11px] text-text-muted uppercase font-bold tracking-widest">Fase {Math.min(generationStep + 1, 4)} de 4</p>
-              </>
-            ) : (
-              <>
-                <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <AlertCircle className="w-10 h-10 text-red-500" />
-                </div>
-                <h3 className="text-xl font-bold mb-2">Algo correu mal</h3>
-                <p className="text-red-600 mb-6 text-[14px] bg-red-50 p-4 rounded-lg border border-red-100">
-                  {generationError}
-                </p>
-                <div className="space-y-3">
-                  <button 
-                    onClick={() => { setIsGenerating(false); setGenerationError(null); }}
-                    className="w-full py-3 bg-text-dark text-white rounded-lg font-bold hover:opacity-90 transition-opacity"
-                  >
-                    Tentar Novamente
-                  </button>
-                  <button 
-                    onClick={() => { setIsGenerating(false); setIsAiMode(false); setGenerationError(null); }}
-                    className="w-full py-3 bg-white text-text-dark border border-gray-200 rounded-lg font-bold hover:bg-gray-50 transition-colors"
-                  >
-                    Configurar Manualmente
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+      {stores.length === 0 ? (
+        <div className="bg-white border border-border rounded-3xl p-12 text-center shadow-sm">
+          <StoreIcon className="w-12 h-12 text-text-muted mx-auto mb-4" />
+          <h2 className="text-xl font-black text-text-dark">Ainda não tens lojas</h2>
+          <p className="text-text-muted mt-2">Cria uma loja manualmente ou usa a IA para gerar uma loja completa.</p>
         </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {stores.map((store) => (
-          <div key={store.id} className="bg-white rounded-[12px] shadow-[var(--shadow-card)] border border-[var(--color-border)] overflow-hidden flex flex-col">
-            <div className="p-6 border-b border-[var(--color-border)] relative">
-              <button 
-                onClick={() => setDeleteConfirmStoreId(store.id)}
-                className="absolute top-4 right-4 p-2 text-text-muted hover:text-red-500 hover:bg-red-50 rounded-[4px] transition-colors"
-                title="Eliminar loja"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-              <div className="w-12 h-12 rounded-lg bg-indigo-50 flex items-center justify-center mb-4" style={{ backgroundColor: `${store.primary_color}15`, color: store.primary_color }}>
-                {store.logo_url ? (
-                  <img src={store.logo_url} alt={store.name} className="w-12 h-12 rounded-lg object-cover" />
-                ) : (
-                  <StoreIcon className="w-6 h-6" />
-                )}
-              </div>
-              <h3 className="text-[18px] font-bold text-text-dark mb-1">{store.name}</h3>
-              <p className="text-[14px] text-text-muted flex items-center gap-1.5">
-                <Link2 className="w-4 h-4" /> shopforge.com/s/{store.domain}
-              </p>
-              
-              <div className="mt-6 flex gap-2 flex-wrap sm:flex-nowrap">
-                <button 
-                  onClick={() => {
-                    setSelectedStore(store.id);
-                    router.push('/dashboard');
-                  }}
-                  className="bg-white border border-[var(--color-border)] text-text-dark px-3 py-2 rounded-[4px] font-[600] text-[13px] hover:bg-gray-50 transition-colors"
-                >
-                  Gerir
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {stores.map((store) => (
+            <div key={store.id} className="bg-white border border-border rounded-3xl p-6 shadow-sm hover:shadow-xl transition-all">
+              <div className="flex items-start justify-between gap-4 mb-5">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg" style={{ backgroundColor: store.primary_color || '#008060' }}>
+                    <StoreIcon className="w-6 h-6" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-black text-text-dark truncate">{store.name}</h3>
+                    <p className="text-xs text-text-muted truncate">/s/{store.domain}</p>
+                  </div>
+                </div>
+                <button onClick={() => setDeleteConfirmStoreId(store.id)} className="p-2 text-red-400 hover:bg-red-50 rounded-xl transition-colors">
+                  <Trash2 className="w-4 h-4" />
                 </button>
-                <Link 
-                  href={`/dashboard/stores/${store.id}/customize`}
-                  className="bg-shopify-green text-white px-3 py-2 rounded-[4px] font-[600] text-[13px] hover:opacity-90 transition-opacity flex-1 flex items-center justify-center gap-1.5 whitespace-nowrap"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  Customizar
+              </div>
+
+              <p className="text-sm text-text-muted min-h-[44px] line-clamp-2">{store.description || 'Sem descrição.'}</p>
+
+              <div className="grid grid-cols-2 gap-3 mt-6">
+                <Link href={`/dashboard/stores/${store.id}/customize`} className="bg-slate-900 text-white py-2.5 rounded-xl text-center text-xs font-black flex items-center justify-center gap-2">
+                  <Sparkles className="w-4 h-4" /> Customizar
                 </Link>
-                <Link 
-                  href={`/s/${store.domain}`}
-                  target="_blank"
-                  className="bg-emerald-600 text-white px-3 py-2 rounded-[4px] font-[600] text-[13px] hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 min-w-[80px]"
-                >
-                  Ver <ExternalLink className="w-3.5 h-3.5" />
+                <Link href={`/s/${store.domain}`} target="_blank" className="bg-slate-50 text-text-dark border border-border py-2.5 rounded-xl text-center text-xs font-black flex items-center justify-center gap-2">
+                  <ExternalLink className="w-4 h-4" /> Ver loja
                 </Link>
               </div>
-            </div>
-          </div>
-        ))}
-      </div>
-      
-      {stores.length === 0 && !isCreating && (
-        <div className="text-center py-20 bg-white rounded-[8px] border border-[var(--color-border)]">
-          <StoreIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <h2 className="text-xl font-bold mb-2">Ainda não tem lojas</h2>
-          <p className="text-gray-500 mb-6">Crie a sua primeira loja para começar a vender online.</p>
-          <button 
-            onClick={() => setIsCreating(true)}
-            className="bg-shopify-green text-white px-[16px] py-[8px] rounded-[4px] font-[600] text-[13px] border-none cursor-pointer hover:opacity-90 transition-opacity"
-          >
-            Criar Minha Primeira Loja
-          </button>
-        </div>
-      )}
 
-      {deleteConfirmStoreId && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl border border-gray-100">
-            <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Trash2 className="w-7 h-7 text-red-500" />
+              {deleteConfirmStoreId === store.id && (
+                <div className="mt-4 bg-red-50 border border-red-100 rounded-2xl p-4 space-y-3">
+                  <p className="text-sm text-red-800 font-bold">Eliminar esta loja?</p>
+                  <div className="flex gap-2">
+                    <button onClick={() => handleDeleteStore(store.id)} className="flex-1 bg-red-600 text-white rounded-lg py-2 text-xs font-black">Eliminar</button>
+                    <button onClick={() => setDeleteConfirmStoreId(null)} className="flex-1 bg-white text-red-700 border border-red-100 rounded-lg py-2 text-xs font-black">Cancelar</button>
+                  </div>
+                </div>
+              )}
             </div>
-            <h3 className="text-xl font-bold mb-2 text-center">Eliminar Loja</h3>
-            <p className="text-text-muted text-center mb-6 text-[14px]">
-              Tem a certeza que deseja eliminar esta loja? Esta ação não pode ser desfeita.
-            </p>
-            <div className="flex gap-3">
-              <button 
-                onClick={() => setDeleteConfirmStoreId(null)}
-                className="flex-1 py-3 bg-gray-100 text-text-dark rounded-lg font-[600] text-[14px] hover:bg-gray-200 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button 
-                onClick={() => handleDeleteStore(deleteConfirmStoreId)}
-                className="flex-1 py-3 bg-red-500 text-white rounded-lg font-[600] text-[14px] hover:bg-red-600 transition-colors"
-              >
-                Eliminar
-              </button>
-            </div>
-          </div>
+          ))}
         </div>
       )}
     </div>
