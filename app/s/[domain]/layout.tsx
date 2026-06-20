@@ -3,14 +3,16 @@
 import { getStorefrontDataAction } from '@/lib/actions';
 import { notFound, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ShoppingCart, Loader2 } from 'lucide-react';
+import { ShoppingCart, Loader2, UserRound } from 'lucide-react';
 import { useState, ReactNode, useEffect } from 'react';
 import { CartProvider, useCart } from '@/components/CartProvider';
 
 function StoreLayoutInner({ children, store }: { children: ReactNode, store: any }) {
   const { cartCount } = useCart();
   const isDark = store.theme === 'dark';
+  const accountsEnabled = store.customization?.accounts?.enabled === true;
   const [refCode, setRefCode] = useState<string | null>(null);
+  const [customer, setCustomer] = useState<any>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -28,6 +30,17 @@ function StoreLayoutInner({ children, store }: { children: ReactNode, store: any
     }
   }, [store.id]);
 
+  useEffect(() => {
+    if (!accountsEnabled) return;
+
+    try {
+      const saved = localStorage.getItem(`shopforge-store-customer-${store.id}`);
+      setCustomer(saved ? JSON.parse(saved) : null);
+    } catch {
+      setCustomer(null);
+    }
+  }, [accountsEnabled, store.id]);
+
   return (
       <div 
         className={`min-h-screen flex flex-col ${isDark ? 'bg-black text-white' : 'bg-white text-black'}`}
@@ -38,7 +51,13 @@ function StoreLayoutInner({ children, store }: { children: ReactNode, store: any
             <Link href={`/s/${store.domain}`} className="text-2xl font-bold tracking-tight">
               {store.name}
             </Link>
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4">
+              {accountsEnabled && (
+                <Link href={`/s/${store.domain}/account`} className="flex items-center gap-2 text-sm font-black opacity-80 hover:opacity-100 transition-opacity">
+                  <UserRound className="w-5 h-5" />
+                  <span className="hidden sm:inline">{customer?.name ? customer.name.split(' ')[0] : 'Conta'}</span>
+                </Link>
+              )}
               <Link href={`/s/${store.domain}/cart`} className="relative p-2">
                 <ShoppingCart className="w-6 h-6" />
                 {cartCount > 0 && (
