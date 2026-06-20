@@ -51,10 +51,20 @@ export default function StoreAccountPage() {
   }, [storageKey]);
 
   const accountsEnabled = store?.customization?.accounts?.enabled !== false;
+  const allowRegistration = store?.customization?.accounts?.allowRegistration !== false;
+
+  useEffect(() => {
+    if (!allowRegistration && mode === 'register') setMode('login');
+  }, [allowRegistration, mode]);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!store || !storageKey) return;
+
+    if (mode === 'register' && !allowRegistration) {
+      setError('Esta loja não permite criar novas contas neste momento.');
+      return;
+    }
 
     setError('');
     setIsSubmitting(true);
@@ -164,9 +174,13 @@ export default function StoreAccountPage() {
             </button>
           </form>
 
-          <button onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="w-full mt-5 text-sm font-black text-slate-500 hover:text-slate-950">
-            {mode === 'login' ? 'Ainda não tenho conta. Criar conta' : 'Já tenho conta. Entrar'}
-          </button>
+          {allowRegistration ? (
+            <button onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="w-full mt-5 text-sm font-black text-slate-500 hover:text-slate-950">
+              {mode === 'login' ? 'Ainda não tenho conta. Criar conta' : 'Já tenho conta. Entrar'}
+            </button>
+          ) : (
+            <p className="text-center mt-5 text-xs font-bold text-slate-400">Esta loja não permite novos registos de momento.</p>
+          )}
         </div>
       </div>
     </div>
