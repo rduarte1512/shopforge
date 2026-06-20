@@ -12,8 +12,7 @@ export default async function ProductsPage() {
     redirect('/login');
   }
 
-  // Fetch data in parallel on the server
-  const [_, stores, cookieStoreId] = await Promise.all([
+  const [profile, stores, cookieStoreId] = await Promise.all([
     syncUserAction(),
     getMyStoresAction(),
     getSelectedStoreId()
@@ -28,9 +27,20 @@ export default async function ProductsPage() {
     initialProducts = await getStoreProductsAction(activeStoreId);
   }
 
+  const clientUser = JSON.parse(JSON.stringify(user));
+
+  if (profile?.subscription_tier) {
+    clientUser.publicMetadata = {
+      ...(clientUser.publicMetadata ?? {}),
+      subscriptionTier: profile.subscription_tier,
+      subscriptionStatus: profile.subscription_status ?? 'active',
+      role: profile.role ?? 'CLIENT',
+    };
+  }
+
   return (
     <ProductsClient 
-      user={JSON.parse(JSON.stringify(user))} 
+      user={clientUser} 
       initialProducts={initialProducts} 
       selectedStoreId={selectedStoreId} 
     />
