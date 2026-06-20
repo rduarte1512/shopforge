@@ -11,7 +11,6 @@ export default async function CustomersPage() {
     redirect('/login');
   }
 
-  // Fetch data in parallel on the server
   const [_, stores, cookieStoreId] = await Promise.all([
     syncUserAction(),
     getMyStoresAction(),
@@ -29,7 +28,8 @@ export default async function CustomersPage() {
 
   return (
     <CustomersClient 
-      initialOrders={initialOrders} 
+      initialOrders={initialOrders}
+      selectedStoreId={selectedStoreId}
     />
   );
 }
