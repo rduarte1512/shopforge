@@ -1,8 +1,7 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { getProfile } from './db';
 
 interface AuthUser {
   id: string;
@@ -16,6 +15,7 @@ interface AuthUser {
 interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,39 +25,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchUserProfile() {
-      if (isLoaded && clerkUser) {
-        // In a real app, you'd fetch this from your Neon database
-        // For now, we'll try to get it from our db helper if possible, 
-        // or just mock it based on Clerk data
-        try {
-          // This is a client component, so we can't call getProfile directly if it uses @vercel/postgres
-          // We would need a server action. For now, let's just use Clerk data.
-          setUser({
-            id: clerkUser.id,
-            email: clerkUser.emailAddresses[0].emailAddress,
-            name: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim(),
-            role: 'CLIENT',
-            subscriptionTier: (clerkUser.publicMetadata.subscriptionTier as any) || 'STARTER',
-            subscriptionStatus: 'active'
-          });
-        } catch (error) {
-          console.error('Error setting user profile:', error);
-        } finally {
-          setLoading(false);
-        }
-      } else if (isLoaded) {
-        setUser(null);
-        setLoading(false);
-      }
+  const refreshUser = useCallback(async () => {
+    if (!isLoaded) return;
+
+    if (!clerkUser) {
+      setUser(null);
+      setLoading(false);
+      return;
     }
 
-    fetchUserProfile();
+    const fallbackUser: AuthUser = {
+      id: clerkUser.id,
+      email: clerkUser.primaryEmailAddress?.emailAddress ?? clerkUser.emailAddresses?.[0]?.emailAddress ?? '',
+      name: [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ') || clerkUser.username || 'Cliente',
+      role: 'CLIENT',
+      subscriptionTier: 'STARTER',
+      subscriptionStatus: 'active',
+    };
+
+    setLoading(true);
+
+    try {
+      const response = await fetch('/api/profile', { cache: 'no-store' });
+
+      if (!response.ok) {
+        throw new Error('Profile request failed');
+      }
+
+      const data = await response.json();
+      setUser(data.user ?? fallbackUser);
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+      setUser(fallbackUser);
+    } finally {
+      setLoading(false);
+    }
   }, [clerkUser, isLoaded]);
 
+  useEffect(() => {
+    void refreshUser();
+  }, [refreshUser]);
+
   return (
-    <AuthContext.Provider value={{ user, loading }}>
+    <AuthContext.Provider value={{ user, loading, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
