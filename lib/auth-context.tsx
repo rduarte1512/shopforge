@@ -20,6 +20,14 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function isSubscriptionTier(value: unknown): value is AuthUser['subscriptionTier'] {
+  return ['STARTER', 'GROWTH', 'PRO', 'BUSINESS', 'ENTERPRISE'].includes(String(value));
+}
+
+function isSubscriptionStatus(value: unknown): value is AuthUser['subscriptionStatus'] {
+  return ['active', 'expired', 'trialing', 'none'].includes(String(value));
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { user: clerkUser, isLoaded } = useUser();
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -34,13 +42,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    const clerkTier = clerkUser.publicMetadata?.subscriptionTier;
+    const clerkStatus = clerkUser.publicMetadata?.subscriptionStatus;
+
     const fallbackUser: AuthUser = {
       id: clerkUser.id,
       email: clerkUser.primaryEmailAddress?.emailAddress ?? clerkUser.emailAddresses?.[0]?.emailAddress ?? '',
       name: [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ') || clerkUser.username || 'Cliente',
-      role: 'CLIENT',
-      subscriptionTier: 'STARTER',
-      subscriptionStatus: 'active',
+      role: clerkUser.publicMetadata?.role === 'ADMIN' ? 'ADMIN' : 'CLIENT',
+      subscriptionTier: isSubscriptionTier(clerkTier) ? clerkTier : 'STARTER',
+      subscriptionStatus: isSubscriptionStatus(clerkStatus) ? clerkStatus : 'active',
     };
 
     setLoading(true);
@@ -53,7 +64,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const data = await response.json();
-      setUser(data.user ?? fallbackUser);
+      const profileUser = data.user ?? fallbackUser;
+      setUser(profileUser);
+
+      if (
+        profileUser?.subscriptionTier &&
+        clerkUser.publicMetadata?.subscriptionTier !== profileUser.subscriptionTier &&
+        typeof (clerkUser as any).reload === 'function'
+      ) {
+        await (clerkUser as any).reload();
+      }
     } catch (error) {
       console.error('Error loading user profile:', error);
       setUser(fallbackUser);
