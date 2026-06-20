@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth, currentUser } from '@clerk/nextjs/server';
+import { revalidatePath } from 'next/cache';
 import Stripe from 'stripe';
 import {
   activateSubscription,
@@ -7,6 +8,7 @@ import {
   isValidSubscriptionTier,
   mapProfileRowToAuthUser,
 } from '@/lib/subscription-db';
+import { syncClerkSubscriptionMetadata } from '@/lib/clerk-metadata';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_missing', {
   apiVersion: '2026-04-22.dahlia',
@@ -71,10 +73,24 @@ export async function POST(request: Request) {
       tier: plan.id,
     });
 
+    const user = mapProfileRowToAuthUser(profile);
+
+    await syncClerkSubscriptionMetadata({
+      userId,
+      subscriptionTier: user.subscriptionTier,
+      subscriptionStatus: user.subscriptionStatus,
+      role: user.role,
+    });
+
+    revalidatePath('/dashboard');
+    revalidatePath('/dashboard/stores');
+    revalidatePath('/dashboard/products');
+    revalidatePath('/dashboard/subscription');
+
     return NextResponse.json({
       ok: true,
       plan,
-      user: mapProfileRowToAuthUser(profile),
+      user,
     });
   } catch (error: any) {
     console.error('Stripe confirmation error:', error);
