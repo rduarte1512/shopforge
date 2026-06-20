@@ -50,7 +50,7 @@ function buildDefaultCustomization(store: any) {
   const accent = store.primary_color || store.primaryColor || '#008060';
 
   return {
-    accounts: { enabled: store.enableAccounts !== false, requireLoginForCheckout: false },
+    accounts: { enabled: store.enableAccounts !== false, requireLoginForCheckout: false, allowRegistration: true },
     header: { sticky: true, logoPosition: 'left', height: 72 },
     hero: { height: 520, textAlign: 'center', showOverlay: true, overlayOpacity: 0.12, title: store.name, subtitle: store.description },
     products: { columns: 4, gap: 28, aspectRatio: 'portrait', showPrice: true, showStock: true },
@@ -373,7 +373,7 @@ export default function StoresPage() {
                     <ShieldCheck className="w-5 h-5 text-emerald-600 mt-0.5" />
                     <div>
                       <p className="text-sm font-black text-emerald-900">Contas de cliente ativadas</p>
-                      <p className="text-xs text-emerald-700 mt-1">As lojas criadas por IA já vêm com login/criar conta no storefront. Podes desligar depois no editor de customização.</p>
+                      <p className="text-xs text-emerald-700 mt-1">As lojas criadas por IA já vêm com login/criar conta no storefront. Podes desligar depois no botão Login de cada loja.</p>
                     </div>
                   </div>
 
@@ -490,9 +490,12 @@ export default function StoresPage() {
                   Login da loja: <span className={accountsEnabled ? 'text-emerald-600' : 'text-slate-400'}>{accountsEnabled ? 'Ativo' : 'Desativo'}</span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 mt-6">
+                <div className="grid grid-cols-3 gap-3 mt-6">
                   <Link href={`/dashboard/stores/${store.id}/customize`} className="bg-slate-900 text-white py-2.5 rounded-xl text-center text-xs font-black flex items-center justify-center gap-2">
                     <Sparkles className="w-4 h-4" /> Customizar
+                  </Link>
+                  <Link href={`/dashboard/stores/${store.id}/accounts`} className="bg-emerald-50 text-emerald-700 border border-emerald-100 py-2.5 rounded-xl text-center text-xs font-black flex items-center justify-center gap-2">
+                    <UserRound className="w-4 h-4" /> Login
                   </Link>
                   <Link href={`/s/${store.domain}`} target="_blank" className="bg-slate-50 text-text-dark border border-border py-2.5 rounded-xl text-center text-xs font-black flex items-center justify-center gap-2">
                     <ExternalLink className="w-4 h-4" /> Ver loja
