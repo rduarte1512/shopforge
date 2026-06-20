@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
-import { deleteAbandonedCartBySessionAction, saveAbandonedCartAction } from '@/lib/abandoned-cart-actions';
+import { saveAbandonedCartAction } from '@/lib/abandoned-cart-actions';
 
 type CartItem = {
   productId: string;
@@ -19,12 +19,12 @@ interface CartContextType {
 }
 
 const CartContext = createContext<CartContextType>({
-  items: [], 
-  addItem: () => {}, 
+  items: [],
+  addItem: () => {},
   removeItem: () => {},
   updateQuantity: () => {},
-  clearCart: () => {}, 
-  cartCount: 0
+  clearCart: () => {},
+  cartCount: 0,
 });
 
 export const useCart = () => useContext(CartContext);
@@ -78,14 +78,9 @@ export function CartProvider({ children, storeId, storeDomain }: { children: Rea
 
     localStorage.setItem(cartStorageKey, JSON.stringify(cartItems));
 
-    if (!storeId) return;
+    if (!storeId || cartItems.length === 0) return;
 
     const sessionId = getSessionId(storeKey);
-
-    if (cartItems.length === 0) {
-      deleteAbandonedCartBySessionAction(storeId, sessionId).catch(console.error);
-      return;
-    }
 
     const timeout = window.setTimeout(() => {
       const customer = getStoredCustomer(storeId);
@@ -95,7 +90,7 @@ export function CartProvider({ children, storeId, storeDomain }: { children: Rea
         session_id: sessionId,
         customer_email: customer?.email || null,
         customer_name: customer?.name || null,
-        items: cartItems
+        items: cartItems,
       }).catch(console.error);
     }, 700);
 
