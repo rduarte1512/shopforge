@@ -2,294 +2,410 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const API_KEY = "AIzaSyB4GtxyWDgFrQyWp29EH6AjdFfVTRMh2JQ";
+const API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || '';
 
-const genAI = new GoogleGenerativeAI(API_KEY);
+function getModel(options?: any) {
+  if (!API_KEY) return null;
+  const genAI = new GoogleGenerativeAI(API_KEY);
+  return genAI.getGenerativeModel({
+    model: 'gemini-2.5-flash',
+    ...options,
+  });
+}
+
+function cleanJson(text: string) {
+  return text.replace(/```json|```/g, '').trim();
+}
+
+function parseJsonResponse(text: string) {
+  const cleaned = cleanJson(text);
+  const firstObject = cleaned.indexOf('{');
+  const firstArray = cleaned.indexOf('[');
+  const start = firstArray !== -1 && (firstArray < firstObject || firstObject === -1) ? firstArray : firstObject;
+  const end = cleaned.trim().endsWith(']') ? cleaned.lastIndexOf(']') : cleaned.lastIndexOf('}');
+
+  if (start >= 0 && end > start) {
+    return JSON.parse(cleaned.slice(start, end + 1));
+  }
+
+  return JSON.parse(cleaned);
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 42) || 'loja-online';
+}
+
+function pick<T>(items: T[]) {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+function detectNiche(prompt: string) {
+  const lower = prompt.toLowerCase();
+
+  if (/joia|jóia|anel|colar|pulseira|brinco/.test(lower)) return 'joalharia premium';
+  if (/roupa|streetwear|tshirt|camisola|moda|fashion/.test(lower)) return 'moda urbana';
+  if (/tech|tecnologia|gadget|eletr|electr|gaming/.test(lower)) return 'gadgets tecnológicos';
+  if (/beleza|skincare|cosmético|cosmetico|perfume/.test(lower)) return 'beleza e skincare';
+  if (/café|cafe|pastelaria|restaurante|comida|snack/.test(lower)) return 'café boutique';
+  if (/construção|construcao|cimento|ferramenta|obra/.test(lower)) return 'materiais de construção modernos';
+  if (/fitness|gym|treino|suplemento|desporto/.test(lower)) return 'fitness e performance';
+
+  return pick([
+    'joalharia premium',
+    'moda urbana',
+    'gadgets tecnológicos',
+    'beleza e skincare',
+    'casa minimalista',
+    'acessórios lifestyle',
+  ]);
+}
+
+function buildFallbackStoreConfig(prompt: string) {
+  const niche = detectNiche(prompt);
+  const concepts = [
+    {
+      suffix: 'Atelier',
+      mood: 'luxuoso, editorial e minimalista',
+      theme: 'light',
+      colors: ['#111827', '#f8fafc', '#c08a2d'],
+      hero: 'Design intemporal para quem valoriza detalhe.',
+    },
+    {
+      suffix: 'Lab',
+      mood: 'futurista, limpo e tecnológico',
+      theme: 'dark',
+      colors: ['#050816', '#f8fafc', '#22c55e'],
+      hero: 'Produtos inteligentes para uma experiência superior.',
+    },
+    {
+      suffix: 'Studio',
+      mood: 'premium, moderno e aspiracional',
+      theme: 'light',
+      colors: ['#fff7ed', '#111827', '#ea580c'],
+      hero: 'Uma coleção criada para elevar o teu dia a dia.',
+    },
+    {
+      suffix: 'House',
+      mood: 'elegante, acolhedor e sofisticado',
+      theme: 'light',
+      colors: ['#f5f5f4', '#1c1917', '#0f766e'],
+      hero: 'Escolhas com personalidade, qualidade e presença.',
+    },
+  ];
+
+  const concept = pick(concepts);
+  const nameRoot = niche.split(' ')[0].replace(/^./, (letter) => letter.toUpperCase());
+  const name = `${nameRoot} ${concept.suffix}`;
+  const [background, text, accent] = concept.colors;
+  const baseSeed = slugify(`${name}-${Date.now()}`);
+
+  const productNames = [
+    'Edição Signature',
+    'Coleção Essential',
+    'Modelo Aurora',
+    'Peça Prime',
+    'Pack Studio',
+    'Linha Icon',
+    'Seleção Premium',
+    'Produto Hero',
+  ];
+
+  const products = productNames.map((productName, index) => ({
+    name: `${productName} ${index + 1}`,
+    description: `Produto pensado para ${niche}, com apresentação premium e foco em qualidade percebida.`,
+    price: Number((29 + index * 12 + Math.random() * 18).toFixed(2)),
+    stock: 25 + index * 7,
+    category: niche,
+    imageKeyword: `${niche} ${productName}`,
+  }));
+
+  return {
+    name,
+    domain: `${slugify(name)}-${Math.floor(Math.random() * 900 + 100)}`,
+    description: `Uma loja de ${niche} com posicionamento ${concept.mood}.`,
+    theme: concept.theme,
+    primaryColor: accent,
+    bannerKeyword: niche,
+    logoKeyword: nameRoot,
+    products,
+    customization: {
+      header: { sticky: true, logoPosition: concept.theme === 'dark' ? 'center' : 'left', height: 76 },
+      hero: { height: 520, textAlign: 'center', showOverlay: true, overlayOpacity: 0.18, title: name, subtitle: concept.hero },
+      products: { columns: 4, gap: 30, aspectRatio: 'portrait', showPrice: true, showStock: true },
+      colors: { background, text, accent, muted: '#94a3b8', primary: accent },
+      fonts: { heading: 'Inter', body: 'Inter' },
+      sections: [
+        {
+          id: 'hero-1',
+          type: 'hero',
+          content: { title: name, subtitle: concept.hero, buttonText: 'Explorar coleção' },
+          styles: { height: 520, textAlign: 'center' },
+        },
+        {
+          id: 'brand-story-1',
+          type: 'text',
+          content: { text: `Criámos uma experiência de compra ${concept.mood}, focada em confiança, desejo e conversão.` },
+          styles: { textAlign: 'center' },
+        },
+        {
+          id: 'image-1',
+          type: 'image',
+          content: { url: `https://picsum.photos/seed/${baseSeed}/1400/560`, alt: `${name} banner` },
+          styles: { textAlign: 'center' },
+        },
+        {
+          id: 'products-1',
+          type: 'products',
+          content: { title: 'Mais desejados' },
+          styles: { columns: 4, textAlign: 'left' },
+        },
+        {
+          id: 'cta-1',
+          type: 'button',
+          content: { text: 'Comprar agora', action: 'checkout', url: '#produtos' },
+          styles: { textAlign: 'center' },
+        },
+      ],
+    },
+  };
+}
+
+function normalizeStoreConfig(config: any, prompt: string) {
+  const fallback = buildFallbackStoreConfig(prompt);
+  const merged = { ...fallback, ...(config || {}) };
+  const customization = config?.customization || config?.layout || config?.storefront || fallback.customization;
+
+  return {
+    ...merged,
+    name: merged.name || fallback.name,
+    domain: slugify(merged.domain || merged.name || fallback.domain),
+    description: merged.description || fallback.description,
+    theme: merged.theme === 'dark' ? 'dark' : 'light',
+    primaryColor: merged.primaryColor || merged.primary_color || fallback.primaryColor,
+    products: Array.isArray(merged.products) && merged.products.length > 0 ? merged.products : fallback.products,
+    customization: {
+      ...fallback.customization,
+      ...(customization || {}),
+      header: { ...fallback.customization.header, ...(customization?.header || {}) },
+      colors: { ...fallback.customization.colors, ...(customization?.colors || {}) },
+      fonts: { ...fallback.customization.fonts, ...(customization?.fonts || {}) },
+      products: { ...fallback.customization.products, ...(customization?.products || {}) },
+      sections: Array.isArray(customization?.sections) && customization.sections.length > 0 ? customization.sections : fallback.customization.sections,
+    },
+  };
+}
 
 export async function generateStoreConfig(prompt: string) {
+  const fallback = buildFallbackStoreConfig(prompt);
+
   try {
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
+    const model = getModel({
       generationConfig: {
-        temperature: 0.7,
-        responseMimeType: "application/json",
-      }
+        temperature: 1.05,
+        topP: 0.95,
+        responseMimeType: 'application/json',
+      },
     });
 
-    const fullPrompt = `Act as an e-commerce branding expert. Based on the user's description: "${prompt}", generate a complete store configuration. 
-Return ONLY a valid JSON object with these fields: 
-- name (string)
-- domain (string, url-friendly)
-- description (string, short)
-- theme (string, "light" or "dark")
-- primaryColor (string, hex)
-- bannerKeyword (string, a single descriptive word for a hero banner image)
-- logoKeyword (string, a single descriptive word for a logo image)
-- products (array of objects, generate at least 4 products. Each product object must have: name, description, price (number), stock (number), category, and imageKeyword (single descriptive word for the product image)).`;
+    if (!model) return fallback;
 
-    const result = await model.generateContent(fullPrompt);
+    const creativeBrief = `
+You are an elite e-commerce brand strategist, store designer and conversion copywriter.
+The user request is: "${prompt}".
+
+If the request is vague, such as "create an incredible/perfect store", you MUST choose a specific niche, a strong brand concept and a distinct visual direction. Do not make a generic Shopify clone.
+
+Generate a complete, production-ready Portuguese online store concept with:
+- memorable brand name
+- unique domain slug
+- short Portuguese description
+- theme: "light" or "dark"
+- primaryColor in HEX
+- bannerKeyword and logoKeyword
+- 8 realistic products in EUR
+- a full customization object for the visual editor
+
+The customization object must have this exact shape:
+{
+  "header": { "sticky": true, "logoPosition": "left" | "center", "height": number },
+  "hero": { "height": number, "textAlign": "left" | "center", "showOverlay": true, "overlayOpacity": number, "title": string, "subtitle": string },
+  "products": { "columns": number, "gap": number, "aspectRatio": "portrait", "showPrice": true, "showStock": true },
+  "colors": { "background": string, "text": string, "accent": string, "muted": string, "primary": string },
+  "fonts": { "heading": "Inter", "body": "Inter" },
+  "sections": [
+    { "id": string, "type": "hero", "content": { "title": string, "subtitle": string, "buttonText": string }, "styles": { "height": number, "textAlign": "left" | "center" } },
+    { "id": string, "type": "text", "content": { "text": string }, "styles": { "textAlign": "left" | "center" } },
+    { "id": string, "type": "image", "content": { "url": string, "alt": string }, "styles": { "textAlign": "center" } },
+    { "id": string, "type": "products", "content": { "title": string }, "styles": { "columns": 3 | 4, "textAlign": "left" } },
+    { "id": string, "type": "button", "content": { "text": string, "action": "checkout", "url": "#produtos" }, "styles": { "textAlign": "center" } }
+  ]
+}
+
+Use picsum image URLs with unique seeds, for example https://picsum.photos/seed/brand-name-hero/1400/560.
+Return ONLY valid JSON.`;
+
+    const result = await model.generateContent(creativeBrief);
     const response = await result.response;
-    let aiText = response.text();
+    const aiText = response.text();
 
-    if (!aiText) {
-      throw new Error("A API devolveu uma resposta vazia.");
-    }
+    if (!aiText) return fallback;
 
-    // Fallback: cleaning markdown if AI includes it despite responseMimeType
-    if (aiText.includes('```')) {
-      aiText = aiText.replace(/```json|```/g, '').trim();
-    }
-
-    try {
-      return JSON.parse(aiText);
-    } catch (parseErr) {
-      console.error("Failed to parse AI JSON. Raw text:", aiText);
-      throw new Error("A IA gerou um formato inválido. Tenta novamente.");
-    }
-
+    return normalizeStoreConfig(parseJsonResponse(aiText), prompt);
   } catch (error: any) {
-    console.error("AI Generation Critical Error:", error);
-
-    if (error.message?.includes('404')) {
-      throw new Error("Erro na comunicação com a API (Status: 404). O modelo pode estar indisponível.");
-    }
-
-    throw new Error(error.message || "Erro desconhecido na geração");
+    console.error('AI Generation Critical Error:', error);
+    return fallback;
   }
 }
 
 export async function updateStoreCustomizationWithAI(currentConfig: any, userRequest: string) {
   try {
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
+    const model = getModel({
       generationConfig: {
-        temperature: 0.5,
-        responseMimeType: "application/json",
-      }
+        temperature: 0.85,
+        topP: 0.9,
+        responseMimeType: 'application/json',
+      },
     });
 
-    const fullPrompt = `Act as an e-commerce branding and design expert. 
+    if (!model) throw new Error('GEMINI_API_KEY não configurada.');
+
+    const fullPrompt = `Act as a senior e-commerce designer.
 Current Store Configuration: ${JSON.stringify(currentConfig)}
 
-The user wants to make the following changes: "${userRequest}"
+The user wants: "${userRequest}"
 
-Generate an updated configuration object. You can modify colors, theme, layout, header settings, and most importantly, the dynamic sections.
-Return ONLY the COMPLETE updated JSON object for the customization field. 
-
-Structure:
-{
-  "header": { "sticky": boolean, "logoPosition": "left"|"center", "height": number },
-  "colors": { "background": string, "text": string, "accent": string, "muted": string, "primary": string },
-  "fonts": { "heading": string, "body": string },
-  "sections": [
-    { 
-      "id": string, 
-      "type": "hero"|"products"|"text"|"button"|"image"|"spacer",
-      "content": {
-        // For hero: { title, subtitle, buttonText }
-        // For products: { title }
-        // For text: { text }
-        // For button: { text, action: "link"|"whatsapp"|"checkout", url }
-        // For image: { url, alt }
-      },
-      "styles": {
-        // For all: { textAlign: "left"|"center"|"right" }
-        // For products: { columns: number }
-        // For hero: { height: number }
-        // For spacer: { height: number }
-      }
-    }
-  ] 
-}
-
-Make sure the changes are visually appealing and consistent with the user's request. Add new sections or reorder them if needed to fulfill the request.`;
+Return ONLY the COMPLETE updated JSON object for the customization field.
+Keep all required keys: header, hero, products, colors, fonts, sections.
+Never return an empty sections array.
+Make the design conversion-focused, visually distinct and consistent with the request.
+Use Portuguese copy in visible text.`;
 
     const result = await model.generateContent(fullPrompt);
     const response = await result.response;
-    let aiText = response.text();
+    const aiText = response.text();
 
-    if (aiText.includes('```')) {
-      aiText = aiText.replace(/```json|```/g, '').trim();
-    }
+    if (!aiText) throw new Error('Resposta vazia da IA.');
 
-    return JSON.parse(aiText);
-
+    return parseJsonResponse(aiText);
   } catch (error: any) {
-    console.error("AI Update Critical Error:", error);
-    throw new Error("Falha ao atualizar a loja com IA. Tenta novamente.");
+    console.error('AI Update Critical Error:', error);
+    throw new Error('Falha ao atualizar a loja com IA. Tenta novamente.');
   }
 }
 
 export async function generateProduct(prompt: string, category?: string) {
   try {
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
+    const model = getModel({
       generationConfig: {
-        temperature: 0.8,
-        responseMimeType: "application/json",
-      }
+        temperature: 0.85,
+        responseMimeType: 'application/json',
+      },
     });
 
-    const categoryContext = category ? `Categoria do produto: ${category}.` : '';
+    if (!model) {
+      return {
+        name: 'Produto Premium',
+        description: `Produto criado para ${prompt}, com foco em qualidade e apresentação profissional.`,
+        price: 39.9,
+        stock: 80,
+        category: category || 'Destaques',
+        imageKeyword: prompt,
+        sku: `PRD-${Math.floor(Math.random() * 9999)}`,
+        weight: 0.5,
+        material: 'Premium',
+        brand: 'ShopForge',
+        tags: ['premium', 'novo', 'destaque'],
+        specifications: {},
+        isActive: true,
+        isFeatured: true,
+      };
+    }
 
-    const fullPrompt = `Act as an e-commerce product expert. Based on the user's description: "${prompt}" ${categoryContext}
-Generate a complete product details. 
-Return ONLY a valid JSON object with these fields: 
-- name (string, product name)
-- description (string, detailed product description, 2-3 sentences highlighting features and benefits)
-- price (number, realistic price in EUR)
-- stock (number, realistic stock quantity between 10-200)
-- category (string, appropriate category)
-- imageKeyword (string, a single descriptive word for the product image that will be used with picsum.photos)
-- sku (string, unique SKU code like "PRD-001")
-- weight (number, weight in kg)
-- dimensions (object with length, width, height in cm)
-- material (string, main material)
-- brand (string, brand name)
-- tags (array of strings, relevant tags)
-- specifications (object, key-value pairs for technical specs)
-- isActive (boolean, default true)
-- isFeatured (boolean, default false).`;
+    const categoryContext = category ? `Categoria do produto: ${category}.` : '';
+    const fullPrompt = `Act as an e-commerce product expert. Based on: "${prompt}" ${categoryContext}
+Generate complete product details in Portuguese.
+Return ONLY valid JSON with: name, description, price, stock, category, imageKeyword, sku, weight, dimensions, material, brand, tags, specifications, isActive, isFeatured.`;
 
     const result = await model.generateContent(fullPrompt);
     const response = await result.response;
-    let aiText = response.text();
+    const aiText = response.text();
 
-    if (!aiText) {
-      throw new Error("A API devolveu uma resposta vazia.");
-    }
+    if (!aiText) throw new Error('A API devolveu uma resposta vazia.');
 
-    if (aiText.includes('```')) {
-      aiText = aiText.replace(/```json|```/g, '').trim();
-    }
-
-    try {
-      return JSON.parse(aiText);
-    } catch (parseErr) {
-      console.error("Failed to parse AI JSON. Raw text:", aiText);
-      throw new Error("A IA gerou um formato inválido. Tenta novamente.");
-    }
-
+    return parseJsonResponse(aiText);
   } catch (error: any) {
-    console.error("AI Product Generation Error:", error);
-    throw new Error(error.message || "Erro desconhecido na geração de produto");
+    console.error('AI Product Generation Error:', error);
+    throw new Error(error.message || 'Erro desconhecido na geração de produto');
   }
 }
 
 export async function generateMultipleProducts(prompt: string, count: number = 4) {
   try {
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
+    const model = getModel({
       generationConfig: {
-        temperature: 0.8,
-        responseMimeType: "application/json",
-      }
+        temperature: 0.9,
+        responseMimeType: 'application/json',
+      },
     });
 
-    const fullPrompt = `Act as an e-commerce product expert. Based on the user's description: "${prompt}"
-Generate ${count} complete product details. 
-Return ONLY a valid JSON array with ${count} product objects. Each product object must have: 
-- name (string, product name)
-- description (string, detailed product description, 2-3 sentences)
-- price (number, realistic price in EUR between 10-500)
-- stock (number, realistic stock quantity between 5-100)
-- category (string, appropriate category)
-- imageKeyword (string, a single descriptive word for the product image)
-- sku (string, unique SKU code like "PRD-001")
-- weight (number, weight in kg)
-- material (string, main material)
-- brand (string, brand name)
-- tags (array of strings, 3-5 relevant tags)
-- isActive (boolean, default true).`;
+    if (!model) return buildFallbackStoreConfig(prompt).products.slice(0, count);
+
+    const fullPrompt = `Act as an e-commerce product expert. Based on: "${prompt}"
+Generate ${count} complete product details in Portuguese.
+Return ONLY a valid JSON array with ${count} product objects. Each must include name, description, price, stock, category, imageKeyword, sku, weight, material, brand, tags, isActive.`;
 
     const result = await model.generateContent(fullPrompt);
     const response = await result.response;
-    let aiText = response.text();
+    const aiText = response.text();
 
-    if (!aiText) {
-      throw new Error("A API devolveu uma resposta vazia.");
-    }
+    if (!aiText) throw new Error('A API devolveu uma resposta vazia.');
 
-    if (aiText.includes('```')) {
-      aiText = aiText.replace(/```json|```/g, '').trim();
-    }
-
-    try {
-      const products = JSON.parse(aiText);
-      return Array.isArray(products) ? products : [products];
-    } catch (parseErr) {
-      console.error("Failed to parse AI JSON. Raw text:", aiText);
-      throw new Error("A IA gerou um formato inválido. Tenta novamente.");
-    }
-
+    const products = parseJsonResponse(aiText);
+    return Array.isArray(products) ? products : [products];
   } catch (error: any) {
-    console.error("AI Products Generation Error:", error);
-    throw new Error(error.message || "Erro desconhecido na geração de produtos");
+    console.error('AI Products Generation Error:', error);
+    throw new Error(error.message || 'Erro desconhecido na geração de produtos');
   }
 }
 
-export async function chatWithAssistant(messages: { role: 'user' | 'assistant', content: string }[]) {
+export async function chatWithAssistant(messages: { role: 'user' | 'assistant'; content: string }[]) {
   try {
-    const systemInstruction = `Tu és o Assistente ShopForge, um especialista em e-commerce e na plataforma ShopForge.
-ShopForge é uma plataforma SaaS que permite aos utilizadores criar e gerir as suas próprias lojas online de forma fácil e rápida.
-
-Funcionalidades principais do ShopForge:
-1. Painel de Controlo (Dashboard): Onde o utilizador gere tudo.
-2. Gestão de Produtos: Criar, editar, remover produtos, categorias, stock e preços.
-3. Encomendas: Visualizar e gerir encomendas dos clientes.
-4. Clientes: Base de dados de clientes que compraram na loja.
-5. Relatórios: Estatísticas de vendas e performance.
-6. Promoções e Cupões: Criar descontos e campanhas de marketing.
-7. Configurações de Loja: Personalização visual (tema, cores, logo), domínio e definições gerais.
-8. IA Integrada: O ShopForge usa IA para ajudar a gerar descrições de produtos, configurações de loja e até imagens.
-
-O teu objetivo é:
-- Esclarecer dúvidas sobre como usar a plataforma.
-- Ajudar com estratégias de e-commerce e marketing.
-- Ser amigável, profissional e prestável.
-- Responder em Português de Portugal.
-
-Se não souberes algo específico sobre a conta do utilizador, sugere que ele verifique as configurações no Dashboard.`;
-
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
-      systemInstruction: systemInstruction,
+    const model = getModel({
+      systemInstruction: `Tu és o Assistente ShopForge, especialista em e-commerce, criação de lojas online e crescimento de vendas. Responde em Português de Portugal, com respostas práticas e diretas.`,
     });
 
-    // Gemini requires history to start with 'user' role.
-    // If the first message is from the assistant, we skip it.
+    if (!model) throw new Error('GEMINI_API_KEY não configurada.');
+
     const history = messages.slice(0, -1)
-      .filter((m, i) => i > 0 || m.role === 'user')
-      .map(m => ({
-        role: m.role === 'user' ? 'user' : 'model',
-        parts: [{ text: m.content }],
+      .filter((message, index) => index > 0 || message.role === 'user')
+      .map((message) => ({
+        role: message.role === 'user' ? 'user' : 'model',
+        parts: [{ text: message.content }],
       }));
 
     const chat = model.startChat({
       history,
       generationConfig: {
         maxOutputTokens: 1000,
-        temperature: 0.7,
+        temperature: 0.75,
       },
     });
 
     const lastMessage = messages[messages.length - 1].content;
     const result = await chat.sendMessage(lastMessage);
     const response = await result.response;
-    
-    if (!response.text()) {
-      throw new Error("O assistente não conseguiu gerar uma resposta. Tenta reformular a tua pergunta.");
-    }
+
+    if (!response.text()) throw new Error('O assistente não conseguiu gerar uma resposta.');
 
     return response.text();
-
   } catch (error: any) {
-    console.error("AI Chat Error Details:", {
-      message: error.message,
-      stack: error.stack,
-      status: error.status,
-      response: error.response?.data
-    });
-    throw new Error("O assistente teve um problema ao processar a tua mensagem. Tenta novamente.");
+    console.error('AI Chat Error Details:', error);
+    throw new Error('O assistente teve um problema ao processar a tua mensagem. Tenta novamente.');
   }
 }
