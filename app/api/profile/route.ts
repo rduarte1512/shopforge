@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { ensureProfileFromAuth, mapProfileRowToAuthUser } from '@/lib/subscription-db';
+import { syncClerkSubscriptionMetadata } from '@/lib/clerk-metadata';
 
 export async function GET() {
   try {
@@ -15,8 +16,16 @@ export async function GET() {
     const name = [clerkUser?.firstName, clerkUser?.lastName].filter(Boolean).join(' ') || clerkUser?.username || null;
 
     const profile = await ensureProfileFromAuth({ userId, email, name });
+    const user = mapProfileRowToAuthUser(profile);
 
-    return NextResponse.json({ user: mapProfileRowToAuthUser(profile) });
+    await syncClerkSubscriptionMetadata({
+      userId,
+      subscriptionTier: user.subscriptionTier,
+      subscriptionStatus: user.subscriptionStatus,
+      role: user.role,
+    });
+
+    return NextResponse.json({ user });
   } catch (error: any) {
     console.error('Profile API error:', error);
     return NextResponse.json(
