@@ -5,9 +5,9 @@ import {
   getShippingMethodsAction,
   getCouponsAction,
   checkCouponAction,
-  createOrderAction,
   getAffiliateByCodeAction
 } from '@/lib/actions';
+import { createStorefrontOrderAction } from '@/lib/checkout-actions';
 import { getEnabledPaymentMethods, StorefrontPaymentMethod } from '@/lib/payment-methods';
 import { useParams } from 'next/navigation';
 import { useCart } from '@/components/CartProvider';
@@ -189,7 +189,11 @@ export default function CartPage() {
         affiliate_link_id: affiliateLinkId
       };
 
-      await createOrderAction(orderData, orderItemsData);
+      const orderResult = await createStorefrontOrderAction(orderData, orderItemsData);
+
+      if (!orderResult?.success) {
+        throw new Error(orderResult?.error || 'Não foi possível guardar a encomenda.');
+      }
 
       clearCart();
       setPaymentInfo({
