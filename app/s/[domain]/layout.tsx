@@ -107,11 +107,10 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <CartProvider>
+    <CartProvider storeId={store.id} storeDomain={store.domain}>
       <StoreLayoutInner store={store}>
          {children}
       </StoreLayoutInner>
     </CartProvider>
   );
 }
-
