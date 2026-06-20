@@ -8,7 +8,7 @@ import {
   normalizeBillingCycle,
 } from '@/lib/subscription-db';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_missing', {
   apiVersion: '2026-04-22.dahlia',
 });
 
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
 
     const origin = request.headers.get('origin') ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
     const amountCents = getCheckoutAmountCents(plan, billingCycle);
-    const stripeInterval: Stripe.PriceCreateParams.Recurring.Interval = billingCycle === 'yearly' ? 'year' : 'month';
+    const stripeInterval = billingCycle === 'yearly' ? 'year' : 'month';
 
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
