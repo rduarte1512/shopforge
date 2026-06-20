@@ -34,6 +34,8 @@ import {
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { NotificationPanel } from '@/components/dashboard/NotificationPanel';
+import { useAuth } from '@/lib/auth-context';
+import { setSelectedStoreCookie } from '@/lib/dashboard-actions';
 
 const navigation = [
   { name: 'Visão Geral', href: '/dashboard', icon: LayoutDashboard },
@@ -52,8 +54,6 @@ const navigation = [
   { name: 'Configurações', href: '/dashboard/settings', icon: Settings },
 ];
 
-import { setSelectedStoreCookie } from '@/lib/dashboard-actions';
-
 interface DashboardLayoutClientProps {
   children: React.ReactNode;
   user: any;
@@ -62,6 +62,7 @@ interface DashboardLayoutClientProps {
 
 export default function DashboardLayoutClient({ children, user, initialStores }: DashboardLayoutClientProps) {
   const { signOut } = useClerk();
+  const { user: authUser } = useAuth();
   const [stores] = useState<any[]>(initialStores);
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   
@@ -91,13 +92,11 @@ export default function DashboardLayoutClient({ children, user, initialStores }:
     localStorage.setItem('selectedStoreId', storeId);
     await setSelectedStoreCookie(storeId);
     setStoreDropdownOpen(false);
-    
-    // Refresh the current route to fetch new data on the server
     router.refresh();
   };
 
   const currentStore = selectedStoreId ? stores.find(s => s.id === selectedStoreId) || stores[0] : stores[0];
-  const subscriptionTier = (user.publicMetadata?.subscriptionTier as string) || 'STARTER';
+  const subscriptionTier = authUser?.subscriptionTier || (user.publicMetadata?.subscriptionTier as string) || 'STARTER';
 
   const handleSignOut = async () => {
     await signOut();
@@ -227,12 +226,10 @@ export default function DashboardLayoutClient({ children, user, initialStores }:
 
   return (
     <div className="min-h-screen bg-white flex font-sans antialiased text-text-primary">
-      {/* Desktop Sidebar */}
       <aside className="hidden lg:flex fixed inset-y-0 left-0 w-[280px] bg-white border-r border-border z-40">
         <SidebarContent />
       </aside>
       
-      {/* Mobile Sidebar Overlay */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <>
