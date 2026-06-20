@@ -1,19 +1,35 @@
 'use client';
 
 import { useState } from 'react';
-import { Package, Eye, CheckCircle2, Truck, X, Search, Filter } from 'lucide-react';
+import { Package, Eye, CheckCircle2, Truck, X, Search, Filter, Pencil, Trash2, Save, Loader2 } from 'lucide-react';
 import { StatusBadge } from '@/components/dashboard';
 import { getStoreOrdersAction, updateOrderStatusAction } from '@/lib/actions';
+import { removeOrderAction, updateOrderDetailsAction } from '@/lib/order-management-actions';
 
 interface OrdersClientProps {
   initialOrders: any[];
   selectedStoreId: string | null;
 }
 
+const emptyEditOrder = {
+  customer_name: '',
+  customer_email: '',
+  status: 'pending',
+  subtotal: 0,
+  shipping_cost: 0,
+  discount_amount: 0,
+  total: 0,
+  payment_method_type: '',
+  payment_instructions: '',
+};
+
 export default function OrdersClient({ initialOrders, selectedStoreId }: OrdersClientProps) {
   const [orders, setOrders] = useState<any[]>(initialOrders);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editOrder, setEditOrder] = useState<any>(emptyEditOrder);
+  const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   const refreshOrders = async () => {
@@ -48,10 +64,60 @@ export default function OrdersClient({ initialOrders, selectedStoreId }: OrdersC
     }
   };
 
+  const openEdit = (order: any) => {
+    setSelectedOrder(order);
+    setEditOrder({
+      customer_name: order.customer_name || '',
+      customer_email: order.customer_email || '',
+      status: order.status || 'pending',
+      subtotal: Number(order.subtotal || 0),
+      shipping_cost: Number(order.shipping_cost || 0),
+      discount_amount: Number(order.discount_amount || 0),
+      total: Number(order.total || 0),
+      payment_method_type: order.payment_method_type || '',
+      payment_instructions: order.payment_instructions || '',
+    });
+    setIsEditOpen(true);
+  };
+
+  const saveOrder = async () => {
+    if (!selectedOrder) return;
+    setSaving(true);
+    try {
+      const result = await updateOrderDetailsAction(selectedOrder.id, editOrder);
+      if (!result?.success) throw new Error(result?.error || 'Erro ao editar encomenda.');
+      await refreshOrders();
+      setIsEditOpen(false);
+      setSelectedOrder(result.order || { ...selectedOrder, ...editOrder });
+    } catch (err: any) {
+      alert(err.message || 'Erro ao editar encomenda.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const removeOrder = async (order: any) => {
+    const ok = confirm(`Eliminar a encomenda #${String(order.id).slice(0, 8).toUpperCase()}? Esta ação também remove os itens desta encomenda.`);
+    if (!ok) return;
+
+    try {
+      const result = await removeOrderAction(order.id);
+      if (!result?.success) throw new Error(result?.error || 'Erro ao eliminar encomenda.');
+      setOrders(prev => prev.filter(item => item.id !== order.id));
+      if (selectedOrder?.id === order.id) {
+        setSelectedOrder(null);
+        setIsModalOpen(false);
+        setIsEditOpen(false);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Erro ao eliminar encomenda.');
+    }
+  };
+
   const filteredOrders = orders.filter(o => 
-    o.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    o.customer_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    o.id.includes(searchTerm)
+    String(o.customer_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    String(o.customer_email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    String(o.id || '').includes(searchTerm)
   );
 
   return (
@@ -95,7 +161,7 @@ export default function OrdersClient({ initialOrders, selectedStoreId }: OrdersC
               {filteredOrders.map((order) => (
                 <tr key={order.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="py-4 px-6 font-mono text-[13px] font-bold text-gray-900">
-                    #{order.id.slice(0, 8).toUpperCase()}
+                    #{String(order.id).slice(0, 8).toUpperCase()}
                   </td>
                   <td className="py-4 px-6">
                     <div className="text-[13px] font-[600] text-text-dark">{order.customer_name}</div>
@@ -136,12 +202,29 @@ export default function OrdersClient({ initialOrders, selectedStoreId }: OrdersC
                     </div>
                   </td>
                   <td className="py-4 px-6 text-right">
-                    <button 
-                      onClick={() => { setSelectedOrder(order); setIsModalOpen(true); }}
-                      className="p-2 text-gray-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
-                    >
-                      <Eye className="w-5 h-5" />
-                    </button>
+                    <div className="flex items-center justify-end gap-1">
+                      <button 
+                        onClick={() => { setSelectedOrder(order); setIsModalOpen(true); }}
+                        className="p-2 text-gray-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
+                        title="Ver detalhes"
+                      >
+                        <Eye className="w-5 h-5" />
+                      </button>
+                      <button 
+                        onClick={() => openEdit(order)}
+                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                        title="Editar"
+                      >
+                        <Pencil className="w-5 h-5" />
+                      </button>
+                      <button 
+                        onClick={() => removeOrder(order)}
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                        title="Eliminar"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -157,6 +240,74 @@ export default function OrdersClient({ initialOrders, selectedStoreId }: OrdersC
         </div>
       </div>
 
+      {isEditOpen && selectedOrder && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+              <div>
+                <h2 className="text-xl font-black">Editar Encomenda</h2>
+                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">#{String(selectedOrder.id).slice(0, 8).toUpperCase()}</p>
+              </div>
+              <button onClick={() => setIsEditOpen(false)} className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[70vh] overflow-y-auto no-scrollbar">
+              <label className="space-y-1">
+                <span className="text-xs font-bold text-gray-500">Nome do cliente</span>
+                <input value={editOrder.customer_name} onChange={e => setEditOrder({ ...editOrder, customer_name: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-primary" />
+              </label>
+              <label className="space-y-1">
+                <span className="text-xs font-bold text-gray-500">Email</span>
+                <input type="email" value={editOrder.customer_email} onChange={e => setEditOrder({ ...editOrder, customer_email: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-primary" />
+              </label>
+              <label className="space-y-1">
+                <span className="text-xs font-bold text-gray-500">Estado</span>
+                <select value={editOrder.status} onChange={e => setEditOrder({ ...editOrder, status: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-primary">
+                  <option value="pending">Pendente</option>
+                  <option value="paid">Pago</option>
+                  <option value="shipped">Enviado</option>
+                  <option value="delivered">Entregue</option>
+                </select>
+              </label>
+              <label className="space-y-1">
+                <span className="text-xs font-bold text-gray-500">Método de pagamento</span>
+                <input value={editOrder.payment_method_type} onChange={e => setEditOrder({ ...editOrder, payment_method_type: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-primary" />
+              </label>
+              <label className="space-y-1">
+                <span className="text-xs font-bold text-gray-500">Subtotal</span>
+                <input type="number" step="0.01" value={editOrder.subtotal} onChange={e => setEditOrder({ ...editOrder, subtotal: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-primary" />
+              </label>
+              <label className="space-y-1">
+                <span className="text-xs font-bold text-gray-500">Envio</span>
+                <input type="number" step="0.01" value={editOrder.shipping_cost} onChange={e => setEditOrder({ ...editOrder, shipping_cost: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-primary" />
+              </label>
+              <label className="space-y-1">
+                <span className="text-xs font-bold text-gray-500">Desconto</span>
+                <input type="number" step="0.01" value={editOrder.discount_amount} onChange={e => setEditOrder({ ...editOrder, discount_amount: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-primary" />
+              </label>
+              <label className="space-y-1">
+                <span className="text-xs font-bold text-gray-500">Total</span>
+                <input type="number" step="0.01" value={editOrder.total} onChange={e => setEditOrder({ ...editOrder, total: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-primary" />
+              </label>
+              <label className="space-y-1 md:col-span-2">
+                <span className="text-xs font-bold text-gray-500">Instruções de pagamento</span>
+                <textarea value={editOrder.payment_instructions || ''} onChange={e => setEditOrder({ ...editOrder, payment_instructions: e.target.value })} rows={3} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-primary" />
+              </label>
+            </div>
+
+            <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+              <button onClick={() => setIsEditOpen(false)} className="px-6 py-3 bg-white border border-gray-200 rounded-xl font-bold text-sm hover:bg-gray-50 transition-all">Cancelar</button>
+              <button onClick={saveOrder} disabled={saving} className="px-8 py-3 bg-gray-900 text-white rounded-xl font-bold text-sm hover:bg-black transition-all flex items-center gap-2 disabled:opacity-50">
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isModalOpen && selectedOrder && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
@@ -171,7 +322,6 @@ export default function OrdersClient({ initialOrders, selectedStoreId }: OrdersC
             </div>
             
             <div className="p-8 space-y-8 max-h-[70vh] overflow-y-auto no-scrollbar">
-              {/* Status Section */}
               <div className="flex flex-col sm:flex-row gap-6 justify-between items-start sm:items-center p-6 bg-gray-50 rounded-2xl border border-gray-100">
                 <div className="space-y-1">
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Estado Atual</p>
@@ -195,10 +345,12 @@ export default function OrdersClient({ initialOrders, selectedStoreId }: OrdersC
                        <Truck className="w-4 h-4" /> Marcar como Enviado
                      </button>
                    )}
+                   <button onClick={() => openEdit(selectedOrder)} className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-xl text-sm font-bold hover:bg-black transition-all">
+                    <Pencil className="w-4 h-4" /> Editar
+                   </button>
                 </div>
               </div>
 
-              {/* Customer Info */}
               <div className="grid grid-cols-2 gap-8">
                 <div className="space-y-4">
                   <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">Cliente</h3>
@@ -216,7 +368,6 @@ export default function OrdersClient({ initialOrders, selectedStoreId }: OrdersC
                 </div>
               </div>
 
-              {/* Items List */}
               <div className="space-y-4">
                 <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">Itens da Encomenda</h3>
                 <div className="divide-y divide-gray-100 border rounded-2xl overflow-hidden bg-white">
@@ -237,7 +388,6 @@ export default function OrdersClient({ initialOrders, selectedStoreId }: OrdersC
                 </div>
               </div>
 
-              {/* Summary */}
               <div className="pt-6 border-t border-gray-100 flex flex-col items-end space-y-2">
                 <div className="flex justify-between w-48 text-sm font-medium text-gray-500">
                   <span>Subtotal</span>
@@ -260,7 +410,10 @@ export default function OrdersClient({ initialOrders, selectedStoreId }: OrdersC
               </div>
             </div>
             
-            <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end">
+            <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-between">
+              <button onClick={() => removeOrder(selectedOrder)} className="px-6 py-3 bg-red-50 text-red-600 rounded-xl font-bold text-sm hover:bg-red-100 transition-all flex items-center gap-2">
+                <Trash2 className="w-4 h-4" /> Eliminar
+              </button>
               <button onClick={() => setIsModalOpen(false)} className="px-8 py-3 bg-gray-900 text-white rounded-xl font-bold text-sm hover:bg-black transition-all">
                 Fechar
               </button>
