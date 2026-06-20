@@ -50,7 +50,7 @@ export default function StoreAccountPage() {
     }
   }, [storageKey]);
 
-  const accountsEnabled = store?.customization?.accounts?.enabled === true;
+  const accountsEnabled = store?.customization?.accounts?.enabled !== false;
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -109,7 +109,7 @@ export default function StoreAccountPage() {
         <div className="max-w-xl mx-auto bg-white rounded-[2rem] p-8 border border-slate-100 shadow-xl text-center">
           <LockKeyhole className="w-12 h-12 mx-auto mb-4 text-slate-300" />
           <h1 className="text-2xl font-black mb-2">Conta indisponível</h1>
-          <p className="text-slate-500 mb-6">Esta loja ainda não ativou o sistema de login.</p>
+          <p className="text-slate-500 mb-6">Esta loja desativou o sistema de login.</p>
           <Link href={`/s/${store.domain}`} className="inline-flex items-center gap-2 px-6 py-3 bg-slate-950 text-white rounded-2xl font-black">
             <ArrowLeft className="w-4 h-4" /> Voltar à loja
           </Link>
