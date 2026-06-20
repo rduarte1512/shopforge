@@ -76,16 +76,18 @@ export default function SubscriptionPage() {
             </motion.p>
 
             <div className="flex flex-wrap gap-3 pt-2">
-              {[
-                ['Stripe seguro', CreditCard],
-                ['Plano ativado após pagamento', LockKeyhole],
-                ['Cancela quando quiseres', ShieldCheck],
-              ].map(([label, Icon]) => (
-                <div key={label as string} className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-white/10 border border-white/10 text-sm font-bold text-slate-200">
-                  <Icon className="w-4 h-4 text-emerald-300" />
-                  {label as string}
-                </div>
-              ))}
+              <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-white/10 border border-white/10 text-sm font-bold text-slate-200">
+                <CreditCard className="w-4 h-4 text-emerald-300" />
+                Stripe seguro
+              </div>
+              <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-white/10 border border-white/10 text-sm font-bold text-slate-200">
+                <LockKeyhole className="w-4 h-4 text-emerald-300" />
+                Plano ativado após pagamento
+              </div>
+              <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-white/10 border border-white/10 text-sm font-bold text-slate-200">
+                <ShieldCheck className="w-4 h-4 text-emerald-300" />
+                Cancela quando quiseres
+              </div>
             </div>
           </div>
 
