@@ -11,14 +11,24 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/login');
   }
 
-  // Fetch data in parallel on the server
-  const [_, stores] = await Promise.all([
+  const [profile, stores] = await Promise.all([
     syncUserAction(),
     getMyStoresAction()
   ]);
 
+  const clientUser = JSON.parse(JSON.stringify(user));
+
+  if (profile?.subscription_tier) {
+    clientUser.publicMetadata = {
+      ...(clientUser.publicMetadata ?? {}),
+      subscriptionTier: profile.subscription_tier,
+      subscriptionStatus: profile.subscription_status ?? 'active',
+      role: profile.role ?? 'CLIENT',
+    };
+  }
+
   return (
-    <DashboardLayoutClient user={JSON.parse(JSON.stringify(user))} initialStores={stores}>
+    <DashboardLayoutClient user={clientUser} initialStores={stores}>
       {children}
     </DashboardLayoutClient>
   );
