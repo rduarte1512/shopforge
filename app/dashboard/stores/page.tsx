@@ -11,6 +11,7 @@ import {
 import { setSelectedStoreCookie } from '@/lib/dashboard-actions';
 import { SUBSCRIPTION_PLANS, useMockDB } from '@/lib/store';
 import { useAuth } from '@/lib/auth-context';
+import { getProductSmartImage, replaceRandomImagesInCustomization } from '@/lib/smart-images';
 import {
   AlertCircle,
   ArrowRight,
@@ -77,17 +78,21 @@ function buildDefaultCustomization(store: any) {
 
 function normalizeCustomization(config: any, store: any) {
   const fallback = buildDefaultCustomization(store);
-  const hasSections = Array.isArray(config?.sections) && config.sections.length > 0;
+  const sanitizedConfig = replaceRandomImagesInCustomization(
+    config,
+    `${store.name || ''} ${store.description || ''} ${store.domain || ''}`
+  );
+  const hasSections = Array.isArray(sanitizedConfig?.sections) && sanitizedConfig.sections.length > 0;
 
   return {
     ...fallback,
-    ...(config || {}),
-    header: { ...fallback.header, ...(config?.header || {}) },
-    hero: { ...fallback.hero, ...(config?.hero || {}) },
-    products: { ...fallback.products, ...(config?.products || {}) },
-    colors: { ...fallback.colors, ...(config?.colors || {}) },
-    fonts: { ...fallback.fonts, ...(config?.fonts || {}) },
-    sections: hasSections ? config.sections : fallback.sections,
+    ...(sanitizedConfig || {}),
+    header: { ...fallback.header, ...(sanitizedConfig?.header || {}) },
+    hero: { ...fallback.hero, ...(sanitizedConfig?.hero || {}) },
+    products: { ...fallback.products, ...(sanitizedConfig?.products || {}) },
+    colors: { ...fallback.colors, ...(sanitizedConfig?.colors || {}) },
+    fonts: { ...fallback.fonts, ...(sanitizedConfig?.fonts || {}) },
+    sections: hasSections ? sanitizedConfig.sections : fallback.sections,
   };
 }
 
@@ -121,7 +126,7 @@ export default function StoresPage() {
   const steps = [
     'Conceito e posicionamento da marca',
     'Identidade visual, cores e layout',
-    'Produtos iniciais e imagens',
+    'Produtos iniciais com imagens certas',
     'Finalização e ligação ao dashboard',
   ];
 
@@ -146,20 +151,19 @@ export default function StoresPage() {
     await setSelectedStoreCookie(storeId);
   };
 
-  const createProductsForStore = async (storeId: string, products: any[]) => {
+  const createProductsForStore = async (storeId: string, products: any[], storeContext = '') => {
     const safeProducts = Array.isArray(products) ? products : [];
 
     await Promise.all(
       safeProducts.slice(0, 8).map(async (product, index) => {
         try {
-          const seed = slugify(product.imageKeyword || product.name || `produto-${index}`);
           await addProductAction({
             store_id: storeId,
             name: product.name || `Produto ${index + 1}`,
             description: product.description || 'Produto criado automaticamente pela IA.',
             price: Number(product.price) || 29.9,
             stock: Number(product.stock) || 50,
-            image_url: `https://picsum.photos/seed/${seed}/800/1000`,
+            image_url: getProductSmartImage(product, index, storeContext),
             category: product.category || 'Destaques',
           });
         } catch (error) {
@@ -196,10 +200,11 @@ export default function StoresPage() {
       };
 
       const store = await createStoreAction(storePayload);
-      const customization = normalizeCustomization(config.customization, { ...storePayload, ...store });
+      const storeContext = `${aiPrompt} ${storePayload.name} ${storePayload.description}`;
+      const customization = normalizeCustomization(config.customization, { ...storePayload, ...store, bannerKeyword: config.bannerKeyword });
 
       await updateStoreCustomizationAction(store.id, customization);
-      await createProductsForStore(store.id, config.products || []);
+      await createProductsForStore(store.id, config.products || [], storeContext);
       await selectCreatedStore(store.id);
 
       clearInterval(stepInterval);
@@ -308,7 +313,7 @@ export default function StoresPage() {
                 {isAiMode ? <Sparkles className="w-5 h-5 text-shopify-green" /> : <Plus className="w-5 h-5" />}
                 {isAiMode ? 'Gerar loja completa com IA' : 'Criar loja manualmente'}
               </h2>
-              <p className="text-sm text-text-muted mt-1">A loja criada por IA já vem com layout, customização e produtos iniciais.</p>
+              <p className="text-sm text-text-muted mt-1">A loja criada por IA já vem com layout, customização, produtos e imagens do nicho pedido.</p>
             </div>
             <button onClick={() => setIsCreating(false)} className="text-text-muted hover:text-text-dark border-none bg-transparent cursor-pointer font-bold">Esc</button>
           </div>
@@ -345,8 +350,8 @@ export default function StoresPage() {
               ) : (
                 <div className="space-y-5">
                   <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4">
-                    <p className="text-sm text-emerald-900 font-bold">Escreve pouco ou muito. A IA completa o resto.</p>
-                    <p className="text-sm text-emerald-700 mt-1">Com um prompt simples, ela escolhe nicho, branding, cores, layout, secções e cria produtos reais na aba Produtos.</p>
+                    <p className="text-sm text-emerald-900 font-bold">A IA agora usa imagens relacionadas com o nicho.</p>
+                    <p className="text-sm text-emerald-700 mt-1">Exemplo: se pedires relógios, cria produtos de relógios com imagens de relógios, não imagens aleatórias.</p>
                   </div>
 
                   <textarea
@@ -354,7 +359,7 @@ export default function StoresPage() {
                     onChange={(event) => setAiPrompt(event.target.value)}
                     rows={4}
                     className="w-full px-4 py-3 border border-[var(--color-border)] rounded-2xl focus:outline-none focus:border-shopify-green text-sm resize-none"
-                    placeholder="Ex: cria uma loja incrível e perfeita"
+                    placeholder="Ex: cria uma loja de relógios premium com estilo preto e dourado"
                   />
 
                   {isGenerating && (
@@ -409,24 +414,16 @@ export default function StoresPage() {
 
           <div className="sticky bottom-0 bg-white/95 backdrop-blur border-t border-[var(--color-border)] p-4 flex items-center justify-between gap-4">
             <div className="hidden sm:block text-xs text-text-muted font-medium">
-              {isAiMode ? 'Cria loja + layout + produtos automaticamente.' : 'Cria a loja e abre o editor visual depois.'}
+              {isAiMode ? 'Cria loja + layout + produtos + imagens certas.' : 'Cria a loja e abre o editor visual depois.'}
             </div>
             {isAiMode ? (
-              <button
-                onClick={handleAiGenerate}
-                disabled={isGenerating || isAiRestricted}
-                className="ml-auto bg-slate-950 text-white px-7 py-3 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed shadow-xl"
-              >
+              <button onClick={handleAiGenerate} disabled={isGenerating || isAiRestricted} className="ml-auto bg-slate-950 text-white px-7 py-3 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed shadow-xl">
                 {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                 {isGenerating ? 'A criar loja completa...' : 'Criar loja com IA'}
                 {!isGenerating && <ArrowRight className="w-4 h-4" />}
               </button>
             ) : (
-              <button
-                form="manual-store-form"
-                type="submit"
-                className="ml-auto bg-shopify-green text-white px-7 py-3 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity shadow-xl"
-              >
+              <button form="manual-store-form" type="submit" className="ml-auto bg-shopify-green text-white px-7 py-3 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity shadow-xl">
                 Criar loja manualmente
                 <ArrowRight className="w-4 h-4" />
               </button>
