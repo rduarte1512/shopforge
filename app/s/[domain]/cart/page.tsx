@@ -122,6 +122,7 @@ export default function CartPage() {
   }, [params.domain]);
 
   const accountsEnabled = store?.customization?.accounts?.enabled !== false;
+  const requireLoginForCheckout = store?.customization?.accounts?.requireLoginForCheckout === true;
 
   const paymentMethods = useMemo(() => {
     return getEnabledPaymentMethods(
@@ -183,6 +184,11 @@ export default function CartPage() {
     e.preventDefault();
     if (!selectedShipping) return alert('Por favor, selecione um método de envio.');
     if (!selectedPayment) return alert('Por favor, selecione um método de pagamento.');
+    if (accountsEnabled && requireLoginForCheckout && !customer) {
+      alert('Esta loja exige login para finalizar a compra. Entre ou crie conta primeiro.');
+      window.location.href = `/s/${store.domain}/account`;
+      return;
+    }
     if (!checkoutName || !checkoutEmail) return alert('Confirme o nome e email do cliente.');
 
     setIsCheckingOut(true);
@@ -389,16 +395,24 @@ export default function CartPage() {
                       <div className="rounded-2xl bg-white/[0.08] border border-white/10 p-4 flex items-center gap-3">
                         <div className="w-11 h-11 rounded-2xl bg-white text-slate-950 flex items-center justify-center"><UserRound className="w-5 h-5" /></div>
                         <div className="min-w-0 flex-1"><p className="font-black truncate">{customer.name}</p><p className="text-xs text-white/45 truncate">{customer.email}</p></div>
-                        <button type="button" onClick={() => setUseAccount(false)} className="text-[10px] font-black text-white/45 hover:text-white uppercase">Alterar</button>
+                        {!requireLoginForCheckout && <button type="button" onClick={() => setUseAccount(false)} className="text-[10px] font-black text-white/45 hover:text-white uppercase">Alterar</button>}
                       </div>
                     ) : (
                       <>
-                        {accountsEnabled && !customer && <Link href={`/s/${store.domain}/account`} className="block rounded-2xl bg-emerald-400/10 border border-emerald-300/20 p-4 text-sm font-bold text-emerald-200">Entrar ou criar conta para preencher automaticamente</Link>}
-                        <input required type="text" placeholder="Nome completo" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-4 rounded-2xl bg-white/8 border border-white/10 focus:outline-none focus:border-white/35 font-semibold text-white placeholder:text-white/25" />
-                        <input required type="email" placeholder="Email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full px-4 py-4 rounded-2xl bg-white/8 border border-white/10 focus:outline-none focus:border-white/35 font-semibold text-white placeholder:text-white/25" />
+                        {accountsEnabled && !customer && (
+                          <Link href={`/s/${store.domain}/account`} className={`block rounded-2xl border p-4 text-sm font-bold ${requireLoginForCheckout ? 'bg-red-400/10 border-red-300/20 text-red-200' : 'bg-emerald-400/10 border-emerald-300/20 text-emerald-200'}`}>
+                            {requireLoginForCheckout ? 'Esta loja exige login para finalizar. Entrar ou criar conta' : 'Entrar ou criar conta para preencher automaticamente'}
+                          </Link>
+                        )}
+                        {!(accountsEnabled && requireLoginForCheckout && !customer) && (
+                          <>
+                            <input required type="text" placeholder="Nome completo" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-4 rounded-2xl bg-white/8 border border-white/10 focus:outline-none focus:border-white/35 font-semibold text-white placeholder:text-white/25" />
+                            <input required type="email" placeholder="Email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full px-4 py-4 rounded-2xl bg-white/8 border border-white/10 focus:outline-none focus:border-white/35 font-semibold text-white placeholder:text-white/25" />
+                          </>
+                        )}
                       </>
                     )}
-                    <button type="submit" disabled={isCheckingOut || !selectedPayment || !selectedShipping} className="w-full py-5 rounded-2xl text-slate-950 bg-white font-black text-lg transition-all hover:bg-white/90 disabled:opacity-40 shadow-xl shadow-black/20 mt-4 flex items-center justify-center gap-2">
+                    <button type="submit" disabled={isCheckingOut || !selectedPayment || !selectedShipping || (accountsEnabled && requireLoginForCheckout && !customer)} className="w-full py-5 rounded-2xl text-slate-950 bg-white font-black text-lg transition-all hover:bg-white/90 disabled:opacity-40 shadow-xl shadow-black/20 mt-4 flex items-center justify-center gap-2">
                       {isCheckingOut && <Loader2 className="w-5 h-5 animate-spin" />}
                       {isCheckingOut ? 'A processar...' : 'Finalizar Compra'}
                     </button>
