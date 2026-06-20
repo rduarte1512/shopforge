@@ -19,9 +19,11 @@ import {
   Loader2,
   Lock,
   Plus,
+  ShieldCheck,
   Sparkles,
   Store as StoreIcon,
   Trash2,
+  UserRound,
   Wand2,
   Zap,
 } from 'lucide-react';
@@ -48,6 +50,7 @@ function buildDefaultCustomization(store: any) {
   const accent = store.primary_color || store.primaryColor || '#008060';
 
   return {
+    accounts: { enabled: store.enableAccounts !== false, requireLoginForCheckout: false },
     header: { sticky: true, logoPosition: 'left', height: 72 },
     hero: { height: 520, textAlign: 'center', showOverlay: true, overlayOpacity: 0.12, title: store.name, subtitle: store.description },
     products: { columns: 4, gap: 28, aspectRatio: 'portrait', showPrice: true, showStock: true },
@@ -87,6 +90,7 @@ function normalizeCustomization(config: any, store: any) {
   return {
     ...fallback,
     ...(sanitizedConfig || {}),
+    accounts: { ...fallback.accounts, ...(sanitizedConfig?.accounts || {}) },
     header: { ...fallback.header, ...(sanitizedConfig?.header || {}) },
     hero: { ...fallback.hero, ...(sanitizedConfig?.hero || {}) },
     products: { ...fallback.products, ...(sanitizedConfig?.products || {}) },
@@ -115,6 +119,7 @@ export default function StoresPage() {
     description: '',
     theme: 'light' as 'light' | 'dark',
     primaryColor: '#008060',
+    enableAccounts: true,
   });
   const router = useRouter();
 
@@ -197,6 +202,7 @@ export default function StoresPage() {
         theme: config.theme === 'dark' ? 'dark' : 'light',
         primary_color: config.primaryColor || '#008060',
         base_currency: 'EUR',
+        enableAccounts: true,
       };
 
       const store = await createStoreAction(storePayload);
@@ -242,6 +248,7 @@ export default function StoresPage() {
         theme: newStore.theme,
         primary_color: newStore.primaryColor,
         base_currency: 'EUR',
+        enableAccounts: newStore.enableAccounts,
       };
 
       const store = await createStoreAction(storePayload);
@@ -249,7 +256,7 @@ export default function StoresPage() {
       await selectCreatedStore(store.id);
 
       setIsCreating(false);
-      setNewStore({ name: '', domain: '', description: '', theme: 'light', primaryColor: '#008060' });
+      setNewStore({ name: '', domain: '', description: '', theme: 'light', primaryColor: '#008060', enableAccounts: true });
       await fetchStores();
       router.refresh();
     } catch (err: any) {
@@ -362,6 +369,14 @@ export default function StoresPage() {
                     placeholder="Ex: cria uma loja de relógios premium com estilo preto e dourado"
                   />
 
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 flex items-start gap-3">
+                    <ShieldCheck className="w-5 h-5 text-emerald-600 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-black text-emerald-900">Contas de cliente ativadas</p>
+                      <p className="text-xs text-emerald-700 mt-1">As lojas criadas por IA já vêm com login/criar conta no storefront. Podes desligar depois no editor de customização.</p>
+                    </div>
+                  </div>
+
                   {isGenerating && (
                     <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-3">
                       {steps.map((step, index) => (
@@ -408,6 +423,14 @@ export default function StoresPage() {
                     <input type="color" value={newStore.primaryColor} onChange={(event) => setNewStore({ ...newStore, primaryColor: event.target.value })} className="w-full h-10 border border-[var(--color-border)] rounded-lg" />
                   </div>
                 </div>
+
+                <label className="flex items-start gap-4 p-4 rounded-2xl border border-emerald-100 bg-emerald-50 cursor-pointer">
+                  <input type="checkbox" checked={newStore.enableAccounts} onChange={(event) => setNewStore({ ...newStore, enableAccounts: event.target.checked })} className="mt-1 h-4 w-4 accent-shopify-green" />
+                  <div>
+                    <p className="text-sm font-black text-emerald-900 flex items-center gap-2"><UserRound className="w-4 h-4" /> Ativar login e criar conta na loja</p>
+                    <p className="text-xs text-emerald-700 mt-1">Clientes podem criar conta só nesta loja. No checkout o nome/email aparecem automaticamente e carrinhos abandonados ficam ligados à conta.</p>
+                  </div>
+                </label>
               </form>
             )}
           </div>
@@ -440,45 +463,54 @@ export default function StoresPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {stores.map((store) => (
-            <div key={store.id} className="bg-white border border-border rounded-3xl p-6 shadow-sm hover:shadow-xl transition-all">
-              <div className="flex items-start justify-between gap-4 mb-5">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg" style={{ backgroundColor: store.primary_color || '#008060' }}>
-                    <StoreIcon className="w-6 h-6" />
+          {stores.map((store) => {
+            const accountsEnabled = store.customization?.accounts?.enabled !== false;
+
+            return (
+              <div key={store.id} className="bg-white border border-border rounded-3xl p-6 shadow-sm hover:shadow-xl transition-all">
+                <div className="flex items-start justify-between gap-4 mb-5">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg" style={{ backgroundColor: store.primary_color || '#008060' }}>
+                      <StoreIcon className="w-6 h-6" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-black text-text-dark truncate">{store.name}</h3>
+                      <p className="text-xs text-text-muted truncate">/s/{store.domain}</p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <h3 className="font-black text-text-dark truncate">{store.name}</h3>
-                    <p className="text-xs text-text-muted truncate">/s/{store.domain}</p>
-                  </div>
+                  <button onClick={() => setDeleteConfirmStoreId(store.id)} className="p-2 text-red-400 hover:bg-red-50 rounded-xl transition-colors">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
-                <button onClick={() => setDeleteConfirmStoreId(store.id)} className="p-2 text-red-400 hover:bg-red-50 rounded-xl transition-colors">
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
 
-              <p className="text-sm text-text-muted min-h-[44px] line-clamp-2">{store.description || 'Sem descrição.'}</p>
+                <p className="text-sm text-text-muted min-h-[44px] line-clamp-2">{store.description || 'Sem descrição.'}</p>
 
-              <div className="grid grid-cols-2 gap-3 mt-6">
-                <Link href={`/dashboard/stores/${store.id}/customize`} className="bg-slate-900 text-white py-2.5 rounded-xl text-center text-xs font-black flex items-center justify-center gap-2">
-                  <Sparkles className="w-4 h-4" /> Customizar
-                </Link>
-                <Link href={`/s/${store.domain}`} target="_blank" className="bg-slate-50 text-text-dark border border-border py-2.5 rounded-xl text-center text-xs font-black flex items-center justify-center gap-2">
-                  <ExternalLink className="w-4 h-4" /> Ver loja
-                </Link>
-              </div>
-
-              {deleteConfirmStoreId === store.id && (
-                <div className="mt-4 bg-red-50 border border-red-100 rounded-2xl p-4 space-y-3">
-                  <p className="text-sm text-red-800 font-bold">Eliminar esta loja?</p>
-                  <div className="flex gap-2">
-                    <button onClick={() => handleDeleteStore(store.id)} className="flex-1 bg-red-600 text-white rounded-lg py-2 text-xs font-black">Eliminar</button>
-                    <button onClick={() => setDeleteConfirmStoreId(null)} className="flex-1 bg-white text-red-700 border border-red-100 rounded-lg py-2 text-xs font-black">Cancelar</button>
-                  </div>
+                <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-slate-50 border border-border px-3 py-1.5 text-[11px] font-black text-text-muted">
+                  <UserRound className="w-3.5 h-3.5" />
+                  Login da loja: <span className={accountsEnabled ? 'text-emerald-600' : 'text-slate-400'}>{accountsEnabled ? 'Ativo' : 'Desativo'}</span>
                 </div>
-              )}
-            </div>
-          ))}
+
+                <div className="grid grid-cols-2 gap-3 mt-6">
+                  <Link href={`/dashboard/stores/${store.id}/customize`} className="bg-slate-900 text-white py-2.5 rounded-xl text-center text-xs font-black flex items-center justify-center gap-2">
+                    <Sparkles className="w-4 h-4" /> Customizar
+                  </Link>
+                  <Link href={`/s/${store.domain}`} target="_blank" className="bg-slate-50 text-text-dark border border-border py-2.5 rounded-xl text-center text-xs font-black flex items-center justify-center gap-2">
+                    <ExternalLink className="w-4 h-4" /> Ver loja
+                  </Link>
+                </div>
+
+                {deleteConfirmStoreId === store.id && (
+                  <div className="mt-4 bg-red-50 border border-red-100 rounded-2xl p-4 space-y-3">
+                    <p className="text-sm text-red-800 font-bold">Eliminar esta loja?</p>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleDeleteStore(store.id)} className="flex-1 bg-red-600 text-white rounded-lg py-2 text-xs font-black">Eliminar</button>
+                      <button onClick={() => setDeleteConfirmStoreId(null)} className="flex-1 bg-white text-red-700 border border-red-100 rounded-lg py-2 text-xs font-black">Cancelar</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
