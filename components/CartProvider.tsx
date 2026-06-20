@@ -40,6 +40,17 @@ function getSessionId(storeKey: string) {
   return generated;
 }
 
+function getStoredCustomer(storeId?: string) {
+  if (!storeId) return null;
+
+  try {
+    const saved = localStorage.getItem(`shopforge-store-customer-${storeId}`);
+    return saved ? JSON.parse(saved) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function CartProvider({ children, storeId, storeDomain }: { children: ReactNode; storeId?: string; storeDomain?: string }) {
   const storeKey = storeId || storeDomain || 'global';
   const cartStorageKey = useMemo(() => `shopforge-cart-${storeKey}`, [storeKey]);
@@ -77,9 +88,13 @@ export function CartProvider({ children, storeId, storeDomain }: { children: Rea
     }
 
     const timeout = window.setTimeout(() => {
+      const customer = getStoredCustomer(storeId);
+
       saveAbandonedCartAction({
         store_id: storeId,
         session_id: sessionId,
+        customer_email: customer?.email || null,
+        customer_name: customer?.name || null,
         items: cartItems
       }).catch(console.error);
     }, 700);
