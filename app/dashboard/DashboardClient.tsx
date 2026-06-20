@@ -24,23 +24,48 @@ interface DashboardClientProps {
   selectedStoreId: string | null;
 }
 
+function normalizeDateValue(value: any) {
+  if (!value) return '';
+
+  if (typeof value === 'string') return value;
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? '' : value.toISOString();
+  }
+
+  try {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? String(value) : date.toISOString();
+  } catch {
+    return String(value);
+  }
+}
+
+function formatOrderId(id: any) {
+  return String(id || '').slice(0, 8).toUpperCase();
+}
+
 export default function DashboardClient({ user, stores, products, orders, selectedStoreId }: DashboardClientProps) {
+  const safeOrders = Array.isArray(orders) ? orders : [];
+  const safeProducts = Array.isArray(products) ? products : [];
+  const safeStores = Array.isArray(stores) ? stores : [];
+
   const currentStore = selectedStoreId 
-    ? stores.find(s => s.id === selectedStoreId) || stores[0] 
-    : stores[0];
+    ? safeStores.find(s => s.id === selectedStoreId) || safeStores[0] 
+    : safeStores[0];
 
   const stats = useMemo(() => {
-    const totalSales = orders.reduce((sum, order) => sum + Number(order.total), 0);
-    const activeProducts = products.filter(p => p.stock > 0).length;
-    const avgOrderValue = orders.length > 0 ? totalSales / orders.length : 0;
+    const totalSales = safeOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
+    const activeProducts = safeProducts.filter(p => Number(p.stock || 0) > 0).length;
+    const avgOrderValue = safeOrders.length > 0 ? totalSales / safeOrders.length : 0;
     
     return {
       totalSales,
-      ordersCount: orders.length,
+      ordersCount: safeOrders.length,
       activeProducts,
       avgOrderValue
     };
-  }, [orders, products]);
+  }, [safeOrders, safeProducts]);
 
   const chartData = useMemo(() => {
     const last7Days = Array.from({ length: 7 }, (_, i) => {
@@ -50,16 +75,16 @@ export default function DashboardClient({ user, stores, products, orders, select
     });
 
     return last7Days.map(date => {
-      const dayOrders = orders.filter(o => o.created_at?.startsWith(date));
-      const total = dayOrders.reduce((sum, o) => sum + Number(o.total), 0);
+      const dayOrders = safeOrders.filter(o => normalizeDateValue(o.created_at).startsWith(date));
+      const total = dayOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
       return {
         name: new Date(date).toLocaleDateString('pt-PT', { weekday: 'short' }),
-        value: total || 0 // Changed from random to 0 for consistency
+        value: total || 0
       };
     });
-  }, [orders]);
+  }, [safeOrders]);
 
-  const recentOrders = orders.slice(0, 5);
+  const recentOrders = safeOrders.slice(0, 5);
 
   if (!currentStore) {
     return (
@@ -230,7 +255,7 @@ export default function DashboardClient({ user, stores, products, orders, select
             <div className="divide-y divide-border">
               {recentOrders.map((order, idx) => (
                 <motion.div 
-                  key={order.id} 
+                  key={String(order.id || idx)} 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 * idx }}
@@ -241,13 +266,13 @@ export default function DashboardClient({ user, stores, products, orders, select
                       <ShoppingCart className="w-5 h-5" />
                     </div>
                     <div>
-                      <p className="text-[13px] font-black text-text-primary">#{order.id.slice(0, 8).toUpperCase()}</p>
-                      <p className="text-[11px] font-bold text-text-muted truncate max-w-[120px]">{order.customer_name}</p>
+                      <p className="text-[13px] font-black text-text-primary">#{formatOrderId(order.id)}</p>
+                      <p className="text-[11px] font-bold text-text-muted truncate max-w-[120px]">{order.customer_name || 'Cliente'}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-[14px] font-black text-text-primary mb-1">€{Number(order.total).toFixed(2)}</p>
-                    <StatusBadge status={order.status} />
+                    <p className="text-[14px] font-black text-text-primary mb-1">€{Number(order.total || 0).toFixed(2)}</p>
+                    <StatusBadge status={order.status || 'pending'} />
                   </div>
                 </motion.div>
               ))}
