@@ -20,13 +20,9 @@ function normalizePaymentMethod(value: unknown): CheckoutPaymentMethod {
 }
 
 function getPaymentMethodTypes(paymentMethod: CheckoutPaymentMethod) {
-  const methods = {
-    card: ['card'],
-    paypal: ['paypal'],
-    revolut: ['revolut_pay'],
-  } as const;
-
-  return methods[paymentMethod] as unknown as Stripe.Checkout.SessionCreateParams.PaymentMethodType[];
+  if (paymentMethod === 'paypal') return ['paypal'];
+  if (paymentMethod === 'revolut') return ['revolut_pay'];
+  return ['card'];
 }
 
 export async function POST(request: Request) {
@@ -64,7 +60,7 @@ export async function POST(request: Request) {
       mode: 'subscription',
       customer_email: email,
       client_reference_id: userId,
-      payment_method_types: getPaymentMethodTypes(selectedPaymentMethod),
+      payment_method_types: getPaymentMethodTypes(selectedPaymentMethod) as any,
       line_items: [
         {
           price_data: {
