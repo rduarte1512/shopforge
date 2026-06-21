@@ -43,6 +43,7 @@ const navigation = [
   { name: 'Produtos', href: '/dashboard/products', icon: Package },
   { name: 'Encomendas', href: '/dashboard/orders', icon: ShoppingCart },
   { name: 'Clientes', href: '/dashboard/customers', icon: Users },
+  { name: 'Contas da Loja', href: '/dashboard/store-accounts', icon: Users },
   { name: 'Carrinhos Abandonados', href: '/dashboard/carts', icon: ShoppingCart },
   { name: 'Afiliados', href: '/dashboard/affiliates', icon: LinkIcon },
   { name: 'Relatórios', href: '/dashboard/reports', icon: BarChart3 },
