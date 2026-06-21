@@ -17,9 +17,10 @@ const isAuthRoute = createRouteMatcher([
 export default clerkMiddleware(async (auth, request) => {
   try {
     const { userId } = await auth();
+    const pathname = request.nextUrl.pathname;
 
-    // If the user is signed in and trying to access an auth page, redirect them to dashboard
-    if (userId && isAuthRoute(request)) {
+    // If the user is already signed in, never leave them stuck on the landing/auth pages.
+    if (userId && (pathname === "/" || isAuthRoute(request))) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
 
@@ -37,7 +38,7 @@ export default clerkMiddleware(async (auth, request) => {
 export const config = {
   matcher: [
     // Skip Next.js internals and all static files, unless found in search params
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!m)|jsx?|cfg|icon|zip|webp|mul|png|jpg|jpeg|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|rar|7z)).*)',
+    '/((?!_next|[^?]*\.(?:html?|css|js(?!m)|jsx?|cfg|icon|zip|webp|mul|png|jpg|jpeg|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|rar|7z)).*)',
     // Always run for API routes
     '/(api|trpc)(.*)',
   ],
