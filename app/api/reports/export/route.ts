@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   const data = await getFinancialOverviewForUser(userId, storeId);
 
   if (format === 'pdf') {
-    const pdf = buildSimpleFinancePdf(data);
+    const pdf = await buildSimpleFinancePdf(data);
     return new NextResponse(pdf, {
       headers: {
         'Content-Type': 'application/pdf',
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     });
   }
 
-  const csv = buildFinanceCsv(data);
+  const csv = await buildFinanceCsv(data);
   return new NextResponse(csv, {
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
