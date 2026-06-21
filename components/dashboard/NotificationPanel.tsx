@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Bell, Package, AlertCircle, ShoppingCart, CheckCircle, X, ChevronRight } from 'lucide-react';
+import { Bell, Package, ShoppingCart, CheckCircle, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { getStoreProductsAction } from '@/lib/actions';
 import { useMockDB } from '@/lib/store';
@@ -49,7 +49,6 @@ export function NotificationPanel() {
     setLoading(true);
     const lowStock = await fetchLowStockNotifications();
     
-    // In a real app, we would fetch from a notifications table in Neon
     const mockNotifications: Notification[] = [
       {
         id: 'welcome',
@@ -77,11 +76,12 @@ export function NotificationPanel() {
     <div className="relative">
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2.5 hover:bg-gray-100 rounded-xl transition-all text-text-secondary"
+        className="relative p-2.5 rounded-2xl border border-transparent hover:border-border hover:bg-gray-50 dark:hover:bg-white/[0.08] transition-all text-text-secondary hover:text-text-primary"
+        aria-label="Abrir notificações"
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute top-2 right-2 w-4 h-4 bg-primary text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-card-bg">
+          <span className="absolute top-2 right-2 w-4 h-4 bg-primary text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-card-bg dark:border-slate-950">
             {unreadCount}
           </span>
         )}
@@ -98,13 +98,13 @@ export function NotificationPanel() {
               initial={{ opacity: 0, y: 10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
-              className="absolute right-0 mt-2 w-[350px] bg-white rounded-3xl shadow-2xl border border-border overflow-hidden z-50"
+              className="absolute right-0 mt-3 w-[350px] bg-card-bg/95 dark:bg-slate-900/95 rounded-3xl shadow-2xl shadow-black/10 dark:shadow-black/60 border border-border overflow-hidden z-50 backdrop-blur-xl"
             >
-              <div className="p-5 border-b border-border flex items-center justify-between bg-slate-50/50">
+              <div className="p-5 border-b border-border flex items-center justify-between bg-gray-50/70 dark:bg-white/[0.04]">
                 <h3 className="font-black text-sm uppercase tracking-widest text-text-primary">Notificações</h3>
                 <button 
                   onClick={() => setNotifications(notifications.map(n => ({ ...n, read: true })))}
-                  className="text-[10px] font-bold text-primary hover:underline"
+                  className="text-[10px] font-black text-primary hover:underline"
                 >
                   Marcar todas como lidas
                 </button>
@@ -121,19 +121,19 @@ export function NotificationPanel() {
                     {notifications.map((n) => (
                       <div 
                         key={n.id} 
-                        className={`p-4 hover:bg-slate-50 transition-colors flex gap-4 ${!n.read ? 'bg-primary/5' : ''}`}
+                        className={`p-4 hover:bg-gray-50/80 dark:hover:bg-white/[0.05] transition-colors flex gap-4 ${!n.read ? 'bg-primary/5 dark:bg-primary/10' : ''}`}
                       >
-                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
-                          n.type === 'low_stock' ? 'bg-orange-100 text-orange-600' :
-                          n.type === 'order' ? 'bg-emerald-100 text-emerald-600' :
-                          'bg-blue-100 text-blue-600'
+                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border ${
+                          n.type === 'low_stock' ? 'bg-orange-100 text-orange-600 border-orange-200 dark:bg-orange-500/10 dark:text-orange-300 dark:border-orange-400/20' :
+                          n.type === 'order' ? 'bg-emerald-100 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-400/20' :
+                          'bg-blue-100 text-blue-600 border-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:border-blue-400/20'
                         }`}>
                           {n.type === 'low_stock' ? <Package className="w-5 h-5" /> :
                            n.type === 'order' ? <ShoppingCart className="w-5 h-5" /> :
                            <Bell className="w-5 h-5" />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex justify-between items-start mb-1">
+                          <div className="flex justify-between items-start mb-1 gap-3">
                             <p className="text-[13px] font-black text-text-primary">{n.title}</p>
                             <span className="text-[9px] font-bold text-text-muted">{new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                           </div>
@@ -149,15 +149,15 @@ export function NotificationPanel() {
                           )}
                         </div>
                         {!n.read && (
-                          <div className="w-2 h-2 rounded-full bg-primary mt-2 shrink-0" />
+                          <div className="w-2 h-2 rounded-full bg-primary mt-2 shrink-0 shadow-lg shadow-primary/40" />
                         )}
                       </div>
                     ))}
                   </div>
                 ) : (
                   <div className="p-10 text-center space-y-3">
-                    <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto">
-                      <CheckCircle className="w-6 h-6 text-slate-300" />
+                    <div className="w-12 h-12 bg-gray-100 dark:bg-white/[0.06] rounded-full flex items-center justify-center mx-auto border border-border">
+                      <CheckCircle className="w-6 h-6 text-text-muted" />
                     </div>
                     <p className="text-[12px] font-bold text-text-muted">Tudo em dia! Nenhuma notificação nova.</p>
                   </div>
@@ -165,7 +165,7 @@ export function NotificationPanel() {
               </div>
 
               {notifications.length > 0 && (
-                <div className="p-4 bg-slate-50 border-t border-border text-center">
+                <div className="p-4 bg-gray-50/80 dark:bg-white/[0.04] border-t border-border text-center">
                   <button className="text-[11px] font-black text-text-muted hover:text-text-primary transition-colors uppercase tracking-widest">
                     Ver Histórico Completo
                   </button>
