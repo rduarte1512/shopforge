@@ -59,11 +59,11 @@ function CheckoutContent() {
 
   if (!plan || plan.id === 'STARTER' || !pricing) {
     return (
-      <div className="max-w-xl mx-auto text-center p-10 bg-white rounded-[32px] border border-slate-100 shadow-xl shadow-slate-100">
+      <div className="max-w-xl mx-auto text-center p-10 bg-card-bg/95 dark:bg-slate-900/85 rounded-[32px] border border-border shadow-premium backdrop-blur-xl">
         <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
-        <h2 className="text-2xl font-black text-slate-950">Plano não encontrado</h2>
-        <p className="text-slate-500 mt-2 font-medium">Volta à página de subscrições e escolhe um plano válido.</p>
-        <button onClick={() => router.push('/dashboard/subscription')} className="mt-6 px-6 py-3 rounded-2xl bg-slate-950 text-white font-black border-none cursor-pointer">
+        <h2 className="text-2xl font-black text-text-primary">Plano não encontrado</h2>
+        <p className="text-text-muted mt-2 font-medium">Volta à página de subscrições e escolhe um plano válido.</p>
+        <button onClick={() => router.push('/dashboard/subscription')} className="mt-6 px-6 py-3 rounded-2xl bg-slate-950 text-white dark:bg-white dark:text-slate-950 font-black border-none cursor-pointer">
           Voltar para planos
         </button>
       </div>
@@ -106,15 +106,15 @@ function CheckoutContent() {
     <div className="max-w-6xl mx-auto space-y-8">
       <button
         onClick={() => router.push('/dashboard/subscription')}
-        className="flex items-center gap-2 text-slate-500 hover:text-emerald-600 transition-colors font-bold border-none bg-transparent cursor-pointer"
+        className="flex items-center gap-2 text-text-muted hover:text-primary transition-colors font-bold border-none bg-transparent cursor-pointer"
       >
         <ArrowLeft className="w-4 h-4" /> Voltar aos planos
       </button>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         <div className="lg:col-span-7 space-y-6">
-          <div className="relative overflow-hidden bg-slate-950 text-white rounded-[36px] p-8 md:p-10 shadow-2xl shadow-slate-200">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.28),transparent_35%)]" />
+          <div className="relative overflow-hidden bg-slate-950 text-white rounded-[36px] p-8 md:p-10 shadow-2xl shadow-slate-200/60 dark:shadow-black/60 border border-white/10">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.28),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(99,102,241,0.14),transparent_30%)]" />
             <div className="relative z-10 space-y-5">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/10 text-emerald-300 text-xs font-black uppercase tracking-widest">
                 <Sparkles className="w-4 h-4" /> Checkout seguro
@@ -136,10 +136,10 @@ function CheckoutContent() {
             </div>
           </div>
 
-          <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl shadow-slate-100/70 overflow-hidden">
-            <div className="p-6 md:p-8 border-b border-slate-100 bg-slate-50/70">
-              <h2 className="text-xl font-black text-slate-950">Escolhe como queres pagar</h2>
-              <p className="text-sm text-slate-500 font-medium mt-1">O método escolhido será enviado para o checkout seguro da Stripe.</p>
+          <div className="bg-card-bg/95 dark:bg-slate-900/85 rounded-[32px] border border-border shadow-premium overflow-hidden backdrop-blur-xl">
+            <div className="p-6 md:p-8 border-b border-border bg-gray-50/70 dark:bg-white/[0.04]">
+              <h2 className="text-xl font-black text-text-primary">Escolhe como queres pagar</h2>
+              <p className="text-sm text-text-muted font-medium mt-1">O método escolhido será enviado para o checkout seguro da Stripe.</p>
             </div>
 
             <div className="p-6 md:p-8 space-y-5">
@@ -154,23 +154,23 @@ function CheckoutContent() {
                       onClick={() => setPaymentMethod(option.id)}
                       className={`group w-full text-left p-5 rounded-3xl border-2 transition-all flex items-center gap-4 cursor-pointer ${
                         selected
-                          ? 'border-emerald-500 bg-emerald-50 shadow-lg shadow-emerald-100/70'
-                          : 'border-slate-100 bg-white hover:border-slate-200 hover:shadow-md'
+                          ? 'border-emerald-500 bg-emerald-50 shadow-lg shadow-emerald-100/70 dark:bg-emerald-500/10 dark:shadow-emerald-900/30'
+                          : 'border-border bg-card-bg/70 dark:bg-white/[0.03] hover:border-border-hover hover:shadow-md dark:hover:bg-white/[0.06]'
                       }`}
                     >
-                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${selected ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200'}`}>
+                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${selected ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-gray-100 text-text-muted group-hover:bg-gray-200 dark:bg-white/[0.06] dark:group-hover:bg-white/[0.10]'}`}>
                         <Icon className="w-6 h-6" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-black text-slate-950">{option.label}</h3>
-                          <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${selected ? 'bg-white text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                          <h3 className="font-black text-text-primary">{option.label}</h3>
+                          <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${selected ? 'bg-white text-emerald-700 dark:bg-emerald-400 dark:text-slate-950' : 'bg-gray-100 text-text-muted dark:bg-white/[0.06]'}`}>
                             {option.badge}
                           </span>
                         </div>
-                        <p className="text-sm text-slate-500 font-medium mt-1">{option.description}</p>
+                        <p className="text-sm text-text-muted font-medium mt-1">{option.description}</p>
                       </div>
-                      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${selected ? 'border-emerald-500 bg-emerald-500' : 'border-slate-200'}`}>
+                      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${selected ? 'border-emerald-500 bg-emerald-500' : 'border-border'}`}>
                         {selected && <CheckCircle2 className="w-4 h-4 text-white" />}
                       </div>
                     </button>
@@ -179,7 +179,7 @@ function CheckoutContent() {
               </div>
 
               {errorMessage && (
-                <div className="flex items-start gap-3 bg-red-50 text-red-700 border border-red-100 rounded-2xl p-4 text-sm font-bold">
+                <div className="flex items-start gap-3 bg-red-50 text-red-700 border border-red-100 dark:bg-red-500/10 dark:text-red-300 dark:border-red-400/20 rounded-2xl p-4 text-sm font-bold">
                   <AlertCircle className="w-5 h-5 flex-shrink-0" />
                   {errorMessage}
                 </div>
@@ -188,7 +188,7 @@ function CheckoutContent() {
               <button
                 onClick={handlePayment}
                 disabled={isProcessing}
-                className="w-full py-4 bg-emerald-500 text-white rounded-2xl font-[900] text-[16px] hover:bg-emerald-600 transition-all shadow-xl shadow-emerald-200 flex items-center justify-center gap-3 border-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full py-4 bg-emerald-500 text-white rounded-2xl font-[900] text-[16px] hover:bg-emerald-600 transition-all shadow-xl shadow-emerald-200 dark:shadow-emerald-900/40 flex items-center justify-center gap-3 border-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {isProcessing ? (
                   <>
@@ -203,7 +203,7 @@ function CheckoutContent() {
                 )}
               </button>
 
-              <div className="flex items-center justify-center gap-2 text-slate-500 text-[12px] font-bold pt-1">
+              <div className="flex items-center justify-center gap-2 text-text-muted text-[12px] font-bold pt-1">
                 <LockKeyhole className="w-4 h-4 text-emerald-500" />
                 Os dados de pagamento são tratados pela Stripe, não ficam guardados no ShopForge.
               </div>
@@ -212,21 +212,21 @@ function CheckoutContent() {
         </div>
 
         <div className="lg:col-span-5 space-y-6">
-          <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl shadow-slate-100/70 overflow-hidden sticky top-24">
-            <div className="p-6 md:p-8 border-b border-slate-100 bg-gradient-to-br from-emerald-50 to-white">
+          <div className="bg-card-bg/95 dark:bg-slate-900/85 rounded-[32px] border border-border shadow-premium overflow-hidden sticky top-24 backdrop-blur-xl">
+            <div className="p-6 md:p-8 border-b border-border bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-500/10 dark:to-white/[0.03]">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-xs font-black uppercase tracking-widest text-emerald-600">Resumo</p>
-                  <h2 className="text-2xl font-[900] text-slate-950 mt-1">Plano {plan.name}</h2>
+                  <p className="text-xs font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-300">Resumo</p>
+                  <h2 className="text-2xl font-[900] text-text-primary mt-1">Plano {plan.name}</h2>
                 </div>
-                <div className="w-14 h-14 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-100">
+                <div className="w-14 h-14 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-100 dark:shadow-emerald-900/30">
                   <BadgePercent className="w-7 h-7" />
                 </div>
               </div>
             </div>
 
             <div className="p-6 md:p-8 space-y-6">
-              <div className="rounded-3xl bg-slate-950 text-white p-6 space-y-2 overflow-hidden relative">
+              <div className="rounded-3xl bg-slate-950 text-white p-6 space-y-2 overflow-hidden relative border border-white/10">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-400/20 blur-3xl rounded-full" />
                 <p className="relative text-sm text-slate-300 font-bold">Equivalente mensal</p>
                 <div className="relative flex items-end gap-1">
@@ -240,39 +240,39 @@ function CheckoutContent() {
 
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500 font-bold">Plano</span>
-                  <span className="text-slate-950 font-black">{plan.name}</span>
+                  <span className="text-text-muted font-bold">Plano</span>
+                  <span className="text-text-primary font-black">{plan.name}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500 font-bold">Faturação</span>
-                  <span className="text-slate-950 font-black">{billingCycle === 'yearly' ? 'Anual' : 'Mensal'}</span>
+                  <span className="text-text-muted font-bold">Faturação</span>
+                  <span className="text-text-primary font-black">{billingCycle === 'yearly' ? 'Anual' : 'Mensal'}</span>
                 </div>
                 {billingCycle === 'yearly' && (
-                  <div className="flex justify-between text-sm text-emerald-600">
+                  <div className="flex justify-between text-sm text-emerald-600 dark:text-emerald-300">
                     <span className="font-bold">Desconto anual</span>
                     <span className="font-black">-€{pricing.savings},00</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500 font-bold">IVA</span>
-                  <span className="text-slate-950 font-black">€0,00</span>
+                  <span className="text-text-muted font-bold">IVA</span>
+                  <span className="text-text-primary font-black">€0,00</span>
                 </div>
-                <div className="flex justify-between pt-5 border-t border-slate-100 text-xl">
-                  <span className="text-slate-950 font-black">Total hoje</span>
-                  <span className="text-emerald-600 font-[950]">€{pricing.total},00</span>
+                <div className="flex justify-between pt-5 border-t border-border text-xl">
+                  <span className="text-text-primary font-black">Total hoje</span>
+                  <span className="text-emerald-600 dark:text-emerald-300 font-[950]">€{pricing.total},00</span>
                 </div>
               </div>
 
-              <div className="space-y-3 rounded-3xl bg-emerald-50/70 p-5 border border-emerald-100">
+              <div className="space-y-3 rounded-3xl bg-emerald-50/70 p-5 border border-emerald-100 dark:bg-emerald-500/10 dark:border-emerald-400/20">
                 {plan.features.slice(0, 5).map((feature) => (
                   <div key={feature} className="flex items-start gap-3">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
-                    <span className="text-xs text-emerald-900 font-bold leading-relaxed">{feature}</span>
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-300 mt-0.5 flex-shrink-0" />
+                    <span className="text-xs text-emerald-900 dark:text-emerald-100 font-bold leading-relaxed">{feature}</span>
                   </div>
                 ))}
               </div>
 
-              <p className="text-xs text-slate-500 leading-relaxed font-medium">
+              <p className="text-xs text-text-muted leading-relaxed font-medium">
                 Podes cancelar a subscrição a qualquer momento. O acesso às funcionalidades do plano mantém-se enquanto a subscrição estiver ativa.
               </p>
             </div>
@@ -285,7 +285,7 @@ function CheckoutContent() {
 
 export default function CheckoutPage() {
   return (
-    <div className="min-h-[80vh] py-8 px-4 bg-gradient-to-b from-white via-slate-50 to-white">
+    <div className="min-h-[80vh] py-8 px-4 bg-[radial-gradient(circle_at_top_right,_rgba(16,185,129,0.10),_transparent_34%),linear-gradient(180deg,var(--color-bg-main)_0%,var(--color-bg-gray)_100%)] transition-colors duration-300">
       <Suspense fallback={
         <div className="flex items-center justify-center min-h-[400px]">
           <Loader2 className="w-8 h-8 animate-spin text-shopify-green" />
