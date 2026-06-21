@@ -5,6 +5,7 @@ import GlobalAssistant from '@/components/GlobalAssistant';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { ClerkProvider } from '@clerk/nextjs';
 import { AuthProvider } from '@/lib/auth-context';
+import { RememberClerkAccount } from '@/components/auth/RememberClerkAccount';
 import { ptPT } from "@clerk/localizations";
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <body className="font-sans antialiased" suppressHydrationWarning>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
             <AuthProvider>
+              <RememberClerkAccount />
               {children}
               <GlobalAssistant />
             </AuthProvider>
