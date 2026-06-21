@@ -6,6 +6,9 @@ import { auth } from '@clerk/nextjs/server';
 const n = (v: any) => Number.isFinite(Number(v || 0)) ? Number(v || 0) : 0;
 const month = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 
+type CsvCell = string | number | null | undefined;
+type CsvRow = CsvCell[];
+
 export async function getFinancialOverviewForUser(userId: string, storeId?: string | null) {
   const { rows: stores } = await sql`SELECT * FROM stores WHERE user_id = ${userId} ORDER BY created_at DESC`;
   const store = storeId ? stores.find((s: any) => String(s.id) === String(storeId)) || stores[0] : stores[0];
@@ -84,8 +87,21 @@ export async function getFinancialOverviewAction(storeId?: string | null) {
 }
 
 export async function buildFinanceCsv(data: any) {
-  const rows = [['Métrica', 'Valor'], ['Receita líquida', data.metrics?.netRevenue ?? 0], ['Lucro líquido', data.metrics?.netProfit ?? 0], ['Custo dos produtos', data.metrics?.productCost ?? 0], ['IVA', data.metrics?.taxAmount ?? 0], ['Reembolsos', data.metrics?.refunds ?? 0], [], ['Encomenda', 'Estado', 'Total'], ...data.orders.map((o: any) => [o.id, o.status || '', o.total || 0])];
-  return rows.map((row) => row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+  const rows: CsvRow[] = [
+    ['Métrica', 'Valor'],
+    ['Receita líquida', data.metrics?.netRevenue ?? 0],
+    ['Lucro líquido', data.metrics?.netProfit ?? 0],
+    ['Custo dos produtos', data.metrics?.productCost ?? 0],
+    ['IVA', data.metrics?.taxAmount ?? 0],
+    ['Reembolsos', data.metrics?.refunds ?? 0],
+    [],
+    ['Encomenda', 'Estado', 'Total'],
+    ...(data.orders ?? []).map((o: any): CsvRow => [o.id, o.status || '', o.total || 0]),
+  ];
+
+  return rows
+    .map((row: CsvRow) => row.map((cell: CsvCell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
+    .join('\n');
 }
 
 export async function buildSimpleFinancePdf(data: any) {
