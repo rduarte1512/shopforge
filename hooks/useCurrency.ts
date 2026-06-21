@@ -1,39 +1,36 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useMockDB } from '@/lib/store';
+import { useEffect, useState } from 'react';
 
 const EXCHANGE_RATES: Record<string, number> = {
-  'EUR': 1,
-  'USD': 1.08,
-  'GBP': 0.84,
-  'BRL': 5.50,
+  EUR: 1,
+  USD: 1.08,
+  GBP: 0.84,
+  BRL: 5.50,
 };
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
-  'EUR': '€',
-  'USD': '$',
-  'GBP': '£',
-  'BRL': 'R$',
+  EUR: '€',
+  USD: '$',
+  GBP: '£',
+  BRL: 'R$',
 };
 
-export function useCurrency() {
-  const { stores, selectedStoreId } = useMockDB();
-  const currentStore = stores.find(s => s.id === selectedStoreId) || stores[0];
-  const [currency, setCurrency] = useState(currentStore?.currency || 'EUR');
+export function useCurrency(baseCurrency = 'EUR') {
+  const safeBaseCurrency = EXCHANGE_RATES[baseCurrency] ? baseCurrency : 'EUR';
+  const [currency, setCurrency] = useState(safeBaseCurrency);
 
-  // Detect location-based currency (simulated for demo)
   useEffect(() => {
     const userLocale = navigator.language;
     if (userLocale.includes('US')) setCurrency('USD');
     else if (userLocale.includes('GB')) setCurrency('GBP');
     else if (userLocale.includes('BR')) setCurrency('BRL');
-    else setCurrency('EUR');
-  }, []);
+    else setCurrency(safeBaseCurrency);
+  }, [safeBaseCurrency]);
 
   const formatPrice = (amount: number, targetCurrency = currency) => {
     const rate = EXCHANGE_RATES[targetCurrency] || 1;
-    const baseRate = EXCHANGE_RATES[currentStore?.baseCurrency || 'EUR'] || 1;
+    const baseRate = EXCHANGE_RATES[safeBaseCurrency] || 1;
     const converted = (amount / baseRate) * rate;
     
     return new Intl.NumberFormat(undefined, {
@@ -44,7 +41,7 @@ export function useCurrency() {
 
   const convertPrice = (amount: number, targetCurrency = currency) => {
     const rate = EXCHANGE_RATES[targetCurrency] || 1;
-    const baseRate = EXCHANGE_RATES[currentStore?.baseCurrency || 'EUR'] || 1;
+    const baseRate = EXCHANGE_RATES[safeBaseCurrency] || 1;
     return (amount / baseRate) * rate;
   };
 
