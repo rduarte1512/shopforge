@@ -19,7 +19,6 @@ export function StatCard({
   currentValue, 
   previousValue, 
   icon: Icon, 
-  iconBgColor = 'var(--color-primary)',
   iconColor = 'var(--color-primary)',
   format = 'number',
   period = 'vs mês anterior'
@@ -47,29 +46,30 @@ export function StatCard({
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
+      transition={{ duration: 0.4, ease: 'easeOut' }}
       whileHover={{ y: -4 }}
-      className="group relative overflow-hidden bg-card-bg p-6 rounded-2xl border border-border shadow-premium hover:shadow-xl hover:border-primary/20 transition-all duration-300"
+      className="group relative overflow-hidden bg-card-bg/95 dark:bg-slate-900/85 p-6 rounded-3xl border border-border shadow-premium hover:shadow-xl hover:border-primary/30 transition-all duration-300 backdrop-blur-xl"
     >
       <div 
-        className="absolute -top-10 -right-10 w-32 h-32 rounded-full blur-3xl opacity-[0.03] group-hover:opacity-[0.08] transition-opacity duration-500"
+        className="absolute -top-10 -right-10 w-36 h-36 rounded-full blur-3xl opacity-[0.04] group-hover:opacity-[0.13] transition-opacity duration-500 dark:opacity-[0.10] dark:group-hover:opacity-[0.20]"
         style={{ backgroundColor: iconColor }}
       />
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent opacity-70 dark:via-white/10" />
       
       <div className="relative flex items-start justify-between">
         <div>
-          <p className="text-[12px] font-medium text-text-muted mb-1 flex items-center gap-1.5">
+          <p className="text-[12px] font-bold text-text-muted mb-1 flex items-center gap-1.5 uppercase tracking-[0.12em]">
             {label}
           </p>
-          <p className="text-2xl font-bold text-text-primary leading-tight tracking-tight">
+          <p className="text-2xl font-black text-text-primary leading-tight tracking-tight">
             {formattedValue(currentValue)}
           </p>
         </div>
         
         {Icon && (
           <div 
-            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm group-hover:scale-110 transition-transform duration-300"
-            style={{ backgroundColor: `${iconColor}10` }}
+            className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ring-1 ring-black/[0.03] dark:ring-white/10 group-hover:scale-110 transition-transform duration-300"
+            style={{ backgroundColor: `${iconColor}18` }}
           >
             <Icon className="w-5 h-5" style={{ color: iconColor }} />
           </div>
@@ -77,12 +77,12 @@ export function StatCard({
       </div>
 
       <div className="relative mt-5 flex items-center gap-2">
-        <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[12px] font-semibold ${
+        <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-black border ${
           trend.percentage === 0 
-            ? 'bg-slate-100 text-text-muted' 
+            ? 'bg-slate-100 text-text-muted border-slate-200 dark:bg-white/5 dark:border-white/10' 
             : trend.isPositive 
-              ? 'bg-emerald-50 text-emerald-600' 
-              : 'bg-rose-50 text-rose-600'
+              ? 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-400/20' 
+              : 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-500/10 dark:text-rose-300 dark:border-rose-400/20'
         }`}>
           {trend.percentage === 0 ? (
             <Minus className="w-3 h-3" />
@@ -93,7 +93,7 @@ export function StatCard({
           )}
           <span>{trend.percentage.toFixed(1)}%</span>
         </div>
-        <span className="text-[11px] font-medium text-text-muted">{period}</span>
+        <span className="text-[11px] font-bold text-text-muted">{period}</span>
       </div>
     </motion.div>
   );
