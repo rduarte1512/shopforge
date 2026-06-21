@@ -2,6 +2,7 @@
 
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { setSelectedStoreCookie } from '@/lib/dashboard-actions';
+import { useMockDB } from '@/lib/store';
 
 export const SELECTED_STORE_CHANGED_EVENT = 'shopforge-selected-store-changed';
 
@@ -27,63 +28,61 @@ function getValidStoreId(stores: StoreSummary[], requestedId?: string | null) {
   return stores[0]?.id ?? null;
 }
 
-export function SelectedStoreProvider({
-  children,
-  initialStores,
-  initialSelectedStoreId,
-}: {
-  children: ReactNode;
-  initialStores: StoreSummary[];
-  initialSelectedStoreId?: string | null;
-}) {
+export function SelectedStoreProvider({ children, initialStores, initialSelectedStoreId }: { children: ReactNode; initialStores: StoreSummary[]; initialSelectedStoreId?: string | null }) {
   const [stores, setStoresState] = useState<StoreSummary[]>(initialStores || []);
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(() => getValidStoreId(initialStores || [], initialSelectedStoreId));
+  const setCompatStores = useMockDB((state) => state.setStores);
+  const setCompatSelectedStore = useMockDB((state) => state.setSelectedStore);
 
   const persistSelectedStore = useCallback(async (storeId: string | null) => {
     setSelectedStoreId(storeId);
+    setCompatSelectedStore(storeId);
 
     if (typeof window !== 'undefined') {
       if (storeId) localStorage.setItem('selectedStoreId', storeId);
       else localStorage.removeItem('selectedStoreId');
-
       window.dispatchEvent(new CustomEvent(SELECTED_STORE_CHANGED_EVENT, { detail: { storeId } }));
     }
 
-    if (storeId) {
-      await setSelectedStoreCookie(storeId);
-    }
-  }, []);
+    if (storeId) await setSelectedStoreCookie(storeId);
+  }, [setCompatSelectedStore]);
 
   useEffect(() => {
-    setStoresState(initialStores || []);
+    const safeStores = initialStores || [];
+    setStoresState(safeStores);
+    setCompatStores(safeStores);
 
     const localStoreId = typeof window !== 'undefined' ? localStorage.getItem('selectedStoreId') : null;
-    const nextStoreId = getValidStoreId(initialStores || [], initialSelectedStoreId || localStoreId);
+    const nextStoreId = getValidStoreId(safeStores, initialSelectedStoreId || localStoreId);
+    setCompatSelectedStore(nextStoreId);
 
-    if (nextStoreId !== selectedStoreId) {
-      void persistSelectedStore(nextStoreId);
-    }
-  }, [initialStores, initialSelectedStoreId, persistSelectedStore, selectedStoreId]);
+    if (nextStoreId !== selectedStoreId) void persistSelectedStore(nextStoreId);
+  }, [initialStores, initialSelectedStoreId, persistSelectedStore, selectedStoreId, setCompatSelectedStore, setCompatStores]);
 
   useEffect(() => {
     const onSelectedStoreChanged = (event: Event) => {
       const storeId = (event as CustomEvent<{ storeId?: string | null }>).detail?.storeId;
-      setSelectedStoreId(getValidStoreId(stores, storeId ?? null));
+      const nextStoreId = getValidStoreId(stores, storeId ?? null);
+      setSelectedStoreId(nextStoreId);
+      setCompatSelectedStore(nextStoreId);
     };
 
     window.addEventListener(SELECTED_STORE_CHANGED_EVENT, onSelectedStoreChanged);
     return () => window.removeEventListener(SELECTED_STORE_CHANGED_EVENT, onSelectedStoreChanged);
-  }, [stores]);
+  }, [setCompatSelectedStore, stores]);
 
   const setStores = useCallback((nextStores: StoreSummary[]) => {
-    setStoresState(nextStores || []);
-    setSelectedStoreId((current) => getValidStoreId(nextStores || [], current));
-  }, []);
+    const safeStores = nextStores || [];
+    setStoresState(safeStores);
+    setCompatStores(safeStores);
+    setSelectedStoreId((current) => {
+      const nextStoreId = getValidStoreId(safeStores, current);
+      setCompatSelectedStore(nextStoreId);
+      return nextStoreId;
+    });
+  }, [setCompatSelectedStore, setCompatStores]);
 
-  const currentStore = useMemo(
-    () => stores.find((store) => store.id === selectedStoreId) ?? stores[0] ?? null,
-    [selectedStoreId, stores]
-  );
+  const currentStore = useMemo(() => stores.find((store) => store.id === selectedStoreId) ?? stores[0] ?? null, [selectedStoreId, stores]);
 
   const value = useMemo<SelectedStoreContextValue>(() => ({
     stores,
@@ -98,8 +97,6 @@ export function SelectedStoreProvider({
 
 export function useSelectedStore() {
   const context = useContext(SelectedStoreContext);
-  if (!context) {
-    throw new Error('useSelectedStore must be used inside SelectedStoreProvider');
-  }
+  if (!context) throw new Error('useSelectedStore must be used inside SelectedStoreProvider');
   return context;
 }
