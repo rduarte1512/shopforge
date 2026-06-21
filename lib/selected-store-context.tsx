@@ -50,7 +50,7 @@ export function SelectedStoreProvider({ children, initialStores, initialSelected
   useEffect(() => {
     const safeStores = initialStores || [];
     setStoresState(safeStores);
-    setCompatStores(safeStores);
+    setCompatStores(safeStores as any);
 
     const localStoreId = typeof window !== 'undefined' ? localStorage.getItem('selectedStoreId') : null;
     const nextStoreId = getValidStoreId(safeStores, initialSelectedStoreId || localStoreId);
@@ -74,7 +74,7 @@ export function SelectedStoreProvider({ children, initialStores, initialSelected
   const setStores = useCallback((nextStores: StoreSummary[]) => {
     const safeStores = nextStores || [];
     setStoresState(safeStores);
-    setCompatStores(safeStores);
+    setCompatStores(safeStores as any);
     setSelectedStoreId((current) => {
       const nextStoreId = getValidStoreId(safeStores, current);
       setCompatSelectedStore(nextStoreId);
