@@ -2,28 +2,30 @@
 
 import { revalidatePath } from 'next/cache';
 
-async function tableExists(sql: any, tableName: string) {
-  const { rows } = await sql`
-    SELECT EXISTS (
-      SELECT 1
-      FROM information_schema.tables
-      WHERE table_schema = 'public'
-      AND table_name = ${tableName}
-    ) as exists
-  `;
+const tableExistsCache = new Map<string, Promise<boolean>>();
 
-  return Boolean(rows?.[0]?.exists);
+async function tableExists(sql: any, tableName: string) {
+  if (!tableExistsCache.has(tableName)) {
+    tableExistsCache.set(tableName, (async () => {
+      const { rows } = await sql`
+        SELECT EXISTS (
+          SELECT 1
+          FROM information_schema.tables
+          WHERE table_schema = 'public'
+          AND table_name = ${tableName}
+        ) as exists
+      `;
+
+      return Boolean(rows?.[0]?.exists);
+    })());
+  }
+
+  return tableExistsCache.get(tableName)!;
 }
 
 export async function saveAbandonedCartAction(data: any) {
   try {
     const { sql } = await import('@vercel/postgres');
-    const exists = await tableExists(sql, 'abandoned_carts');
-
-    if (!exists) {
-      return { success: false, needsSetup: true };
-    }
-
     const items = Array.isArray(data?.items) ? data.items : [];
 
     if (!data?.store_id || !data?.session_id || items.length === 0) {
