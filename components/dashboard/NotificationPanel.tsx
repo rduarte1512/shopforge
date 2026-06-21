@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Bell, Package, ShoppingCart, CheckCircle, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { getStoreProductsAction } from '@/lib/actions';
-import { useMockDB } from '@/lib/store';
+import { useSelectedStore } from '@/lib/selected-store-context';
 import Link from 'next/link';
 
 interface Notification {
@@ -18,7 +18,7 @@ interface Notification {
 }
 
 export function NotificationPanel() {
-  const { selectedStoreId } = useMockDB();
+  const { selectedStoreId } = useSelectedStore();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
