@@ -5,7 +5,7 @@ import { Check, Zap, Star, Crown, Rocket, Building2, ShieldCheck, ArrowRight, Sp
 import { SUBSCRIPTION_PLANS, SubscriptionTier } from '@/lib/store';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 
 export default function SubscriptionPage() {
   const { user } = useAuth();
@@ -30,21 +30,21 @@ export default function SubscriptionPage() {
 
   const getColors = (tier: SubscriptionTier) => {
     switch (tier) {
-      case 'STARTER': return 'bg-slate-100 text-slate-600 border-slate-200';
-      case 'GROWTH': return 'bg-blue-50 text-blue-600 border-blue-100';
-      case 'PRO': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
-      case 'BUSINESS': return 'bg-purple-50 text-purple-600 border-purple-100';
-      case 'ENTERPRISE': return 'bg-amber-50 text-amber-600 border-amber-100';
-      default: return 'bg-gray-50 text-gray-600 border-gray-100';
+      case 'STARTER': return 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-white/[0.06] dark:text-slate-300 dark:border-white/10';
+      case 'GROWTH': return 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-500/10 dark:text-blue-300 dark:border-blue-400/20';
+      case 'PRO': return 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-400/20';
+      case 'BUSINESS': return 'bg-purple-50 text-purple-600 border-purple-100 dark:bg-purple-500/10 dark:text-purple-300 dark:border-purple-400/20';
+      case 'ENTERPRISE': return 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-400/20';
+      default: return 'bg-gray-50 text-gray-600 border-gray-100 dark:bg-white/[0.06] dark:text-slate-300 dark:border-white/10';
     }
   };
 
   return (
     <div className="relative max-w-7xl mx-auto px-4 py-10 space-y-14 overflow-hidden">
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[420px] bg-emerald-200/30 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute top-40 right-0 w-72 h-72 bg-blue-200/30 blur-[100px] rounded-full pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[420px] bg-emerald-200/30 dark:bg-emerald-500/12 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute top-40 right-0 w-72 h-72 bg-blue-200/30 dark:bg-blue-500/12 blur-[100px] rounded-full pointer-events-none" />
 
-      <div className="relative bg-slate-950 rounded-[44px] p-8 md:p-14 text-white overflow-hidden shadow-2xl shadow-slate-200">
+      <div className="relative bg-slate-950 rounded-[44px] p-8 md:p-14 text-white overflow-hidden shadow-2xl shadow-slate-200/70 dark:shadow-black/60 border border-white/10">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.28),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.18),transparent_30%)]" />
         <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
           <div className="lg:col-span-8 space-y-6">
@@ -143,18 +143,18 @@ export default function SubscriptionPage() {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.08 }}
-              className={`relative flex flex-col bg-white/90 backdrop-blur rounded-[34px] p-7 border transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-200/70 ${
-                isPro ? 'border-emerald-400 shadow-xl ring-8 ring-emerald-50 z-10' : 'border-slate-100'
+              className={`relative flex flex-col bg-card-bg/92 dark:bg-slate-900/82 backdrop-blur-xl rounded-[34px] p-7 border transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl dark:hover:shadow-black/50 ${
+                isPro ? 'border-emerald-400 shadow-xl shadow-emerald-100/60 dark:shadow-emerald-950/30 ring-8 ring-emerald-50 dark:ring-emerald-500/10 z-10' : 'border-border'
               }`}
             >
               {isPro && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-slate-950 text-white px-5 py-2 rounded-full text-[10px] font-black tracking-widest uppercase shadow-xl whitespace-nowrap">
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-slate-950 dark:bg-emerald-400 text-white dark:text-slate-950 px-5 py-2 rounded-full text-[10px] font-black tracking-widest uppercase shadow-xl whitespace-nowrap">
                   Mais recomendado
                 </div>
               )}
 
               {isCurrent && (
-                <div className="absolute top-5 right-5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-widest border border-emerald-100">
+                <div className="absolute top-5 right-5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-widest border border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-400/20">
                   Atual
                 </div>
               )}
@@ -165,28 +165,28 @@ export default function SubscriptionPage() {
                     {getIcon(plan.id)}
                   </div>
                   <div>
-                    <h3 className="text-xl font-[900] text-slate-950">{plan.name}</h3>
-                    <p className="text-xs text-slate-500 font-semibold mt-1 leading-relaxed">{plan.description}</p>
+                    <h3 className="text-xl font-[900] text-text-primary">{plan.name}</h3>
+                    <p className="text-xs text-text-muted font-semibold mt-1 leading-relaxed">{plan.description}</p>
                   </div>
                 </div>
 
                 <div className="space-y-1">
                   <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-black text-slate-950">€{displayedPrice}</span>
-                    <span className="text-slate-400 text-sm font-black">/mês</span>
+                    <span className="text-4xl font-black text-text-primary">€{displayedPrice}</span>
+                    <span className="text-text-muted text-sm font-black">/mês</span>
                   </div>
                   {billingCycle === 'yearly' && !isFree && (
-                    <p className="text-[11px] text-emerald-600 font-black">Cobrado €{yearlyTotal}/ano</p>
+                    <p className="text-[11px] text-emerald-600 dark:text-emerald-300 font-black">Cobrado €{yearlyTotal}/ano</p>
                   )}
                 </div>
 
-                <div className="space-y-4 pt-4 border-t border-slate-100">
+                <div className="space-y-4 pt-4 border-t border-border">
                   {plan.features.map((feature, idx) => (
                     <div key={idx} className="flex items-start gap-3">
-                      <div className="mt-0.5 bg-emerald-500 rounded-full p-0.5 flex-shrink-0">
+                      <div className="mt-0.5 bg-emerald-500 rounded-full p-0.5 flex-shrink-0 shadow-sm shadow-emerald-500/20">
                         <Check className="w-3 h-3 text-white" />
                       </div>
-                      <span className="text-xs font-bold text-slate-600 leading-tight">{feature}</span>
+                      <span className="text-xs font-bold text-text-secondary leading-tight">{feature}</span>
                     </div>
                   ))}
                 </div>
@@ -197,12 +197,12 @@ export default function SubscriptionPage() {
                 disabled={isCurrent || isFree}
                 className={`w-full mt-8 py-4 rounded-2xl font-black text-[14px] transition-all flex items-center justify-center gap-2 border-none cursor-pointer group ${
                   isCurrent
-                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                    ? 'bg-gray-100 text-text-muted cursor-not-allowed dark:bg-white/[0.06]'
                     : isFree
-                    ? 'bg-slate-50 text-slate-400 cursor-not-allowed'
+                    ? 'bg-gray-50 text-text-muted cursor-not-allowed dark:bg-white/[0.04]'
                     : isPro
-                    ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200 hover:scale-[1.02] active:scale-95'
-                    : 'bg-slate-950 text-white hover:bg-slate-800'
+                    ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200 dark:shadow-emerald-900/40 hover:scale-[1.02] active:scale-95'
+                    : 'bg-slate-950 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200'
                 }`}
               >
                 {isCurrent ? 'Plano atual' : isFree ? 'Incluído grátis' : (
@@ -217,34 +217,34 @@ export default function SubscriptionPage() {
         })}
       </div>
 
-      <div className="relative bg-slate-950 rounded-[44px] p-8 md:p-12 text-white overflow-hidden">
+      <div className="relative bg-slate-950 rounded-[44px] p-8 md:p-12 text-white overflow-hidden border border-white/10 shadow-2xl shadow-black/20">
         <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 blur-[100px] rounded-full -mr-48 -mt-48" />
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-500/10 blur-[100px] rounded-full -ml-48 -mb-48" />
 
         <div className="relative z-10 grid grid-cols-1 md:grid-cols-4 gap-10">
           <div className="space-y-4">
-            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm border border-white/10">
               <Globe className="w-6 h-6 text-emerald-400" />
             </div>
             <h4 className="font-bold text-lg">Presença Global</h4>
             <p className="text-slate-400 text-sm leading-relaxed">Infraestrutura otimizada para carregamento ultra-rápido.</p>
           </div>
           <div className="space-y-4">
-            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm border border-white/10">
               <ShieldCheck className="w-6 h-6 text-blue-400" />
             </div>
             <h4 className="font-bold text-lg">Segurança Máxima</h4>
             <p className="text-slate-400 text-sm leading-relaxed">SSL incluído, sessão validada no backend e checkout seguro.</p>
           </div>
           <div className="space-y-4">
-            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm border border-white/10">
               <BarChart3 className="w-6 h-6 text-purple-400" />
             </div>
             <h4 className="font-bold text-lg">Data-Driven</h4>
             <p className="text-slate-400 text-sm leading-relaxed">Analytics e dados para escalar decisões comerciais.</p>
           </div>
           <div className="space-y-4">
-            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm border border-white/10">
               <Headphones className="w-6 h-6 text-amber-400" />
             </div>
             <h4 className="font-bold text-lg">Suporte de Elite</h4>
