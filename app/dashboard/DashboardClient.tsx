@@ -89,14 +89,14 @@ export default function DashboardClient({ user, stores, products, orders, select
   if (!currentStore) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
-        <div className="w-20 h-20 rounded-3xl bg-slate-100 flex items-center justify-center mb-6 text-text-muted">
+        <div className="w-20 h-20 rounded-3xl bg-gray-100 dark:bg-white/[0.06] border border-border flex items-center justify-center mb-6 text-text-muted">
           <ShoppingBag className="w-10 h-10" />
         </div>
-        <h2 className="text-2xl font-bold text-text-primary mb-2">Ainda não tens uma loja</h2>
-        <p className="text-text-muted max-w-xs mx-auto">Cria a tua primeira loja para começares a vender e acompanhar o teu sucesso.</p>
+        <h2 className="text-2xl font-black text-text-primary mb-2">Ainda não tens uma loja</h2>
+        <p className="text-text-muted max-w-xs mx-auto font-medium">Cria a tua primeira loja para começares a vender e acompanhar o teu sucesso.</p>
         <Link 
           href="/dashboard/settings" 
-          className="mt-8 px-6 py-3 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-105 transition-transform"
+          className="mt-8 px-6 py-3 bg-primary text-white font-black rounded-2xl shadow-lg shadow-primary/20 hover:scale-105 transition-transform"
         >
           Criar Minha Loja
         </Link>
@@ -127,12 +127,12 @@ export default function DashboardClient({ user, stores, products, orders, select
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="flex items-center gap-2.5 px-4 py-2 bg-white border border-border rounded-2xl shadow-sm"
+          className="flex items-center gap-2.5 px-4 py-2 bg-card-bg/90 dark:bg-white/[0.06] border border-border rounded-2xl shadow-premium backdrop-blur-xl"
         >
           <Calendar className="w-4 h-4 text-primary" />
           <span className="text-[13px] font-bold text-text-secondary">Últimos 30 dias</span>
           <div className="w-px h-4 bg-border mx-1" />
-          <span className="text-[12px] font-bold text-emerald-500 uppercase tracking-wider">Tempo Real</span>
+          <span className="text-[12px] font-black text-emerald-500 dark:text-emerald-300 uppercase tracking-wider">Tempo Real</span>
         </motion.div>
       </div>
 
@@ -174,14 +174,14 @@ export default function DashboardClient({ user, stores, products, orders, select
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         <div className="xl:col-span-2 space-y-6">
-          <div className="bg-white rounded-[32px] border border-border shadow-premium overflow-hidden">
-            <div className="p-6 border-b border-border flex justify-between items-center bg-slate-50/50">
+          <div className="bg-card-bg/95 dark:bg-slate-900/85 rounded-[32px] border border-border shadow-premium overflow-hidden backdrop-blur-xl">
+            <div className="p-6 border-b border-border flex justify-between items-center bg-gray-50/60 dark:bg-white/[0.04]">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/10">
                   <BarChart3 className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-text-primary leading-tight">Performance de Vendas</h3>
+                  <h3 className="text-lg font-black text-text-primary leading-tight">Performance de Vendas</h3>
                   <p className="text-xs font-bold text-text-muted uppercase tracking-wider">Volume diário de vendas</p>
                 </div>
               </div>
@@ -198,7 +198,7 @@ export default function DashboardClient({ user, stores, products, orders, select
                   <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.15} />
+                        <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.24} />
                         <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0} />
                       </linearGradient>
                     </defs>
@@ -222,10 +222,11 @@ export default function DashboardClient({ user, stores, products, orders, select
                     />
                     <Tooltip 
                       contentStyle={{ 
-                        backgroundColor: 'white',
-                        borderRadius: '16px', 
+                        backgroundColor: 'var(--color-card-bg)',
+                        color: 'var(--color-text-primary)',
+                        borderRadius: '18px', 
                         border: '1px solid var(--color-border)', 
-                        boxShadow: 'var(--shadow-lg)',
+                        boxShadow: 'var(--shadow-premium)',
                         padding: '12px'
                       }}
                       itemStyle={{ fontWeight: 'bold', fontSize: '13px', color: 'var(--color-text-primary)' }}
@@ -247,9 +248,9 @@ export default function DashboardClient({ user, stores, products, orders, select
         </div>
 
         <div className="space-y-8">
-          <div className="bg-white rounded-[32px] border border-border shadow-premium overflow-hidden">
-            <div className="p-6 border-b border-border flex justify-between items-center">
-              <h3 className="text-lg font-bold text-text-primary">Pedidos Recentes</h3>
+          <div className="bg-card-bg/95 dark:bg-slate-900/85 rounded-[32px] border border-border shadow-premium overflow-hidden backdrop-blur-xl">
+            <div className="p-6 border-b border-border flex justify-between items-center bg-gray-50/40 dark:bg-white/[0.03]">
+              <h3 className="text-lg font-black text-text-primary">Pedidos Recentes</h3>
               <Link href="/dashboard/orders" className="text-xs font-bold text-primary hover:underline">Ver todos</Link>
             </div>
             <div className="divide-y divide-border">
@@ -259,10 +260,10 @@ export default function DashboardClient({ user, stores, products, orders, select
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 * idx }}
-                  className="p-5 flex items-center justify-between hover:bg-slate-50/50 transition-all group"
+                  className="p-5 flex items-center justify-between hover:bg-gray-50/70 dark:hover:bg-white/[0.05] transition-all group"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-text-muted group-hover:bg-primary group-hover:text-white transition-colors">
+                    <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-white/[0.06] border border-border flex items-center justify-center text-text-muted group-hover:bg-primary group-hover:text-white transition-colors">
                       <ShoppingCart className="w-5 h-5" />
                     </div>
                     <div>
@@ -278,7 +279,7 @@ export default function DashboardClient({ user, stores, products, orders, select
               ))}
               {recentOrders.length === 0 && (
                 <div className="p-12 text-center">
-                  <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4 text-text-muted">
+                  <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-white/[0.06] border border-border flex items-center justify-center mx-auto mb-4 text-text-muted">
                     <ShoppingCart className="w-6 h-6" />
                   </div>
                   <p className="text-sm font-bold text-text-muted">Ainda sem pedidos.</p>
@@ -287,8 +288,9 @@ export default function DashboardClient({ user, stores, products, orders, select
             </div>
           </div>
           
-          <div className="bg-gradient-to-br from-primary to-emerald-600 rounded-[32px] p-6 text-white shadow-xl relative overflow-hidden group">
+          <div className="bg-gradient-to-br from-primary to-emerald-600 rounded-[32px] p-6 text-white shadow-xl shadow-primary/20 relative overflow-hidden group">
             <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-white/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700" />
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
             <div className="relative z-10">
               <h4 className="text-lg font-black mb-2">Precisa de ajuda?</h4>
               <p className="text-sm text-emerald-50 mb-6 font-medium leading-relaxed">
