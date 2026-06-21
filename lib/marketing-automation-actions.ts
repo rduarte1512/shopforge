@@ -4,7 +4,7 @@ import { auth } from '@clerk/nextjs/server';
 import { sql } from '@vercel/postgres';
 import { revalidatePath } from 'next/cache';
 
-export const DEFAULT_AUTOMATIONS = [
+const DEFAULT_AUTOMATIONS = [
   { type: 'abandoned_cart_1h', name: 'Carrinho abandonado 1h depois', trigger_event: 'abandoned_cart', delay_minutes: 60, audience: 'abandoned_cart', subject: 'Ainda queres terminar a tua compra?', body: 'Olá {{name}}, guardámos o teu carrinho. Volta à loja e termina a encomenda antes que o stock acabe.', coupon_code: '' },
   { type: 'post_purchase', name: 'Email pós-compra', trigger_event: 'order_paid', delay_minutes: 30, audience: 'buyers', subject: 'Obrigado pela tua compra!', body: 'A tua encomenda foi recebida. Vamos tratar de tudo e avisamos quando sair para entrega.', coupon_code: '' },
   { type: 'vip_coupon', name: 'Cupão para cliente VIP', trigger_event: 'vip_customer', delay_minutes: 0, audience: 'vip', subject: 'Tens um presente VIP', body: 'Como és um dos melhores clientes, aqui está um cupão especial para a próxima compra.', coupon_code: 'VIP10' },
@@ -31,18 +31,7 @@ export async function getAutomationDashboardAction(storeId?: string | null) {
       sql`SELECT COUNT(*)::int as count FROM abandoned_carts WHERE store_id = ${store.id}`,
       sql`SELECT COUNT(*)::int as count FROM store_customers WHERE store_id = ${store.id}`,
     ]);
-    return {
-      stores,
-      selectedStoreId: store.id,
-      automations,
-      summary: {
-        active: automations.filter((a: any) => a.active).length,
-        pendingOrders: Number(pendingRows[0]?.count || 0),
-        pendingValue: Number(pendingRows[0]?.value || 0),
-        abandonedCarts: Number(cartRows[0]?.count || 0),
-        customers: Number(customerRows[0]?.count || 0),
-      },
-    };
+    return { stores, selectedStoreId: store.id, automations, summary: { active: automations.filter((a: any) => a.active).length, pendingOrders: Number(pendingRows[0]?.count || 0), pendingValue: Number(pendingRows[0]?.value || 0), abandonedCarts: Number(cartRows[0]?.count || 0), customers: Number(customerRows[0]?.count || 0) } };
   } catch (error) {
     console.error('Automation dashboard error:', error);
     return { stores, selectedStoreId: store.id, automations: [], summary: null, needsSetup: true };
