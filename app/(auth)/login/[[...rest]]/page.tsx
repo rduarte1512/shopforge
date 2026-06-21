@@ -1,17 +1,10 @@
-import { SignIn } from '@clerk/nextjs';
-import { AuthShell, clerkAuthAppearance } from '../../AuthShell';
+import { AuthShell } from '../../AuthShell';
+import LoginForm from './LoginForm';
 
 export default function LoginPage() {
   return (
     <AuthShell mode="login">
-      <SignIn
-        appearance={clerkAuthAppearance}
-        routing="path"
-        path="/login"
-        signUpUrl="/register"
-        forceRedirectUrl="/dashboard"
-        fallbackRedirectUrl="/dashboard"
-      />
+      <LoginForm />
     </AuthShell>
   );
 }
