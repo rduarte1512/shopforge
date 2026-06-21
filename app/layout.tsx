@@ -20,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <ClerkProvider localization={ptPT}>
       <html lang="pt-PT" className={inter.variable} suppressHydrationWarning>
         <body className="font-sans antialiased" suppressHydrationWarning>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
             <AuthProvider>
               <RememberClerkAccount />
               {children}
