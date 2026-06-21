@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, ReactNode } from 'react';
 import { saveAbandonedCartAction } from '@/lib/abandoned-cart-actions';
 
 type CartItem = {
@@ -51,11 +51,25 @@ function getStoredCustomer(storeId?: string) {
   }
 }
 
+function getCartSignature(items: CartItem[]) {
+  return JSON.stringify(
+    items
+      .filter((item) => item?.productId && Number(item?.quantity) > 0)
+      .map((item) => ({
+        productId: item.productId,
+        variantId: item.variantId || null,
+        quantity: Number(item.quantity),
+      }))
+      .sort((a, b) => `${a.productId}-${a.variantId || 'base'}`.localeCompare(`${b.productId}-${b.variantId || 'base'}`))
+  );
+}
+
 export function CartProvider({ children, storeId, storeDomain }: { children: ReactNode; storeId?: string; storeDomain?: string }) {
   const storeKey = storeId || storeDomain || 'global';
   const cartStorageKey = useMemo(() => `shopforge-cart-${storeKey}`, [storeKey]);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const lastSavedSignatureRef = useRef('');
 
   useEffect(() => {
     try {
@@ -63,7 +77,9 @@ export function CartProvider({ children, storeId, storeDomain }: { children: Rea
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          setCartItems(parsed.filter(item => item?.productId && Number(item?.quantity) > 0));
+          const validItems = parsed.filter(item => item?.productId && Number(item?.quantity) > 0);
+          setCartItems(validItems);
+          lastSavedSignatureRef.current = getCartSignature(validItems);
         }
       }
     } catch (error) {
@@ -78,7 +94,13 @@ export function CartProvider({ children, storeId, storeDomain }: { children: Rea
 
     localStorage.setItem(cartStorageKey, JSON.stringify(cartItems));
 
-    if (!storeId || cartItems.length === 0) return;
+    if (!storeId || cartItems.length === 0) {
+      lastSavedSignatureRef.current = '';
+      return;
+    }
+
+    const signature = getCartSignature(cartItems);
+    if (signature === lastSavedSignatureRef.current) return;
 
     const sessionId = getSessionId(storeKey);
 
@@ -91,8 +113,12 @@ export function CartProvider({ children, storeId, storeDomain }: { children: Rea
         customer_email: customer?.email || null,
         customer_name: customer?.name || null,
         items: cartItems,
-      }).catch(console.error);
-    }, 700);
+      })
+        .then((result) => {
+          if (result?.success) lastSavedSignatureRef.current = signature;
+        })
+        .catch(console.error);
+    }, 3000);
 
     return () => window.clearTimeout(timeout);
   }, [cartItems, cartStorageKey, hydrated, storeId, storeKey]);

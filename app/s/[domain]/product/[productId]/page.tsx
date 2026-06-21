@@ -1,6 +1,6 @@
 'use client';
 
-import { getStorefrontDataAction, getStorefrontProductAction } from '@/lib/actions';
+import { getProductPageDataAction } from '@/lib/storefront-actions';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import { useCart } from '@/components/CartProvider';
@@ -26,29 +26,27 @@ export default function ProductPage() {
       if (!params.domain || !params.productId) return;
 
       try {
-        const storefrontData = await getStorefrontDataAction(params.domain);
-        if (!storefrontData) throw new Error('Store not found');
-        setStore(storefrontData.store);
+        const pageData = await getProductPageDataAction(params.domain, params.productId);
+        if (!pageData) {
+          setStore(null);
+          setProduct(null);
+          return;
+        }
 
-        const productData = await getStorefrontProductAction(params.productId);
-        
-        if (!productData || productData.store_id !== storefrontData.store.id) {
-           setProduct(null);
-        } else {
-           setProduct(productData);
-           setActiveImage(productData.image_url);
-           
-           if (productData.variants && productData.variants.length > 0) {
-             setVariants(productData.variants);
-             setSelectedVariant(productData.variants[0]);
-             setSelectedAttributes(productData.variants[0].attributes || {});
-             if (productData.variants[0].image_url) {
-               setActiveImage(productData.variants[0].image_url);
-             }
-           }
+        setStore(pageData.store);
+        setProduct(pageData.product);
+        setActiveImage(pageData.product.image_url);
+
+        if (pageData.product.variants && pageData.product.variants.length > 0) {
+          setVariants(pageData.product.variants);
+          setSelectedVariant(pageData.product.variants[0]);
+          setSelectedAttributes(pageData.product.variants[0].attributes || {});
+          if (pageData.product.variants[0].image_url) {
+            setActiveImage(pageData.product.variants[0].image_url);
+          }
         }
       } catch (err) {
-        console.error('Error fetching data:', err);
+        console.error('Error fetching product page data:', err);
       } finally {
         setLoading(false);
       }
@@ -167,7 +165,7 @@ export default function ProductPage() {
 
           {variants.length > 0 && Object.keys(attributeOptions).length > 0 && (
             <div className="space-y-4 mb-8">
-              {Object.entries(attributeOptions).map(([attrName, attrValue]) => (
+              {Object.entries(attributeOptions).map(([attrName]) => (
                 <div key={attrName}>
                   <label className="text-xs font-bold uppercase tracking-wider opacity-60 mb-2 block">
                     {attrName}

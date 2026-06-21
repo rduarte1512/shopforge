@@ -3,24 +3,24 @@
 import { useEffect, useState } from 'react';
 import { ShoppingCart, Loader2 } from 'lucide-react';
 import { getAbandonedCartsAction } from '@/lib/abandoned-cart-actions';
+import { useSelectedStore } from '@/lib/selected-store-context';
 import CartsClient from './CartsClient';
 
 export default function CartsPage() {
+  const { selectedStoreId } = useSelectedStore();
   const [loading, setLoading] = useState(true);
-  const [storeId, setStoreId] = useState<string | null>(null);
   const [carts, setCarts] = useState<any[]>([]);
   const [needsSetup, setNeedsSetup] = useState(false);
 
   useEffect(() => {
     async function loadCarts() {
-      const selectedStoreId = localStorage.getItem('selectedStoreId');
-      setStoreId(selectedStoreId);
-
       if (!selectedStoreId) {
+        setCarts([]);
         setLoading(false);
         return;
       }
 
+      setLoading(true);
       const result = await getAbandonedCartsAction(selectedStoreId);
       setCarts(result?.carts || []);
       setNeedsSetup(Boolean(result?.needsSetup));
@@ -28,7 +28,7 @@ export default function CartsPage() {
     }
 
     loadCarts();
-  }, []);
+  }, [selectedStoreId]);
 
   if (loading) {
     return (
@@ -38,7 +38,7 @@ export default function CartsPage() {
     );
   }
 
-  if (!storeId) {
+  if (!selectedStoreId) {
     return (
       <div className="text-center py-24 bg-white rounded-3xl border border-border">
         <ShoppingCart className="w-12 h-12 text-gray-300 mx-auto mb-4" />
@@ -48,5 +48,5 @@ export default function CartsPage() {
     );
   }
 
-  return <CartsClient initialCarts={carts} selectedStoreId={storeId} needsSetup={needsSetup} />;
+  return <CartsClient initialCarts={carts} selectedStoreId={selectedStoreId} needsSetup={needsSetup} />;
 }

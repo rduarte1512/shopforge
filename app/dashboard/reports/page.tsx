@@ -3,19 +3,17 @@ import { ReportsOverview } from '@/components/dashboard/ReportsOverview';
 import { AdvancedCharts } from '@/components/dashboard/AdvancedCharts';
 import { TopProductsTable } from '@/components/dashboard/TopProductsTable';
 import { DateRangeFilter, DateRange } from '@/components/dashboard/DateRangeFilter';
-import { Download, Filter, RefreshCcw } from 'lucide-react';
+import { Download, Filter, RefreshCcw, Lock } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useState } from 'react';
 import { subDays, endOfDay, startOfDay } from 'date-fns';
 import { useReportsData } from '@/hooks/useReportsData';
-import { useMockDB, SUBSCRIPTION_PLANS } from '@/lib/store';
+import { SUBSCRIPTION_PLANS } from '@/lib/store';
 import { useAuth } from '@/lib/auth-context';
-import { Lock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function ReportsPage() {
   const { user } = useAuth();
-  const { currentUser } = useMockDB();
   const router = useRouter();
   const plan = SUBSCRIPTION_PLANS.find(p => p.id === user?.subscriptionTier) || SUBSCRIPTION_PLANS[0];
   const isPremium = plan.id !== 'STARTER';
@@ -41,7 +39,6 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-8 pb-12">
-      {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -72,7 +69,6 @@ export default function ReportsPage() {
         </motion.div>
       </div>
 
-      {/* Filter Bar */}
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -84,13 +80,12 @@ export default function ReportsPage() {
           Filtrar por:
         </div>
         <div className="flex items-center gap-2">
-          <span className="px-3 py-1.5 bg-emerald-500/10 text-emerald-600 text-xs font-bold rounded-lg border border-emerald-500/20 cursor-pointer">Todas as Lojas</span>
+          <span className="px-3 py-1.5 bg-emerald-500/10 text-emerald-600 text-xs font-bold rounded-lg border border-emerald-500/20 cursor-pointer">Loja selecionada</span>
           <span className="px-3 py-1.5 bg-bg-gray text-text-secondary text-xs font-bold rounded-lg border border-border cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">Pagos</span>
           <span className="px-3 py-1.5 bg-bg-gray text-text-secondary text-xs font-bold rounded-lg border border-border cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">Enviados</span>
         </div>
       </motion.div>
 
-      {/* Reports Overview Metrics */}
       <ReportsOverview metrics={metrics} loading={loading} />
       
       {isPremium ? (
@@ -121,7 +116,6 @@ export default function ReportsPage() {
         </div>
       )}
 
-      {/* Footer Info */}
       <motion.p 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

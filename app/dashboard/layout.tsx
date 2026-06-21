@@ -1,5 +1,7 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { getMyStoresAction, syncUserAction } from '@/lib/actions';
+import { getSelectedStoreId } from '@/lib/dashboard-actions';
+import { SelectedStoreProvider } from '@/lib/selected-store-context';
 import { redirect } from 'next/navigation';
 import DashboardLayoutClient from './DashboardLayoutClient';
 
@@ -11,9 +13,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/login');
   }
 
-  const [profile, stores] = await Promise.all([
+  const [profile, stores, selectedStoreId] = await Promise.all([
     syncUserAction(),
-    getMyStoresAction()
+    getMyStoresAction(),
+    getSelectedStoreId()
   ]);
 
   const clientUser = JSON.parse(JSON.stringify(user));
@@ -28,8 +31,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   return (
-    <DashboardLayoutClient user={clientUser} initialStores={stores}>
-      {children}
-    </DashboardLayoutClient>
+    <SelectedStoreProvider initialStores={stores} initialSelectedStoreId={selectedStoreId}>
+      <DashboardLayoutClient user={clientUser} initialStores={stores}>
+        {children}
+      </DashboardLayoutClient>
+    </SelectedStoreProvider>
   );
 }
