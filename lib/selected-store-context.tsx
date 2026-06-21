@@ -7,7 +7,7 @@ import { useMockDB } from '@/lib/store';
 export const SELECTED_STORE_CHANGED_EVENT = 'shopforge-selected-store-changed';
 
 type StoreSummary = {
-  id: string;
+  id?: string;
   name?: string;
   domain?: string;
   [key: string]: any;
@@ -23,14 +23,20 @@ interface SelectedStoreContextValue {
 
 const SelectedStoreContext = createContext<SelectedStoreContextValue | undefined>(undefined);
 
+function normalizeStores(stores: StoreSummary[] | null | undefined) {
+  return (stores || []).filter((store) => typeof store?.id === 'string' && store.id.length > 0);
+}
+
 function getValidStoreId(stores: StoreSummary[], requestedId?: string | null) {
-  if (requestedId && stores.some((store) => store.id === requestedId)) return requestedId;
-  return stores[0]?.id ?? null;
+  const validStores = normalizeStores(stores);
+  if (requestedId && validStores.some((store) => store.id === requestedId)) return requestedId;
+  return validStores[0]?.id ?? null;
 }
 
 export function SelectedStoreProvider({ children, initialStores, initialSelectedStoreId }: { children: ReactNode; initialStores: StoreSummary[]; initialSelectedStoreId?: string | null }) {
-  const [stores, setStoresState] = useState<StoreSummary[]>(initialStores || []);
-  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(() => getValidStoreId(initialStores || [], initialSelectedStoreId));
+  const initialSafeStores = normalizeStores(initialStores);
+  const [stores, setStoresState] = useState<StoreSummary[]>(initialSafeStores);
+  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(() => getValidStoreId(initialSafeStores, initialSelectedStoreId));
   const setCompatStores = useMockDB((state) => state.setStores);
   const setCompatSelectedStore = useMockDB((state) => state.setSelectedStore);
 
@@ -48,7 +54,7 @@ export function SelectedStoreProvider({ children, initialStores, initialSelected
   }, [setCompatSelectedStore]);
 
   useEffect(() => {
-    const safeStores = initialStores || [];
+    const safeStores = normalizeStores(initialStores);
     setStoresState(safeStores);
     setCompatStores(safeStores as any);
 
@@ -72,7 +78,7 @@ export function SelectedStoreProvider({ children, initialStores, initialSelected
   }, [setCompatSelectedStore, stores]);
 
   const setStores = useCallback((nextStores: StoreSummary[]) => {
-    const safeStores = nextStores || [];
+    const safeStores = normalizeStores(nextStores);
     setStoresState(safeStores);
     setCompatStores(safeStores as any);
     setSelectedStoreId((current) => {
