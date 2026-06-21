@@ -1,9 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useMockDB, Order as MockOrder } from '@/lib/store';
 import { DateRange } from '@/components/dashboard/DateRangeFilter';
 import { subDays, startOfDay, endOfDay } from 'date-fns';
 import { getStoreProductsAction, getMyStoresAction, getStoreOrdersAction } from '@/lib/actions';
+import { useSelectedStore } from '@/lib/selected-store-context';
 
 interface ReportMetrics {
   totalRevenue: number;
@@ -49,7 +49,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export function useReportsData(dateRange?: DateRange) {
-  const { selectedStoreId } = useMockDB();
+  const { selectedStoreId } = useSelectedStore();
   const [metrics, setMetrics] = useState<ReportMetrics | null>(null);
   const [salesData, setSalesData] = useState<SalesData[]>([]);
   const [categoryData, setCategoryData] = useState<CategoryData[]>([]);
@@ -59,90 +59,90 @@ export function useReportsData(dateRange?: DateRange) {
 
   useEffect(() => {
     function normalizeOrderData(order: any) {
-        return {
-          id: order.id,
-          storeId: order.store_id || order.storeId,
-          customerName: order.customer_name || order.customerName,
-          customerEmail: order.customer_email || order.customerEmail,
-          status: order.status,
-          total: order.total,
-          subtotal: order.subtotal,
-          shippingCost: order.shipping_cost || order.shippingCost,
-          discountAmount: order.discount_amount || order.discountAmount,
-          currency: order.currency,
-          items: (order.items || []).map((item: any) => ({
-            id: item.id,
-            productId: item.product_id || item.productId,
-            quantity: item.quantity,
-            price: item.price
-          })),
-          createdAt: order.created_at || order.createdAt
-        };
-      }
+      return {
+        id: order.id,
+        storeId: order.store_id || order.storeId,
+        customerName: order.customer_name || order.customerName,
+        customerEmail: order.customer_email || order.customerEmail,
+        status: order.status,
+        total: order.total,
+        subtotal: order.subtotal,
+        shippingCost: order.shipping_cost || order.shippingCost,
+        discountAmount: order.discount_amount || order.discountAmount,
+        currency: order.currency,
+        items: (order.items || []).map((item: any) => ({
+          id: item.id,
+          productId: item.product_id || item.productId,
+          quantity: item.quantity,
+          price: item.price
+        })),
+        createdAt: order.created_at || order.createdAt
+      };
+    }
 
-      function normalizeProductData(product: any) {
-        return {
-          id: product.id,
-          storeId: product.store_id || product.storeId,
-          name: product.name,
-          description: product.description,
-          price: product.price,
-          stock: product.stock,
-          sku: product.sku,
-          imageUrl: product.image_url || product.imageUrl,
-          category: product.category,
-          isActive: product.is_active ?? product.isActive,
-          createdAt: product.created_at || product.createdAt
-        };
-      }
+    function normalizeProductData(product: any) {
+      return {
+        id: product.id,
+        storeId: product.store_id || product.storeId,
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        stock: product.stock,
+        sku: product.sku,
+        imageUrl: product.image_url || product.imageUrl,
+        category: product.category,
+        isActive: product.is_active ?? product.isActive,
+        createdAt: product.created_at || product.createdAt
+      };
+    }
 
-      function processOrders(orders: any[], products: any[], startDate: Date, endDate: Date, dates: string[], dayNames: string[]) {
-        const normalizedOrders = orders.map(normalizeOrderData);
-        const normalizedProducts = products.map(normalizeProductData);
+    function processOrders(orders: any[], products: any[], startDate: Date, endDate: Date, dates: string[], dayNames: string[]) {
+      const normalizedOrders = orders.map(normalizeOrderData);
+      const normalizedProducts = products.map(normalizeProductData);
+      
+      const startTime = startDate.getTime();
+      const endTime = endDate.getTime();
+      
+      const filteredOrders = normalizedOrders.filter((o) => {
+        const orderDate = new Date(o.createdAt);
+        const orderTime = orderDate.getTime();
+        return orderTime >= startTime && orderTime <= endTime;
+      });
+
+      const totalRevenue = filteredOrders.reduce((sum: number, o) => sum + (Number(o.total) || 0), 0);
+      const totalOrders = filteredOrders.length;
+      const uniqueCustomers = new Set(filteredOrders.map((o) => o.customerEmail)).size;
+      const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+      const salesByDate: Record<string, { sales: number; orders: number }> = {};
+      dates.forEach(date => salesByDate[date] = { sales: 0, orders: 0 });
+
+      filteredOrders.forEach((order) => {
+        const orderDate = new Date(order.createdAt);
+        const dateStr = orderDate.toLocaleDateString('en-CA');
         
-        const startTime = startDate.getTime();
-        const endTime = endDate.getTime();
-        
-        const filteredOrders = normalizedOrders.filter((o) => {
-          const orderDate = new Date(o.createdAt);
-          const orderTime = orderDate.getTime();
-          return orderTime >= startTime && orderTime <= endTime;
-        });
+        if (salesByDate[dateStr]) {
+          salesByDate[dateStr].sales += Number(order.total) || 0;
+          salesByDate[dateStr].orders += 1;
+        }
+      });
 
-        const totalRevenue = filteredOrders.reduce((sum: number, o) => sum + (Number(o.total) || 0), 0);
-        const totalOrders = filteredOrders.length;
-        const uniqueCustomers = new Set(filteredOrders.map((o) => o.customerEmail)).size;
-        const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+      const categoryMap: Record<string, number> = {};
+      normalizedProducts.forEach((p) => {
+        const cat = p.category || 'Geral';
+        categoryMap[cat] = (categoryMap[cat] || 0) + 1;
+      });
 
-        const salesByDate: Record<string, { sales: number; orders: number }> = {};
-        dates.forEach(date => salesByDate[date] = { sales: 0, orders: 0 });
-
-        filteredOrders.forEach((order) => {
-          const orderDate = new Date(order.createdAt);
-          const dateStr = orderDate.toLocaleDateString('en-CA');
-          
-          if (salesByDate[dateStr]) {
-            salesByDate[dateStr].sales += Number(order.total) || 0;
-            salesByDate[dateStr].orders += 1;
+      const productSales: Record<string, { quantity: number, revenue: number }> = {};
+      filteredOrders.forEach((o) => {
+        o.items?.forEach((item: any) => {
+          if (item.productId) {
+            if (!productSales[item.productId]) productSales[item.productId] = { quantity: 0, revenue: 0 };
+            productSales[item.productId].quantity += item.quantity;
+            productSales[item.productId].revenue += Number(item.price) * item.quantity;
           }
         });
-
-        const categoryMap: Record<string, number> = {};
-        normalizedProducts.forEach((p) => {
-          const cat = p.category || 'Geral';
-          categoryMap[cat] = (categoryMap[cat] || 0) + 1;
-        });
-
-        const productSales: Record<string, { quantity: number, revenue: number }> = {};
-        filteredOrders.forEach((o) => {
-          o.items?.forEach((item: any) => {
-            if (item.productId) {
-              if (!productSales[item.productId]) productSales[item.productId] = { quantity: 0, revenue: 0 };
-              productSales[item.productId].quantity += item.quantity;
-              productSales[item.productId].revenue += Number(item.price) * item.quantity;
-            }
-          });
-        });
+      });
 
       return {
         metrics: {
@@ -183,6 +183,7 @@ export function useReportsData(dateRange?: DateRange) {
 
     async function fetchData() {
       setLoading(true);
+      setError(null);
       const startDate = dateRange ? dateRange.startDate : startOfDay(subDays(new Date(), 6));
       const endDate = dateRange ? dateRange.endDate : endOfDay(new Date());
       
@@ -207,19 +208,24 @@ export function useReportsData(dateRange?: DateRange) {
         }
 
         if (!storeId) {
+          setMetrics(null);
+          setSalesData([]);
+          setCategoryData([]);
+          setTopProducts([]);
           setLoading(false);
           return;
         }
 
-        const orders = await getStoreOrdersAction(storeId, startDate.toISOString(), endDate.toISOString());
-        const products = await getStoreProductsAction(storeId);
+        const [orders, products] = await Promise.all([
+          getStoreOrdersAction(storeId, startDate.toISOString(), endDate.toISOString()),
+          getStoreProductsAction(storeId)
+        ]);
 
         const result = processOrders(orders || [], products || [], startDate, endDate, dates, dayNames);
         setMetrics(result.metrics);
         setSalesData(result.salesData);
         setCategoryData(result.categoryData);
         setTopProducts(result.topProducts);
-
       } catch (err: any) {
         console.error('Error fetching reports data:', err);
         setError(err.message);
