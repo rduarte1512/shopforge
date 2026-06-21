@@ -164,4 +164,66 @@
     box-shadow: var(--shadow-premium);
     backdrop-filter: blur(18px);
   }
+
+  @supports selector(:has(*)) {
+    .dark div:has(> .grid > a[href*="/dashboard/stores/"][href$="/customize"]) {
+      background:
+        radial-gradient(circle at top left, rgba(16, 185, 129, 0.13), transparent 18rem),
+        linear-gradient(135deg, rgba(15, 23, 42, 0.97), rgba(2, 6, 23, 0.94)) !important;
+      border-color: rgba(148, 163, 184, 0.22) !important;
+      box-shadow: 0 24px 70px -38px rgba(0, 0, 0, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+      color: var(--color-text-primary) !important;
+    }
+
+    .dark div:has(> .grid > a[href*="/dashboard/stores/"][href$="/customize"]) h3,
+    .dark div:has(> .grid > a[href*="/dashboard/stores/"][href$="/customize"]) .text-text-dark {
+      color: var(--color-text-primary) !important;
+    }
+
+    .dark div:has(> .grid > a[href*="/dashboard/stores/"][href$="/customize"]) p,
+    .dark div:has(> .grid > a[href*="/dashboard/stores/"][href$="/customize"]) .text-text-muted {
+      color: var(--color-text-muted) !important;
+    }
+
+    .dark div:has(> .grid > a[href*="/dashboard/stores/"][href$="/customize"]) .bg-slate-50,
+    .dark div:has(> .grid > a[href*="/dashboard/stores/"][href$="/customize"]) a[href^="/s/"] {
+      background-color: rgba(255, 255, 255, 0.06) !important;
+      border-color: rgba(148, 163, 184, 0.20) !important;
+      color: var(--color-text-primary) !important;
+    }
+
+    .dark div:has(> .grid > a[href*="/dashboard/stores/"][href$="/customize"]) .bg-emerald-50,
+    .dark div:has(> .grid > a[href*="/dashboard/stores/"][href$="/customize"]) a[href*="/accounts"] {
+      background-color: rgba(16, 185, 129, 0.12) !important;
+      border-color: rgba(16, 185, 129, 0.24) !important;
+      color: #6ee7b7 !important;
+    }
+
+    .dark div:has(> .grid > a[href*="/dashboard/stores/"][href$="/customize"]) a[href$="/customize"] {
+      background: linear-gradient(135deg, #10b981, #059669) !important;
+      color: #ffffff !important;
+      box-shadow: 0 16px 32px -18px rgba(16, 185, 129, 0.85) !important;
+    }
+
+    .dark div:has(> .grid > a[href*="/dashboard/stores/"][href$="/customize"]) button.text-red-400:hover {
+      background-color: rgba(239, 68, 68, 0.12) !important;
+      color: #fca5a5 !important;
+    }
+
+    .dark div:has(> .grid > a[href*="/dashboard/stores/"][href$="/customize"]) .bg-red-50 {
+      background-color: rgba(239, 68, 68, 0.10) !important;
+      border-color: rgba(248, 113, 113, 0.22) !important;
+    }
+
+    .dark div:has(> .grid > a[href*="/dashboard/stores/"][href$="/customize"]) .text-red-800,
+    .dark div:has(> .grid > a[href*="/dashboard/stores/"][href$="/customize"]) .text-red-700 {
+      color: #fca5a5 !important;
+    }
+
+    .dark div:has(> .grid > a[href*="/dashboard/stores/"][href$="/customize"]) button.bg-white {
+      background-color: rgba(255, 255, 255, 0.08) !important;
+      border-color: rgba(248, 113, 113, 0.22) !important;
+      color: #fecaca !important;
+    }
+  }
 }
