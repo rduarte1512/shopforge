@@ -107,7 +107,7 @@ export function AuthShell({ mode, children }: AuthShellProps) {
   const content = authContent[mode];
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#020617] px-4 py-5 text-white sm:px-6 lg:px-8">
+    <main className="relative min-h-screen overflow-x-hidden bg-[#020617] px-4 py-5 text-white sm:px-6 lg:px-8">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_8%,rgba(16,185,129,0.26),transparent_30%),radial-gradient(circle_at_88%_18%,rgba(59,130,246,0.16),transparent_30%),radial-gradient(circle_at_50%_100%,rgba(52,211,153,0.18),transparent_36%),linear-gradient(135deg,#020617_0%,#07111f_52%,#020617_100%)]" />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:72px_72px] opacity-20" />
       <div className="pointer-events-none absolute left-1/2 top-[-18rem] h-[44rem] w-[44rem] -translate-x-1/2 rounded-full bg-emerald-400/20 blur-3xl" />
