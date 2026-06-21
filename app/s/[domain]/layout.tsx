@@ -1,6 +1,6 @@
 'use client';
 
-import { getStorefrontDataAction } from '@/lib/actions';
+import { getStoreByDomainAction } from '@/lib/storefront-actions';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Loader2, ShoppingCart } from 'lucide-react';
@@ -8,23 +8,23 @@ import { useState, ReactNode, useEffect } from 'react';
 import { CartProvider, useCart } from '@/components/CartProvider';
 import { StoreAccountWidget } from '@/components/storefront/StoreAccountWidget';
 
-function StoreLayoutInner({ children, store }: { children: ReactNode, store: any }) {
+function StoreLayoutInner({ children, store }: { children: ReactNode; store: any }) {
   const { cartCount } = useCart();
   const isDark = store.theme === 'dark';
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const ref = params.get('ref');
-    if (ref) {
-      sessionStorage.setItem('affiliate_ref', ref);
-      const url = new URL(window.location.href);
-      url.searchParams.delete('ref');
-      window.history.replaceState({}, '', url.toString());
-    }
+    if (!ref) return;
+
+    sessionStorage.setItem('affiliate_ref', ref);
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.delete('ref');
+    window.history.replaceState({}, '', currentUrl.toString());
   }, [store.id]);
 
   return (
-    <div 
+    <div
       className={`min-h-screen flex flex-col ${isDark ? 'bg-black text-white' : 'bg-white text-black'}`}
       style={isDark ? { '--primary': store.primary_color, color: 'white' } as any : { '--primary': store.primary_color } as any}
     >
@@ -40,7 +40,7 @@ function StoreLayoutInner({ children, store }: { children: ReactNode, store: any
             <Link href={`/s/${store.domain}/cart`} className="relative p-2">
               <ShoppingCart className="w-6 h-6" />
               {cartCount > 0 && (
-                <span 
+                <span
                   className="absolute top-0 right-0 w-5 h-5 flex items-center justify-center rounded-full text-white text-xs font-bold"
                   style={{ backgroundColor: store.primary_color }}
                 >
@@ -59,10 +59,8 @@ function StoreLayoutInner({ children, store }: { children: ReactNode, store: any
       <div className="fixed right-[150px] top-[45px] z-[95] hidden xl:block">
         <StoreAccountWidget store={store} accentColor={store.primary_color} />
       </div>
-      
-      <main className="flex-1">
-        {children}
-      </main>
+
+      <main className="flex-1">{children}</main>
 
       <footer className="py-12 text-center" style={{ borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>
         <p className="opacity-60 text-sm">© {new Date().getFullYear()} {store.name}. Powered by ShopForge.</p>
@@ -75,28 +73,24 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
   const params = useParams() as { domain: string };
   const [store, setStore] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  
+
   useEffect(() => {
     async function fetchStore() {
       if (!params.domain) {
         setLoading(false);
         return;
       }
-      
+
       try {
-        const data = await getStorefrontDataAction(params.domain);
-        if (data && data.store) {
-          setStore(data.store);
-        } else {
-          setStore(null);
-        }
+        const storeData = await getStoreByDomainAction(params.domain);
+        setStore(storeData || null);
       } catch (err: any) {
         console.error('Error fetching store:', err?.message || err);
       } finally {
         setLoading(false);
       }
     }
-    
+
     fetchStore();
   }, [params.domain]);
 
@@ -114,9 +108,7 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
 
   return (
     <CartProvider storeId={store.id} storeDomain={store.domain}>
-      <StoreLayoutInner store={store}>
-         {children}
-      </StoreLayoutInner>
+      <StoreLayoutInner store={store}>{children}</StoreLayoutInner>
     </CartProvider>
   );
 }
