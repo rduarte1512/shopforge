@@ -1,5 +1,7 @@
 'use client';
 
+import { getProductSmartImage } from '@/lib/smart-images';
+
 import { getStorefrontDataAction } from '@/lib/actions';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
@@ -34,7 +36,7 @@ function hexToRgb(hex: string) {
 
 function getProductImage(product: any, index = 0) {
   if (product?.image_url) return product.image_url;
-  return `https://picsum.photos/seed/${encodeURIComponent(product?.name || `produto-${index}`)}/900/1100`;
+  return getProductSmartImage(product, index);
 }
 
 function getSafeSections(store: any, customization: any) {
@@ -70,7 +72,7 @@ function getSafeSections(store: any, customization: any) {
 
 function ProductCard({ product, index, store, formatPrice, addItem, isInComparison, addProduct, removeProduct, colors }: any) {
   return (
-    <article className="group relative rounded-[32px] border border-black/5 bg-white/70 p-3 shadow-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-black/10">
+    <article className={"group relative border border-black/5 bg-white/90 p-3 shadow-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-black/10 " + (store?.customization?.templateId === "editorial" ? "rounded-none" : store?.customization?.templateId === "tech" ? "rounded-lg" : "rounded-[32px]")}>
       <Link href={`/s/${store.domain}/product/${product.id}`} className="block relative aspect-[4/5] overflow-hidden rounded-[24px] bg-slate-100">
         <Image
           src={getProductImage(product, index)}
@@ -176,6 +178,8 @@ export default function StorefrontHomePage() {
   const comparedProducts = products.filter((product) => comparisonIds.includes(product.id));
 
   const customization = store?.customization || {};
+  const templateLayout = customization.templateLayout || 'split';
+  const isDarkTheme = customization.templateId === 'tech' || store?.theme === 'dark';
   const colors = customization.colors || {
     background: '#ffffff',
     text: '#0f172a',
@@ -311,21 +315,21 @@ export default function StorefrontHomePage() {
           style={{ minHeight: `${heroSection?.styles?.height || 700}px`, background: `radial-gradient(circle at 15% 20%, rgba(${rgbAccent}, 0.18), transparent 28%), radial-gradient(circle at 90% 10%, rgba(${rgbAccent}, 0.10), transparent 25%)` }}
         >
           <div className="absolute inset-x-0 top-0 h-px" style={{ backgroundColor: `rgba(${rgbAccent}, .2)` }} />
-          <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-12">
-            <div className="lg:col-span-7">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-black/5 bg-white/70 px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-600 shadow-sm backdrop-blur">
+          <div className="mx-auto grid items-center gap-12 ${templateLayout === 'center' ? 'max-w-4xl text-center' : 'max-w-7xl lg:grid-cols-12'}">
+            <div className={templateLayout === "center" ? "mx-auto max-w-3xl" : "lg:col-span-7"}>
+              <div className={"mb-6 inline-flex items-center gap-2 rounded-full border border-black/5 bg-white/70 px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-600 shadow-sm backdrop-blur " + (isDarkTheme ? "text-slate-950" : "")}>
                 <Star className="h-4 w-4" style={{ color: colors.accent }} />
                 Marca premium online
               </div>
 
-              <h1 className="max-w-4xl text-5xl font-black leading-[0.95] tracking-tight text-slate-950 md:text-7xl lg:text-8xl" style={{ fontFamily: fonts.heading }}>
+              <h1 className="max-w-4xl text-5xl font-black leading-[0.95] tracking-tight md:text-7xl lg:text-8xl" style={{ fontFamily: fonts.heading, color: colors.text }}>
                 {activePromo?.title || heroSection?.content?.title || store.name}
               </h1>
-              <p className="mt-7 max-w-2xl text-lg font-semibold leading-relaxed text-slate-600 md:text-xl">
+              <p className="mt-7 max-w-2xl text-lg font-semibold leading-relaxed md:text-xl" style={{ color: colors.muted || colors.text }}>
                 {activePromo?.subtitle || heroSection?.content?.subtitle || store.description}
               </p>
 
-              <div className="mt-9 flex flex-wrap items-center gap-4">
+              <div className={"mt-9 flex flex-wrap items-center gap-4 " + (templateLayout === "center" ? "justify-center" : "")}>
                 <button
                   onClick={() => handleButtonAction('products')}
                   className="inline-flex items-center gap-3 rounded-2xl px-8 py-4 text-sm font-black text-white shadow-2xl transition-all hover:scale-[1.03] active:scale-95"
@@ -339,9 +343,9 @@ export default function StorefrontHomePage() {
                 </Link>
               </div>
 
-              <div className="mt-10 grid max-w-2xl grid-cols-3 gap-3">
+              <div className={"mt-10 grid max-w-2xl grid-cols-3 gap-3 " + (templateLayout === "center" ? "mx-auto" : "")}>
                 {[
-                  ['+8', 'Produtos curados'],
+                  [String(products.length), 'Produtos disponíveis'],
                   ['24h', 'Resposta rápida'],
                   ['100%', 'Pagamento seguro'],
                 ].map(([value, label]) => (
@@ -353,7 +357,7 @@ export default function StorefrontHomePage() {
               </div>
             </div>
 
-            <div className="relative lg:col-span-5">
+            <div className={templateLayout === "center" ? "relative mx-auto w-full max-w-sm" : "relative lg:col-span-5"}>
               <div className="absolute -left-8 top-12 h-36 w-36 rounded-full blur-3xl" style={{ backgroundColor: `rgba(${rgbAccent}, .35)` }} />
               <div className="relative rounded-[44px] border border-white/70 bg-white/70 p-4 shadow-2xl shadow-black/10 backdrop-blur-xl">
                 <div className="relative aspect-[4/5] overflow-hidden rounded-[34px] bg-slate-100">
@@ -415,7 +419,7 @@ export default function StorefrontHomePage() {
         <section id="sobre" className="mx-auto grid max-w-7xl gap-8 px-6 py-20 lg:grid-cols-12">
           <div className="lg:col-span-5">
             <p className="text-xs font-black uppercase tracking-[0.25em]" style={{ color: colors.accent }}>Experiência de marca</p>
-            <h2 className="mt-4 text-4xl font-black leading-tight tracking-tight text-slate-950 md:text-5xl">Uma loja pensada para parecer uma marca real.</h2>
+            <h2 className="mt-4 text-4xl font-black leading-tight tracking-tight md:text-5xl" style={{ color: colors.text }}>Uma loja pensada para parecer uma marca real.</h2>
           </div>
           <div className="grid gap-4 lg:col-span-7 md:grid-cols-3">
             {[
@@ -436,7 +440,7 @@ export default function StorefrontHomePage() {
           <div className="mb-10 flex flex-col justify-between gap-6 md:flex-row md:items-end">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.25em]" style={{ color: colors.accent }}>Coleção</p>
-              <h2 className="mt-3 text-4xl font-black tracking-tight text-slate-950 md:text-5xl">{productSection?.content?.title || 'Produtos em destaque'}</h2>
+              <h2 className="mt-3 text-4xl font-black tracking-tight md:text-5xl" style={{ color: colors.text }}>{productSection?.content?.title || 'Produtos em destaque'}</h2>
               <p className="mt-3 max-w-2xl text-sm font-semibold leading-relaxed text-slate-500">Explora uma seleção apresentada com detalhe, clareza e foco numa experiência de compra profissional.</p>
             </div>
 
