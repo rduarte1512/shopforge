@@ -368,7 +368,7 @@ export default function StorefrontHomePage() {
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                   <div className="absolute bottom-5 left-5 right-5 rounded-3xl bg-white/90 p-4 shadow-xl backdrop-blur">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Produto em destaque</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{heroProduct ? "Produto em destaque" : "Bem-vindo à nossa loja"}</p>
                     <div className="mt-2 flex items-end justify-between gap-3">
                       <div>
                         <p className="font-black leading-tight text-slate-950">{heroProduct?.name || store.name}</p>
