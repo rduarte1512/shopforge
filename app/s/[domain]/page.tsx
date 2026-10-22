@@ -315,8 +315,8 @@ export default function StorefrontHomePage() {
           style={{ minHeight: `${heroSection?.styles?.height || 700}px`, background: `radial-gradient(circle at 15% 20%, rgba(${rgbAccent}, 0.18), transparent 28%), radial-gradient(circle at 90% 10%, rgba(${rgbAccent}, 0.10), transparent 25%)` }}
         >
           <div className="absolute inset-x-0 top-0 h-px" style={{ backgroundColor: `rgba(${rgbAccent}, .2)` }} />
-          <div className="mx-auto grid items-center gap-12 ${templateLayout === 'center' ? 'max-w-4xl text-center' : 'max-w-7xl lg:grid-cols-12'}">
-            <div className={templateLayout === "center" ? "mx-auto max-w-3xl" : "lg:col-span-7"}>
+          <div className={"mx-auto grid items-center gap-12 " + (templateLayout === 'center' ? 'max-w-4xl text-center' : 'max-w-7xl lg:grid-cols-12')}>
+            <div className={templateLayout === "center" ? "mx-auto max-w-3xl" : "lg:col-span-7 " + (templateLayout === "image-first" ? "lg:order-2" : "")}>
               <div className={"mb-6 inline-flex items-center gap-2 rounded-full border border-black/5 bg-white/70 px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-600 shadow-sm backdrop-blur " + (isDarkTheme ? "text-slate-950" : "")}>
                 <Star className="h-4 w-4" style={{ color: colors.accent }} />
                 Marca premium online
@@ -357,7 +357,7 @@ export default function StorefrontHomePage() {
               </div>
             </div>
 
-            <div className={templateLayout === "center" ? "relative mx-auto w-full max-w-sm" : "relative lg:col-span-5"}>
+            <div className={templateLayout === "center" ? "relative mx-auto w-full max-w-sm" : "relative lg:col-span-5 " + (templateLayout === "image-first" ? "lg:order-1" : "")}>
               <div className="absolute -left-8 top-12 h-36 w-36 rounded-full blur-3xl" style={{ backgroundColor: `rgba(${rgbAccent}, .35)` }} />
               <div className="relative rounded-[44px] border border-white/70 bg-white/70 p-4 shadow-2xl shadow-black/10 backdrop-blur-xl">
                 <div className="relative aspect-[4/5] overflow-hidden rounded-[34px] bg-slate-100">
