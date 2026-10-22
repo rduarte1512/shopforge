@@ -384,7 +384,7 @@ function normalizeStoreConfig(config: any, prompt: string) {
   };
 }
 
-export async function generateStoreConfig(prompt: string) {
+export async function generateStoreConfig(prompt: string, includeProducts: boolean = true) {
   const intent = detectIntent(prompt);
   const fallback = buildFallbackStoreConfig(prompt);
 
@@ -397,7 +397,7 @@ export async function generateStoreConfig(prompt: string) {
       },
     });
 
-    if (!model) return fallback;
+    if (!model) return includeProducts ? fallback : { ...fallback, products: [] };
 
     const creativeBrief = `
 You are an elite e-commerce brand strategist, store designer and conversion copywriter.
@@ -410,9 +410,9 @@ Relevant niche keywords: ${intent.keywords.join(', ')}.
 CRITICAL RULES:
 1. If the niche was explicitly requested, every product, category, hero text, description and imageKeyword MUST belong to "${intent.label}".
 2. Do NOT switch to another niche. If the user asks for watches/relogios, create a watch store and watch products only.
-3. Product names must be specific, realistic and sellable in Portuguese.
+3. If products are requested, names must be specific, realistic and sellable in Portuguese.
 4. Avoid generic names like "Produto 1" or unrelated lifestyle products.
-5. The store must feel visually premium and conversion-focused.
+5. The store must feel visually premium and conversion-focused. The visual style, hierarchy, hero alignment, sections and colors must reflect the user's brief; do not copy a generic layout.
 
 Generate a complete, production-ready Portuguese online store concept with:
 - memorable brand name related to ${intent.label}
@@ -421,11 +421,12 @@ Generate a complete, production-ready Portuguese online store concept with:
 - theme: "light" or "dark"
 - primaryColor in HEX
 - bannerKeyword and logoKeyword related to ${intent.label}
-- exactly 8 realistic products in EUR related to ${intent.label}
-- a full customization object for the visual editor
+${includeProducts ? '- exactly 8 realistic products in EUR related to ' + intent.label : '- NO products. Return "products": [] because products will only be generated later if the customer requests it'}
+- a full original customization object for the visual editor, with unique editorial structure and brand copy
 
 The customization object must have this exact shape:
 {
+  "templateLayout": "split" | "center" | "image-first",
   "header": { "sticky": true, "logoPosition": "left" | "center", "height": number },
   "hero": { "height": number, "textAlign": "left" | "center", "showOverlay": true, "overlayOpacity": number, "title": string, "subtitle": string },
   "products": { "columns": number, "gap": number, "aspectRatio": "portrait", "showPrice": true, "showStock": true },
@@ -440,18 +441,19 @@ The customization object must have this exact shape:
   ]
 }
 
-Use picsum image URLs with unique seeds related to ${intent.imageKeyword}, for example https://picsum.photos/seed/watch-heritage-hero/1400/560.
+Do not use picsum.photos, source.unsplash.com, generic placeholders or invented image URLs. For image sections return an empty URL with a descriptive niche-specific alt; the application will pick a matching catalog banner. Do not claim that photos are AI-generated.
 Return ONLY valid JSON.`;
 
     const result = await model.generateContent(creativeBrief);
     const response = await result.response;
     const aiText = response.text();
 
-    if (!aiText) return fallback;
-    return normalizeStoreConfig(parseJsonResponse(aiText), prompt);
+    if (!aiText) return includeProducts ? fallback : { ...fallback, products: [] };
+    const config = normalizeStoreConfig(parseJsonResponse(aiText), prompt);
+    return includeProducts ? config : { ...config, products: [] };
   } catch (error: any) {
     console.error('AI Generation Critical Error:', error);
-    return fallback;
+    return includeProducts ? fallback : { ...fallback, products: [] };
   }
 }
 
