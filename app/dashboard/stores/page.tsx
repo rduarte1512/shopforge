@@ -251,8 +251,15 @@ export default function StoresPage() {
       setNewStore({ name: '', domain: '', description: '', theme: 'light', templateId: 'minimal', primaryColor: '#008060', enableAccounts: true });
     } catch (error: any) {
       const message = error?.message || 'Ocorreu um erro ao criar a loja.';
-      setGenerationError(createdStore ? message + ' A loja já existe: não voltes a clicar em criar.' : message);
-      if (createdStore) await fetchStores();
+      if (createdStore) {
+        // A loja já foi persistida. Fechamos o formulário para evitar duplicados.
+        await selectCreatedStore(createdStore.id);
+        await fetchStores();
+        setIsCreating(false);
+        alert(message + ' A loja foi criada. Podes verificar o catálogo e completar os produtos em falta.');
+      } else {
+        setGenerationError(message);
+      }
     } finally {
       setIsSavingStore(false);
     }
