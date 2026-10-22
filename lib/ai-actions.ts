@@ -465,7 +465,7 @@ export async function updateStoreCustomizationWithAI(currentConfig: any, userReq
       },
     });
 
-    if (!model) throw new Error('GEMINI_API_KEY não configurada.');
+    if (!model) return 'O assistente não está configurado: adiciona GEMINI_API_KEY ao ambiente Production na Vercel e publica novamente.';
 
     const fullPrompt = `Act as a senior e-commerce designer.
 Current Store Configuration: ${JSON.stringify(currentConfig)}
@@ -569,7 +569,7 @@ export async function chatWithAssistant(messages: { role: 'user' | 'assistant'; 
     if (!model) throw new Error('GEMINI_API_KEY não configurada.');
 
     const history = messages.slice(0, -1)
-      .filter((message, index) => index > 0 || message.role === 'user')
+      .filter((message, index, all) => message.role === 'user' || (index > 0 && all[index - 1].role === 'user'))
       .map((message) => ({
         role: message.role === 'user' ? 'user' : 'model',
         parts: [{ text: message.content }],
@@ -591,6 +591,10 @@ export async function chatWithAssistant(messages: { role: 'user' | 'assistant'; 
     return response.text();
   } catch (error: any) {
     console.error('AI Chat Error Details:', error);
-    throw new Error('O assistente teve um problema ao processar a tua mensagem. Tenta novamente.');
+    const detail = error instanceof Error ? error.message : String(error);
+    if (/429|quota|resource_exhausted/i.test(detail)) return 'A API Gemini atingiu o limite de pedidos. Verifica a quota ou tenta novamente mais tarde.';
+    if (/API_KEY|api key|403|permission_denied/i.test(detail)) return 'A chave da API Gemini está em falta, é inválida ou não tem permissões. Verifica a configuração na Vercel.';
+    if (/404|not found/i.test(detail)) return 'O modelo Gemini configurado não está disponível. Verifica o acesso ao modelo na Google AI Studio.';
+    return 'Não foi possível contactar a IA. Consulta os logs do ShopForge na Vercel para identificar o erro.';
   }
 }
