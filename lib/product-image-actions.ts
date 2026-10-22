@@ -1,6 +1,7 @@
 'use server';
 
 import { getProductSmartImage } from './smart-images';
+import { auth } from '@clerk/nextjs/server';
 
 type ProductImageDraft = {
   name: string;
@@ -12,6 +13,8 @@ type ProductImageDraft = {
 // Pesquisa fotografias do produto, em vez de atribuir imagens aleatórias por seed.
 // A chave, quando disponível, é lida exclusivamente do servidor.
 export async function findProductPhotos(products: ProductImageDraft[], storeContext = ''): Promise<string[]> {
+  const { userId } = await auth();
+  if (!userId) throw new Error('É necessário iniciar sessão para procurar fotografias.');
   const limited = Array.isArray(products) ? products.slice(0, 8) : [];
   const pexelsKey = process.env.PEXELS_API_KEY;
   const unsplashKey = process.env.UNSPLASH_ACCESS_KEY;
@@ -30,7 +33,7 @@ export async function findProductPhotos(products: ProductImageDraft[], storeCont
         });
         if (response.ok) {
           const data = await response.json();
-          const photo = (data.photos || []).find((item: any) => item?.src?.large && item?.alt);
+          const photo = (data.photos || []).find((item: any) => item?.src?.large);
           if (photo?.src?.large && /^https:\/\/images\.pexels\.com\//.test(photo.src.large)) return photo.src.large;
         }
       }
@@ -40,7 +43,7 @@ export async function findProductPhotos(products: ProductImageDraft[], storeCont
         });
         if (response.ok) {
           const data = await response.json();
-          const photo = (data.results || []).find((item: any) => item?.urls?.regular && item?.alt_description);
+          const photo = (data.results || []).find((item: any) => item?.urls?.regular);
           if (photo?.urls?.regular && /^https:\/\/images\.unsplash\.com\//.test(photo.urls.regular)) return photo.urls.regular;
         }
       }
