@@ -29,7 +29,10 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { generateStoreConfig } from '@/lib/ai-actions';
+import { generateStoreConfig, generateMultipleProducts } from '@/lib/ai-actions';
+import StoreProductReview, { StoreDraftProduct, toDraftProducts } from '@/components/dashboard/StoreProductReview';
+import { STORE_TEMPLATES, StoreTemplateId, buildTemplateCustomization } from '@/lib/store-templates';
+import { findProductPhotos } from '@/lib/product-image-actions';
 import { useRouter } from 'next/navigation';
 
 function slugify(value: string) {
@@ -110,6 +113,11 @@ export default function StoresPage() {
   const [isAiMode, setIsAiMode] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('Cria uma loja incrível, moderna, bonita e pronta para publicar.');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSavingStore, setIsSavingStore] = useState(false);
+  const [isGeneratingProducts, setIsGeneratingProducts] = useState(false);
+  const [aiConfig, setAiConfig] = useState<any>(null);
+  const [draftProducts, setDraftProducts] = useState<StoreDraftProduct[]>([]);
+  const [includeAiProducts, setIncludeAiProducts] = useState(false);
   const [generationStep, setGenerationStep] = useState(0);
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [deleteConfirmStoreId, setDeleteConfirmStoreId] = useState<string | null>(null);
@@ -118,6 +126,7 @@ export default function StoresPage() {
     domain: '',
     description: '',
     theme: 'light' as 'light' | 'dark',
+    templateId: 'minimal' as StoreTemplateId,
     primaryColor: '#008060',
     enableAccounts: true,
   });
@@ -156,112 +165,136 @@ export default function StoresPage() {
     await setSelectedStoreCookie(storeId);
   };
 
-  const createProductsForStore = async (storeId: string, products: any[], storeContext = '') => {
-    const safeProducts = Array.isArray(products) ? products : [];
-
-    await Promise.all(
-      safeProducts.slice(0, 8).map(async (product, index) => {
-        try {
-          await addProductAction({
-            store_id: storeId,
-            name: product.name || `Produto ${index + 1}`,
-            description: product.description || 'Produto criado automaticamente pela IA.',
-            price: Number(product.price) || 29.9,
-            stock: Number(product.stock) || 50,
-            image_url: getProductSmartImage(product, index, storeContext),
-            category: product.category || 'Destaques',
-          });
-        } catch (error) {
-          console.error('Error creating AI product:', error);
-        }
+  const createProductsForStore = async (storeId: string, products: StoreDraftProduct[], context = '') => {
+    const selected = products.filter((product) => product.selected && product.name.trim());
+    const results = await Promise.allSettled(selected.map((product, index) =>
+      addProductAction({
+        store_id: storeId,
+        name: product.name.trim(),
+        description: product.description.trim(),
+        price: Number(product.price) || 0,
+        stock: Math.max(0, Number(product.stock) || 0),
+        image_url: product.image_url || getProductSmartImage(product, index, context),
+        category: product.category.trim() || 'Geral',
       })
-    );
+    ));
+    const failed = results.filter((result) => result.status === 'rejected');
+    if (failed.length) {
+      console.error('Alguns produtos não foram guardados:', failed);
+      throw new Error('Loja criada, mas ' + failed.length + ' produto(s) não foram guardados. Consulta o catálogo antes de repetir a operação.');
+    }
   };
 
+  // Esta fase prepara uma proposta. Não cria loja nem produtos na base de dados.
   const handleAiGenerate = async () => {
     if (isAiRestricted || !canCreateMoreStores) {
       router.push('/dashboard/subscription');
       return;
     }
-
+    if (!aiPrompt.trim()) {
+      setGenerationError('Descreve o tipo de loja que pretendes criar.');
+      return;
+    }
     setIsGenerating(true);
-    setGenerationStep(0);
     setGenerationError(null);
-
-    const stepInterval = setInterval(() => {
-      setGenerationStep((previous) => (previous < 3 ? previous + 1 : previous));
-    }, 1300);
-
+    setGenerationStep(0);
     try {
-      const config = await generateStoreConfig(aiPrompt.trim() || 'Cria uma loja incrível e perfeita.');
-      const domainBase = config.domain || config.name || `loja-ia-${Date.now()}`;
-      const storePayload = {
-        name: config.name || 'Loja Gerada por IA',
-        domain: withUniqueSuffix(domainBase),
-        description: config.description || 'Loja criada automaticamente com IA.',
-        theme: config.theme === 'dark' ? 'dark' : 'light',
-        primary_color: config.primaryColor || '#008060',
-        base_currency: 'EUR',
-        enableAccounts: true,
-      };
-
-      const store = await createStoreAction(storePayload);
-      const storeContext = `${aiPrompt} ${storePayload.name} ${storePayload.description}`;
-      const customization = normalizeCustomization(config.customization, { ...storePayload, ...store, bannerKeyword: config.bannerKeyword });
-
-      await updateStoreCustomizationAction(store.id, customization);
-      await createProductsForStore(store.id, config.products || [], storeContext);
-      await selectCreatedStore(store.id);
-
-      clearInterval(stepInterval);
+      const config = await generateStoreConfig(aiPrompt.trim(), false);
+      setAiConfig(config);
+      setDraftProducts([]);
+      setIncludeAiProducts(false);
       setGenerationStep(4);
-      await fetchStores();
-      router.refresh();
-
-      setTimeout(() => {
-        setIsGenerating(false);
-        setIsCreating(false);
-        setIsAiMode(false);
-        setAiPrompt('Cria uma loja incrível, moderna, bonita e pronta para publicar.');
-      }, 650);
     } catch (error: any) {
-      clearInterval(stepInterval);
-      console.error('Erro detalhado da IA:', error);
-      setGenerationError(error.message || 'Erro inesperado ao gerar a loja.');
+      setGenerationError(error?.message || 'Não foi possível preparar a proposta.');
+    } finally {
       setIsGenerating(false);
     }
   };
 
-  const handleCreate = async (event: React.FormEvent) => {
-    event.preventDefault();
-
-    if (!canCreateMoreStores) {
-      router.push('/dashboard/subscription');
-      return;
-    }
-
+  const handleProductGeneration = async (count: number) => {
+    if (!includeAiProducts || !aiConfig) return;
+    setIsGeneratingProducts(true);
+    setGenerationError(null);
     try {
-      const storePayload = {
-        name: newStore.name,
-        domain: slugify(newStore.domain || newStore.name),
-        description: newStore.description,
-        theme: newStore.theme,
-        primary_color: newStore.primaryColor,
-        base_currency: 'EUR',
-        enableAccounts: newStore.enableAccounts,
-      };
+      const description = aiPrompt + '. Nome da loja: ' + (aiConfig.name || '') + '. ' + (aiConfig.description || '');
+      const generated = await generateMultipleProducts(description, count);
+      const photos = await findProductPhotos(generated, description);
+      const next = toDraftProducts(generated, photos, description);
+      // As propostas anteriores são substituídas; os produtos manuais permanecem.
+      setDraftProducts((existing) => [...existing.filter((product) => product.source === 'manual'), ...next]);
+    } catch (error: any) {
+      setGenerationError(error?.message || 'Não foi possível gerar produtos. Podes adicioná-los manualmente.');
+    } finally {
+      setIsGeneratingProducts(false);
+    }
+  };
 
-      const store = await createStoreAction(storePayload);
-      await updateStoreCustomizationAction(store.id, buildDefaultCustomization(storePayload));
-      await selectCreatedStore(store.id);
-
-      setIsCreating(false);
-      setNewStore({ name: '', domain: '', description: '', theme: 'light', primaryColor: '#008060', enableAccounts: true });
+  const finishCreation = async (payload: any, customization: any, context: string) => {
+    setIsSavingStore(true);
+    setGenerationError(null);
+    let createdStore: any = null;
+    try {
+      const invalidProduct = draftProducts.find((product) => product.selected && (!product.name.trim() || !Number.isFinite(Number(product.price)) || Number(product.price) < 0));
+      if (invalidProduct) throw new Error('Confirma o nome e o preço de todos os produtos selecionados.');
+      createdStore = await createStoreAction(payload);
+      await updateStoreCustomizationAction(createdStore.id, customization);
+      await createProductsForStore(createdStore.id, draftProducts, context);
+      await selectCreatedStore(createdStore.id);
       await fetchStores();
       router.refresh();
-    } catch (err: any) {
-      alert(`Erro ao criar loja: ${err.message}`);
+      setIsCreating(false);
+      setIsAiMode(false);
+      setAiConfig(null);
+      setDraftProducts([]);
+      setIncludeAiProducts(false);
+      setAiPrompt('Cria uma loja incrível, moderna, bonita e pronta para publicar.');
+      setNewStore({ name: '', domain: '', description: '', theme: 'light', templateId: 'minimal', primaryColor: '#008060', enableAccounts: true });
+    } catch (error: any) {
+      const message = error?.message || 'Ocorreu um erro ao criar a loja.';
+      setGenerationError(createdStore ? message + ' A loja já existe: não voltes a clicar em criar.' : message);
+      if (createdStore) await fetchStores();
+    } finally {
+      setIsSavingStore(false);
     }
+  };
+
+  const handleAiCreate = async () => {
+    if (!aiConfig || isAiRestricted || !canCreateMoreStores || isSavingStore) return;
+    const storePayload = {
+      name: String(aiConfig.name || 'Loja criada por IA').trim(),
+      domain: withUniqueSuffix(aiConfig.domain || aiConfig.name || 'loja-ia'),
+      description: String(aiConfig.description || ''),
+      theme: aiConfig.theme === 'dark' ? 'dark' : 'light',
+      primary_color: aiConfig.primaryColor || '#008060',
+      base_currency: 'EUR',
+      enableAccounts: true,
+    };
+    const customization = normalizeCustomization(aiConfig.customization, storePayload);
+    customization.templateId = 'ai-custom';
+    customization.templateLayout = aiConfig.customization?.templateLayout || 'split';
+    customization.sections = customization.sections.map((section: any) =>
+      section.type === 'hero'
+        ? { ...section, content: { ...section.content, title: storePayload.name } }
+        : section
+    );
+    await finishCreation(storePayload, customization, aiPrompt);
+  };
+
+  const handleCreate = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!canCreateMoreStores || isSavingStore) return;
+    const selectedTemplate = STORE_TEMPLATES.find((template) => template.id === newStore.templateId) || STORE_TEMPLATES[0];
+    const payload = {
+      name: newStore.name.trim(),
+      domain: slugify(newStore.domain || newStore.name),
+      description: newStore.description.trim(),
+      theme: newStore.templateId === 'tech' ? 'dark' : 'light',
+      primary_color: newStore.primaryColor,
+      base_currency: 'EUR',
+      enableAccounts: newStore.enableAccounts,
+    };
+    const config = buildTemplateCustomization(payload, newStore.templateId, newStore.primaryColor || selectedTemplate.accent);
+    await finishCreation(payload, config, payload.name + ' ' + payload.description);
   };
 
   const handleDeleteStore = async (storeId: string) => {
