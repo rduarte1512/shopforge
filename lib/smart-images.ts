@@ -146,15 +146,36 @@ export function getSmartImageUrl(input: string, index = 0, type: 'product' | 'ba
 export function getProductSmartImage(product: any, index = 0, storeContext = '') {
   if (product?.image_url && !isRandomPlaceholderImage(product.image_url)) return product.image_url;
 
-  const input = [
-    product?.name,
-    product?.description,
-    product?.category,
-    product?.imageKeyword,
-    storeContext,
+  const productDescription = [
+    product?.name, product?.category, product?.imageKeyword, product?.description,
   ].filter(Boolean).join(' ');
-
-  return getSmartImageUrl(input, index, 'product');
+  const normalized = normalizeText(productDescription);
+  // A fotografia é escolhida primeiro pelo tipo de produto, não pelo
+  // segmento da loja. Evita mostrar relógios num produto de joalharia.
+  const specific: Array<[RegExp, string, number]> = [
+    [/anel|solitario|ring/, 'joias', 1],
+    [/colar|necklace|pendente/, 'joias', 0],
+    [/brinco|earring/, 'joias', 2],
+    [/pulseira|bracelet/, 'joias', 3],
+    [/vestido|dress/, 'moda', 3],
+    [/hoodie|sweat|camisola/, 'moda', 0],
+    [/casaco|jacket|blazer/, 'moda', 2],
+    [/t-shirt|camisa|shirt|calca|jeans/, 'moda', 1],
+    [/teclado|keyboard|laptop|computador/, 'tecnologia', 2],
+    [/auscultador|headphone/, 'tecnologia', 3],
+    [/perfume|fragrance/, 'beleza', 2],
+    [/serum|creme|skincare/, 'beleza', 0],
+    [/cafe|coffee|espresso/, 'cafe', 0],
+    [/cimento|construction|ferramenta/, 'construcao', 0],
+    [/relogio|watch|cronografo/, 'relogios', 0],
+    [/yoga|tapete/, 'fitness', 2],
+  ];
+  const match = specific.find(([pattern]) => pattern.test(normalized));
+  if (match) return IMAGE_LIBRARY[match[1]].product[match[2]];
+  if (detectImageTheme(productDescription) !== 'generic') {
+    return getSmartImageUrl(productDescription, index, 'product');
+  }
+  return getSmartImageUrl(storeContext || productDescription, index, 'product');
 }
 
 export function getBannerSmartImage(storeOrText: any, index = 0) {

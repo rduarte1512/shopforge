@@ -29,7 +29,10 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { generateStoreConfig } from '@/lib/ai-actions';
+import { generateStoreConfig, generateMultipleProducts } from '@/lib/ai-actions';
+import StoreProductReview, { StoreDraftProduct, toDraftProducts } from '@/components/dashboard/StoreProductReview';
+import { STORE_TEMPLATES, StoreTemplateId, buildTemplateCustomization } from '@/lib/store-templates';
+import { findProductPhotos } from '@/lib/product-image-actions';
 import { useRouter } from 'next/navigation';
 
 function slugify(value: string) {
@@ -110,6 +113,11 @@ export default function StoresPage() {
   const [isAiMode, setIsAiMode] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('Cria uma loja incrível, moderna, bonita e pronta para publicar.');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSavingStore, setIsSavingStore] = useState(false);
+  const [isGeneratingProducts, setIsGeneratingProducts] = useState(false);
+  const [aiConfig, setAiConfig] = useState<any>(null);
+  const [draftProducts, setDraftProducts] = useState<StoreDraftProduct[]>([]);
+  const [includeAiProducts, setIncludeAiProducts] = useState(false);
   const [generationStep, setGenerationStep] = useState(0);
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [deleteConfirmStoreId, setDeleteConfirmStoreId] = useState<string | null>(null);
@@ -118,6 +126,7 @@ export default function StoresPage() {
     domain: '',
     description: '',
     theme: 'light' as 'light' | 'dark',
+    templateId: 'minimal' as StoreTemplateId,
     primaryColor: '#008060',
     enableAccounts: true,
   });
@@ -156,112 +165,143 @@ export default function StoresPage() {
     await setSelectedStoreCookie(storeId);
   };
 
-  const createProductsForStore = async (storeId: string, products: any[], storeContext = '') => {
-    const safeProducts = Array.isArray(products) ? products : [];
-
-    await Promise.all(
-      safeProducts.slice(0, 8).map(async (product, index) => {
-        try {
-          await addProductAction({
-            store_id: storeId,
-            name: product.name || `Produto ${index + 1}`,
-            description: product.description || 'Produto criado automaticamente pela IA.',
-            price: Number(product.price) || 29.9,
-            stock: Number(product.stock) || 50,
-            image_url: getProductSmartImage(product, index, storeContext),
-            category: product.category || 'Destaques',
-          });
-        } catch (error) {
-          console.error('Error creating AI product:', error);
-        }
+  const createProductsForStore = async (storeId: string, products: StoreDraftProduct[], context = '') => {
+    const selected = products.filter((product) => product.selected && product.name.trim());
+    const results = await Promise.allSettled(selected.map((product, index) =>
+      addProductAction({
+        store_id: storeId,
+        name: product.name.trim(),
+        description: product.description.trim(),
+        price: Number(product.price) || 0,
+        stock: Math.max(0, Number(product.stock) || 0),
+        image_url: product.image_url || getProductSmartImage(product, index, context),
+        category: product.category.trim() || 'Geral',
       })
-    );
+    ));
+    const failed = results.filter((result) => result.status === 'rejected');
+    if (failed.length) {
+      console.error('Alguns produtos não foram guardados:', failed);
+      throw new Error('Loja criada, mas ' + failed.length + ' produto(s) não foram guardados. Consulta o catálogo antes de repetir a operação.');
+    }
   };
 
+  // Esta fase prepara uma proposta. Não cria loja nem produtos na base de dados.
   const handleAiGenerate = async () => {
     if (isAiRestricted || !canCreateMoreStores) {
       router.push('/dashboard/subscription');
       return;
     }
-
+    if (!aiPrompt.trim()) {
+      setGenerationError('Descreve o tipo de loja que pretendes criar.');
+      return;
+    }
     setIsGenerating(true);
-    setGenerationStep(0);
     setGenerationError(null);
-
-    const stepInterval = setInterval(() => {
-      setGenerationStep((previous) => (previous < 3 ? previous + 1 : previous));
-    }, 1300);
-
+    setGenerationStep(0);
     try {
-      const config = await generateStoreConfig(aiPrompt.trim() || 'Cria uma loja incrível e perfeita.');
-      const domainBase = config.domain || config.name || `loja-ia-${Date.now()}`;
-      const storePayload = {
-        name: config.name || 'Loja Gerada por IA',
-        domain: withUniqueSuffix(domainBase),
-        description: config.description || 'Loja criada automaticamente com IA.',
-        theme: config.theme === 'dark' ? 'dark' : 'light',
-        primary_color: config.primaryColor || '#008060',
-        base_currency: 'EUR',
-        enableAccounts: true,
-      };
-
-      const store = await createStoreAction(storePayload);
-      const storeContext = `${aiPrompt} ${storePayload.name} ${storePayload.description}`;
-      const customization = normalizeCustomization(config.customization, { ...storePayload, ...store, bannerKeyword: config.bannerKeyword });
-
-      await updateStoreCustomizationAction(store.id, customization);
-      await createProductsForStore(store.id, config.products || [], storeContext);
-      await selectCreatedStore(store.id);
-
-      clearInterval(stepInterval);
+      const config = await generateStoreConfig(aiPrompt.trim(), false);
+      setAiConfig(config);
+      setDraftProducts([]);
+      setIncludeAiProducts(false);
       setGenerationStep(4);
-      await fetchStores();
-      router.refresh();
-
-      setTimeout(() => {
-        setIsGenerating(false);
-        setIsCreating(false);
-        setIsAiMode(false);
-        setAiPrompt('Cria uma loja incrível, moderna, bonita e pronta para publicar.');
-      }, 650);
     } catch (error: any) {
-      clearInterval(stepInterval);
-      console.error('Erro detalhado da IA:', error);
-      setGenerationError(error.message || 'Erro inesperado ao gerar a loja.');
+      setGenerationError(error?.message || 'Não foi possível preparar a proposta.');
+    } finally {
       setIsGenerating(false);
     }
   };
 
-  const handleCreate = async (event: React.FormEvent) => {
-    event.preventDefault();
-
-    if (!canCreateMoreStores) {
-      router.push('/dashboard/subscription');
-      return;
-    }
-
+  const handleProductGeneration = async (count: number) => {
+    if (!includeAiProducts || !aiConfig) return;
+    setIsGeneratingProducts(true);
+    setGenerationError(null);
     try {
-      const storePayload = {
-        name: newStore.name,
-        domain: slugify(newStore.domain || newStore.name),
-        description: newStore.description,
-        theme: newStore.theme,
-        primary_color: newStore.primaryColor,
-        base_currency: 'EUR',
-        enableAccounts: newStore.enableAccounts,
-      };
+      const description = aiPrompt + '. Nome da loja: ' + (aiConfig.name || '') + '. ' + (aiConfig.description || '');
+      const generated = await generateMultipleProducts(description, count);
+      const photos = await findProductPhotos(generated, description);
+      const next = toDraftProducts(generated, photos, description);
+      // As propostas anteriores são substituídas; os produtos manuais permanecem.
+      setDraftProducts((existing) => [...existing.filter((product) => product.source === 'manual'), ...next]);
+    } catch (error: any) {
+      setGenerationError(error?.message || 'Não foi possível gerar produtos. Podes adicioná-los manualmente.');
+    } finally {
+      setIsGeneratingProducts(false);
+    }
+  };
 
-      const store = await createStoreAction(storePayload);
-      await updateStoreCustomizationAction(store.id, buildDefaultCustomization(storePayload));
-      await selectCreatedStore(store.id);
-
-      setIsCreating(false);
-      setNewStore({ name: '', domain: '', description: '', theme: 'light', primaryColor: '#008060', enableAccounts: true });
+  const finishCreation = async (payload: any, customization: any, context: string) => {
+    setIsSavingStore(true);
+    setGenerationError(null);
+    let createdStore: any = null;
+    try {
+      const invalidProduct = draftProducts.find((product) => product.selected && (!product.name.trim() || !Number.isFinite(Number(product.price)) || Number(product.price) < 0));
+      if (invalidProduct) throw new Error('Confirma o nome e o preço de todos os produtos selecionados.');
+      createdStore = await createStoreAction(payload);
+      await updateStoreCustomizationAction(createdStore.id, customization);
+      await createProductsForStore(createdStore.id, draftProducts, context);
+      await selectCreatedStore(createdStore.id);
       await fetchStores();
       router.refresh();
-    } catch (err: any) {
-      alert(`Erro ao criar loja: ${err.message}`);
+      setIsCreating(false);
+      setIsAiMode(false);
+      setAiConfig(null);
+      setDraftProducts([]);
+      setIncludeAiProducts(false);
+      setAiPrompt('Cria uma loja incrível, moderna, bonita e pronta para publicar.');
+      setNewStore({ name: '', domain: '', description: '', theme: 'light', templateId: 'minimal', primaryColor: '#008060', enableAccounts: true });
+    } catch (error: any) {
+      const message = error?.message || 'Ocorreu um erro ao criar a loja.';
+      if (createdStore) {
+        // A loja já foi persistida. Fechamos o formulário para evitar duplicados.
+        await selectCreatedStore(createdStore.id);
+        await fetchStores();
+        setIsCreating(false);
+        alert(message + ' A loja foi criada. Podes verificar o catálogo e completar os produtos em falta.');
+      } else {
+        setGenerationError(message);
+      }
+    } finally {
+      setIsSavingStore(false);
     }
+  };
+
+  const handleAiCreate = async () => {
+    if (!aiConfig || isAiRestricted || !canCreateMoreStores || isSavingStore) return;
+    const storePayload = {
+      name: String(aiConfig.name || 'Loja criada por IA').trim(),
+      domain: withUniqueSuffix(aiConfig.domain || aiConfig.name || 'loja-ia'),
+      description: String(aiConfig.description || ''),
+      theme: aiConfig.theme === 'dark' ? 'dark' : 'light',
+      primary_color: aiConfig.primaryColor || '#008060',
+      base_currency: 'EUR',
+      enableAccounts: true,
+    };
+    const customization = normalizeCustomization(aiConfig.customization, storePayload);
+    customization.templateId = 'ai-custom';
+    customization.templateLayout = aiConfig.customization?.templateLayout || 'split';
+    customization.sections = customization.sections.map((section: any) =>
+      section.type === 'hero'
+        ? { ...section, content: { ...section.content, title: storePayload.name } }
+        : section
+    );
+    await finishCreation(storePayload, customization, aiPrompt);
+  };
+
+  const handleCreate = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!canCreateMoreStores || isSavingStore) return;
+    const selectedTemplate = STORE_TEMPLATES.find((template) => template.id === newStore.templateId) || STORE_TEMPLATES[0];
+    const payload = {
+      name: newStore.name.trim(),
+      domain: slugify(newStore.domain || newStore.name),
+      description: newStore.description.trim(),
+      theme: newStore.templateId === 'tech' ? 'dark' : 'light',
+      primary_color: newStore.primaryColor,
+      base_currency: 'EUR',
+      enableAccounts: newStore.enableAccounts,
+    };
+    const config = buildTemplateCustomization(payload, newStore.templateId, newStore.primaryColor || selectedTemplate.accent);
+    await finishCreation(payload, config, payload.name + ' ' + payload.description);
   };
 
   const handleDeleteStore = async (storeId: string) => {
@@ -356,39 +396,58 @@ export default function StoresPage() {
                 </div>
               ) : (
                 <div className="space-y-5">
-                  <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4">
-                    <p className="text-sm text-emerald-900 font-bold">A IA agora usa imagens relacionadas com o nicho.</p>
-                    <p className="text-sm text-emerald-700 mt-1">Exemplo: se pedires relógios, cria produtos de relógios com imagens de relógios, não imagens aleatórias.</p>
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+                    <p className="text-sm font-black text-emerald-900">1. Descreve a loja que queres criar</p>
+                    <p className="mt-1 text-xs text-emerald-700">A IA prepara a marca e o design. Só criamos a loja quando aprovares a proposta e os produtos.</p>
                   </div>
-
                   <textarea
                     value={aiPrompt}
-                    onChange={(event) => setAiPrompt(event.target.value)}
+                    onChange={(event) => { setAiPrompt(event.target.value); setAiConfig(null); setDraftProducts([]); setIncludeAiProducts(false); }}
                     rows={4}
+                    disabled={isGenerating || isSavingStore}
                     className="w-full px-4 py-3 border border-[var(--color-border)] rounded-2xl focus:outline-none focus:border-shopify-green text-sm resize-none"
-                    placeholder="Ex: cria uma loja de relógios premium com estilo preto e dourado"
+                    placeholder="Ex: loja de relógios premium, estilo preto e dourado, visual luxuoso"
                   />
-
-                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 flex items-start gap-3">
-                    <ShieldCheck className="w-5 h-5 text-emerald-600 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-black text-emerald-900">Contas de cliente ativadas</p>
-                      <p className="text-xs text-emerald-700 mt-1">As lojas criadas por IA já vêm com login/criar conta no storefront. Podes desligar depois no botão Login de cada loja.</p>
-                    </div>
-                  </div>
-
-                  {isGenerating && (
-                    <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-3">
-                      {steps.map((step, index) => (
-                        <div key={step} className={`flex items-center gap-3 text-sm ${index <= generationStep ? 'text-shopify-green font-bold' : 'text-slate-400'}`}>
-                          {index <= generationStep ? <Sparkles className="w-4 h-4" /> : <Loader2 className="w-4 h-4" />}
-                          {step}
+                  {isGenerating && <div className="flex gap-2 items-center rounded-2xl bg-slate-50 p-4 text-sm font-bold text-slate-700"><Loader2 className="w-4 h-4 animate-spin" /> A criar uma proposta personalizada...</div>}
+                  {aiConfig && (
+                    <div className="space-y-5">
+                      <div className="rounded-2xl border border-slate-200 p-4 space-y-3 bg-white">
+                        <h3 className="text-base font-black text-slate-900">2. Revê a identidade visual e os dados</h3>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <label className="text-xs font-bold text-slate-600">Nome da loja
+                            <input value={aiConfig.name || ''} onChange={(e) => setAiConfig({ ...aiConfig, name: e.target.value })} className="mt-1 w-full p-2.5 rounded-xl border border-slate-200 text-sm text-slate-900" />
+                          </label>
+                          <label className="text-xs font-bold text-slate-600">Endereço sugerido
+                            <input value={aiConfig.domain || ''} onChange={(e) => setAiConfig({ ...aiConfig, domain: slugify(e.target.value) })} className="mt-1 w-full p-2.5 rounded-xl border border-slate-200 text-sm text-slate-900" />
+                          </label>
+                          <label className="text-xs font-bold text-slate-600 sm:col-span-2">Descrição
+                            <textarea rows={2} value={aiConfig.description || ''} onChange={(e) => setAiConfig({ ...aiConfig, description: e.target.value })} className="mt-1 w-full p-2.5 rounded-xl border border-slate-200 text-sm text-slate-900" />
+                          </label>
+                          <label className="text-xs font-bold text-slate-600 flex items-center gap-3">Cor de destaque
+                            <input type="color" value={aiConfig.primaryColor || '#008060'} onChange={(e) => setAiConfig({ ...aiConfig, primaryColor: e.target.value, customization: { ...aiConfig.customization, colors: { ...aiConfig.customization?.colors, accent: e.target.value, primary: e.target.value } } })} className="h-9 w-16 rounded-lg" />
+                          </label>
                         </div>
-                      ))}
+                        <div className="rounded-2xl overflow-hidden border border-slate-200" style={{ backgroundColor: aiConfig.customization?.colors?.background || '#ffffff', color: aiConfig.customization?.colors?.text || '#0f172a' }}>
+                          <div className="p-3 border-b border-current/10 font-black text-sm">{aiConfig.name}</div>
+                          <div className="p-6 md:p-8 text-center space-y-3" style={{ background: 'linear-gradient(140deg, transparent, ' + (aiConfig.primaryColor || '#008060') + '1c)' }}>
+                            <span className="text-[10px] font-black uppercase tracking-widest">Pré-visualização da identidade</span>
+                            <h4 className="text-2xl font-black" style={{ fontFamily: aiConfig.customization?.fonts?.heading || 'Inter' }}>{aiConfig.customization?.sections?.find((section: any) => section.type === 'hero')?.content?.title || aiConfig.name}</h4>
+                            <p className="text-xs opacity-70">{aiConfig.customization?.hero?.subtitle || aiConfig.description}</p>
+                            <span className="inline-block px-4 py-2 rounded-xl text-xs text-white font-bold" style={{ backgroundColor: aiConfig.primaryColor || '#008060' }}>Explorar coleção</span>
+                          </div>
+                        </div>
+                      </div>
+                      <h3 className="text-base font-black text-slate-900">3. Escolhe os produtos</h3>
+                      <StoreProductReview
+                        products={draftProducts} onChange={setDraftProducts}
+                        generateEnabled={includeAiProducts}
+                        onGenerateEnabledChange={(enabled) => { setIncludeAiProducts(enabled); if (!enabled) setDraftProducts((list) => list.filter((p) => p.source === 'manual')); }}
+                        onGenerate={handleProductGeneration} generating={isGeneratingProducts}
+                        allowGeneration={true} storeContext={aiPrompt}
+                      />
                     </div>
                   )}
-
-                  {generationError && <div className="bg-red-50 border border-red-100 text-red-700 rounded-2xl p-4 text-sm font-bold">{generationError}</div>}
+                  {generationError && <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">{generationError}</div>}
                 </div>
               )
             ) : (
@@ -410,18 +469,32 @@ export default function StoresPage() {
                   <label className="block text-[13px] font-bold text-text-dark mb-1">Descrição</label>
                   <textarea rows={3} value={newStore.description} onChange={(event) => setNewStore({ ...newStore, description: event.target.value })} className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:outline-none focus:border-shopify-green text-sm resize-none" placeholder="Breve descrição da loja..." />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[13px] font-bold text-text-dark mb-1">Tema</label>
-                    <select value={newStore.theme} onChange={(event) => setNewStore({ ...newStore, theme: event.target.value as 'light' | 'dark' })} className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:outline-none focus:border-shopify-green text-sm">
-                      <option value="light">Claro</option>
-                      <option value="dark">Escuro</option>
-                    </select>
+                <div className="space-y-3">
+                  <h3 className="text-sm font-black text-slate-900">Escolhe um template de loja</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {STORE_TEMPLATES.map((template) => (
+                      <button
+                        key={template.id} type="button"
+                        onClick={() => setNewStore({ ...newStore, templateId: template.id, primaryColor: template.accent, theme: template.id === 'tech' ? 'dark' : 'light' })}
+                        aria-pressed={newStore.templateId === template.id}
+                        className={'text-left overflow-hidden rounded-2xl border-2 transition-all ' + (newStore.templateId === template.id ? 'border-emerald-600 shadow-md' : 'border-slate-200 hover:border-emerald-300')}
+                      >
+                        <div className="h-24 p-3" style={{ backgroundColor: template.background, color: template.text }}>
+                          <div className="flex justify-between items-center text-[10px] font-black"><span>{template.name}</span><span className="rounded-full w-3 h-3" style={{ backgroundColor: template.accent }} /></div>
+                          <div className="mt-3 h-3 w-2/3 rounded" style={{ backgroundColor: template.text, opacity: .8 }} />
+                          <div className="mt-2 h-2 w-1/2 rounded" style={{ backgroundColor: template.text, opacity: .25 }} />
+                          <div className="mt-2 h-2 w-1/3 rounded" style={{ backgroundColor: template.accent }} />
+                        </div>
+                        <div className="bg-white p-3">
+                          <p className="text-xs font-black text-slate-900">{template.name}</p>
+                          <p className="text-[11px] text-slate-500">{template.description}</p>
+                        </div>
+                      </button>
+                    ))}
                   </div>
-                  <div>
-                    <label className="block text-[13px] font-bold text-text-dark mb-1">Cor principal</label>
-                    <input type="color" value={newStore.primaryColor} onChange={(event) => setNewStore({ ...newStore, primaryColor: event.target.value })} className="w-full h-10 border border-[var(--color-border)] rounded-lg" />
-                  </div>
+                  <label className="flex items-center gap-3 text-xs font-bold text-slate-600">Personalizar cor principal
+                    <input type="color" value={newStore.primaryColor} onChange={(event) => setNewStore({ ...newStore, primaryColor: event.target.value })} className="w-14 h-9 rounded-lg" />
+                  </label>
                 </div>
 
                 <label className="flex items-start gap-4 p-4 rounded-2xl border border-emerald-100 bg-emerald-50 cursor-pointer">
@@ -431,23 +504,35 @@ export default function StoresPage() {
                     <p className="text-xs text-emerald-700 mt-1">Clientes podem criar conta só nesta loja. No checkout o nome/email aparecem automaticamente e carrinhos abandonados ficam ligados à conta.</p>
                   </div>
                 </label>
+                <StoreProductReview
+                  products={draftProducts} onChange={setDraftProducts}
+                  generateEnabled={false} onGenerateEnabledChange={() => {}}
+                  onGenerate={async () => {}} generating={false}
+                  allowGeneration={false} storeContext={newStore.name + ' ' + newStore.description}
+                />
+                {generationError && <div role="alert" className="rounded-2xl bg-red-50 border border-red-200 text-red-700 text-sm font-semibold p-4">{generationError}</div>}
               </form>
             )}
           </div>
 
           <div className="sticky bottom-0 bg-white/95 backdrop-blur border-t border-[var(--color-border)] p-4 flex items-center justify-between gap-4">
             <div className="hidden sm:block text-xs text-text-muted font-medium">
-              {isAiMode ? 'Cria loja + layout + produtos + imagens certas.' : 'Cria a loja e abre o editor visual depois.'}
+              {isAiMode ? (aiConfig ? 'Revê o design e aprova os produtos antes de criar.' : 'Primeiro vamos preparar uma proposta.') : 'Escolhe o template e adiciona produtos opcionais.'}
             </div>
             {isAiMode ? (
-              <button onClick={handleAiGenerate} disabled={isGenerating || isAiRestricted} className="ml-auto bg-slate-950 text-white px-7 py-3 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed shadow-xl">
-                {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                {isGenerating ? 'A criar loja completa...' : 'Criar loja com IA'}
-                {!isGenerating && <ArrowRight className="w-4 h-4" />}
+              <button
+                type="button" onClick={aiConfig ? handleAiCreate : handleAiGenerate}
+                disabled={isGenerating || isSavingStore || isGeneratingProducts || isAiRestricted}
+                className="ml-auto bg-slate-950 text-white px-7 py-3 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 shadow-xl"
+              >
+                {isGenerating || isSavingStore ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                {isSavingStore ? 'A criar loja...' : isGenerating ? 'A preparar design...' : aiConfig ? 'Confirmar e criar loja' : 'Preparar proposta com IA'}
+                {!isGenerating && !isSavingStore && <ArrowRight className="w-4 h-4" />}
               </button>
             ) : (
-              <button form="manual-store-form" type="submit" className="ml-auto bg-shopify-green text-white px-7 py-3 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity shadow-xl">
-                Criar loja manualmente
+              <button form="manual-store-form" type="submit" disabled={isSavingStore} className="ml-auto bg-shopify-green text-white px-7 py-3 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 shadow-xl">
+                {isSavingStore ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {isSavingStore ? 'A criar loja...' : 'Criar loja com este template'}
                 <ArrowRight className="w-4 h-4" />
               </button>
             )}
