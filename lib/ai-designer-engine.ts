@@ -200,6 +200,7 @@ export function planLocalDesignerEdit(currentConfig: any, message: string): Desi
   const wantsColor = /(?:cor|fundo|background|color)/.test(text) || (mentionsBanner && /(?:muda|troca|altera|modifica|mete|poe|coloca|define|aplica)/.test(text) && !!detectColor(input));
   if (wantsColor && /(?:muda|troca|altera|modifica|mete|poe|coloca|quero|define|aplica|faz)/.test(text)) {
     const selected = detectColor(input);
+    if (!selected && /(?:quente|fria|pastel|suave|vibrante|moderna|elegante|premium)/.test(text)) return null;
     if (!selected) return {status:'clarification',message:'Claro! Para que cor queres mudar ' + (mentionsBanner ? 'o banner' : 'o design') + '? Podes dizer, por exemplo, “azul escuro”, “verde” ou uma cor HEX como #1e40af.'};
     const target = mentionsBanner ? 'hero' : /(?:fundo|background)/.test(text) ? 'background' : /(?:texto|letras)/.test(text) ? 'text' : 'accent';
     const result = applyDesignerOperations(currentConfig,[{type:'color',target,value:selected}]);
