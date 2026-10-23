@@ -1,6 +1,7 @@
 'use server';
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { planLocalDesignerEdit, applyDesignerOperations, type DesignerReply } from './ai-designer-engine';
 
 const API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || '';
 
@@ -521,41 +522,95 @@ Return ONLY valid JSON.`;
   }
 }
 
-export async function updateStoreCustomizationWithAI(currentConfig: any, userRequest: string) {
-  try {
-    const model = getModel({
-      generationConfig: {
-        temperature: 0.85,
-        topP: 0.9,
-        responseMimeType: 'application/json',
+// O designer devolve operações pequenas e seguras em vez de recriar todo o JSON.
+// Pedidos comuns funcionam localmente mesmo quando o Gemini está indisponível.
+export async function updateStoreCustomizationWithAI(currentConfig: any, userRequest: string): Promise<DesignerReply> {
+  const request = typeof userRequest === 'string' ? userRequest.trim().slice(0, 800) : '';
+  const config = currentConfig && typeof currentConfig === 'object' && !Array.isArray(currentConfig) ? currentConfig : {};
+  const local = planLocalDesignerEdit(config, request);
+  if (local) return local;
+  if (!request) return {status: 'clarification', message:'Descreve a alteração que gostarias de fazer.'};
+
+  const sections = Array.isArray(config.sections) ? config.sections.slice(0, 14) : [];
+  const context = {
+    layoutEngine: config.layoutEngine || 'legacy',
+    colors: config.colors,
+    fonts: config.fonts,
+    heroVariant: config.heroVariant,
+    productVariant: config.productVariant,
+    sections: sections.map((s: any) => ({
+      type: s.type,
+      content: {
+        title: String(s.content?.title || '').slice(0, 110),
+        subtitle: String(s.content?.subtitle || '').slice(0, 120),
+        text: String(s.content?.text || '').slice(0, 150),
+        buttonText: String(s.content?.buttonText || '').slice(0, 65),
       },
-    });
+      styles: { variant: s.styles?.variant, backgroundColor: s.styles?.backgroundColor, columns: s.styles?.columns },
+    })),
+  };
+  const instructions = [
+    'És um editor profissional de lojas online. Responde em português de Portugal.',
+    'Interpreta este pedido como uma alteração ao design EXISTENTE, não como criação de nova loja:',
+    JSON.stringify(request),
+    'Configuração resumida atual: ' + JSON.stringify(context),
+    'DEVOLVE um JSON PEQUENO. NUNCA devolvas a configuração completa nem grandes blocos de HTML.',
+    'Formato: {"intent":"edit","operations":[{"type":"color","target":"hero","value":"#2563eb"}]}',
+    'Ou, se o utilizador fizer uma pergunta: {"intent":"answer","message":"resposta breve"}',
+    'Ou, se falta um dado essencial como a cor: {"intent":"clarification","message":"Que cor queres usar?"}',
+    'Operações permitidas (no máximo 6):',
+    'color: target hero|accent|background|text, value HEX #RRGGBB; o banner é o HERO, não o header ou todos os botões.',
+    'text: target hero.title|hero.subtitle|hero.buttonText|hero.eyebrow|products.title|products.subtitle|story.title|story.text|newsletter.title|newsletter.text|categories.title|categories.subtitle|trust.title|reviews.title|faq.title e value string.',
+    'hero-variant: value split|centered|editorial|full-bleed|product-led|asymmetric.',
+    'product-variant: value cards|editorial|compact|bordered.',
+    'columns: value 2|3|4. font: value Inter|Georgia|Arial|system-ui. theme: value dark|light.',
+    'add-section / remove-section: value categories|trust|story|reviews|faq|newsletter|text|button|image|spacer (só layoutEngine adaptive-v1).',
+    'move-section: target tipo de secção, position first|last|before|after e relativeTo tipo de secção, se necessário.',
+    'Não inventes propriedades, não elimines hero nem products, não inventes testemunhos ou garantias e não alteres nada não pedido.',
+    'Se pedirem algo que o editor ainda não suporta, explica honestamente na resposta em vez de fingir que alteraste.',
+    'Retorna apenas JSON válido, conciso e sem markdown.',
+  ].join('\n');
 
-    if (!model) throw new Error('GEMINI_API_KEY não configurada.');
+  if (!API_KEY) return {status:'error',message:'A IA não está configurada. Alterações simples de cores continuam disponíveis; para pedidos mais complexos é necessário configurar a API Gemini na Vercel.'};
 
-    const fullPrompt = `Act as a senior e-commerce designer.
-Current Store Configuration: ${JSON.stringify(currentConfig)}
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const model = getModel({
+        model: attempt ? 'gemini-2.5-flash-lite' : 'gemini-2.5-flash',
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 1200,
+          responseMimeType: 'application/json',
+        },
+      });
+      if (!model) break;
+      const result = await model.generateContent(instructions);
+      const reply = await result.response;
+      const raw = reply.text();
+      if (!raw || raw.length > 12000) throw new Error('Resposta de designer vazia ou demasiado longa.');
+      const parsed = parseJsonResponse(raw);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Resposta do designer não estruturada.');
 
-The user wants: "${userRequest}"
+      if (parsed.intent === 'answer' || parsed.intent === 'clarification') {
+        const msg = typeof parsed.message === 'string' ? parsed.message.trim().slice(0, 550) : '';
+        if (msg) return {status:parsed.intent,message:msg};
+        throw new Error('Resposta de texto vazia.');
+      }
+      if (parsed.intent !== 'edit' || !Array.isArray(parsed.operations)) throw new Error('Operações do designer não fornecidas.');
 
-Return ONLY the COMPLETE updated JSON object for the customization field.
-Keep all required keys: header, hero, products, colors, fonts, sections and layoutEngine if present.
-If layoutEngine is "adaptive-v1" never change or remove it. You may modify and reorder supported sections: hero, products, trust, categories, story, reviews, faq, newsletter, image, text, button, spacer. Use only supported types.
-For hero styles.variant choose split/centered/editorial/full-bleed/product-led/asymmetric. For products styles.variant choose cards/editorial/compact/bordered.
-Never return an empty sections array. Preserve existing blocks unless the user asks you to replace/remove them, and do not include invented customer reviews, shipping promises or fake guarantees.
-Make the design conversion-focused, visually distinct and consistent with the request.
-Use Portuguese copy in visible text.`;
-
-    const result = await model.generateContent(fullPrompt);
-    const response = await result.response;
-    const aiText = response.text();
-
-    if (!aiText) throw new Error('Resposta vazia da IA.');
-    return parseJsonResponse(aiText);
-  } catch (error: any) {
-    console.error('AI Update Critical Error:', error);
-    throw new Error('Falha ao atualizar a loja com IA. Tenta novamente.');
+      const {config:updated,changes} = applyDesignerOperations(config,parsed.operations);
+      if (changes.length && JSON.stringify(updated) !== JSON.stringify(config)) {
+        return {status:'updated',message:changes.join('. ') + '. Alteração aplicada na pré-visualização. Clica em Guardar alterações para publicar.',customization:updated,changes};
+      }
+      return {status:'clarification',message:'Não consegui identificar uma mudança válida nesse pedido. Podes indicar o elemento e a alteração exata? Por exemplo: “muda o banner para azul escuro” ou “coloca os produtos antes do banner”.'};
+    } catch (error) {
+      lastError = error;
+      console.warn('IA Designer: tentativa falhou ou resposta inválida:', attempt + 1, error);
+    }
   }
+  console.error('IA Designer: falha nas duas tentativas:', lastError);
+  return {status:'error',message:'O serviço de IA não conseguiu interpretar este pedido agora. Podes tentar novamente ou usar o separador Manual Pro. Mudanças simples, como “muda o banner para azul”, funcionam diretamente.'};
 }
 
 export async function generateProduct(prompt: string, category?: string) {

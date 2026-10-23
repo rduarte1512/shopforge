@@ -211,6 +211,9 @@ export default function StoreCustomizePage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [customization, setCustomization] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [previousAiDesign, setPreviousAiDesign] = useState<any>(null);
+  const [pendingDesignerQuestion, setPendingDesignerQuestion] = useState<string | null>(null);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -230,6 +233,7 @@ export default function StoreCustomizePage() {
         setStore(storeData);
         setStoreProducts(productsData || []);
         setCustomization(safeCustomization);
+        setHasUnsavedChanges(false);
       } catch (err) {
         console.error('Error fetching data:', err);
       } finally {
@@ -249,7 +253,10 @@ export default function StoreCustomizePage() {
     return normalizeCustomization(customization, store);
   }, [customization, store]);
 
-  const updateCustomization = (next: any) => setCustomization(normalizeCustomization(next, store));
+  const updateCustomization = (next: any) => {
+    setCustomization(normalizeCustomization(next, store));
+    setHasUnsavedChanges(true);
+  };
 
   const updateSection = (sectionId: string, data: any) => {
     updateCustomization({
@@ -283,26 +290,46 @@ export default function StoreCustomizePage() {
 
   const handleSendMessage = async () => {
     if (!chatInput.trim() || isProcessing || !safeCustomization) return;
-
     const userMessage = chatInput.trim();
-    setMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
+    const looksLikeColorAnswer = /^(?:#[0-9a-f]{3,6}|azul|verde|vermelho|rosa|roxo|amarelo|branco|preto|bege|laranja|dourado|cinza|cinzento|violeta|castanho)(?:\s+(?:claro|escuro|marinho|choque))?$/i.test(userMessage);
+    const requestForDesigner = pendingDesignerQuestion && looksLikeColorAnswer
+      ? pendingDesignerQuestion.replace(/[?.!]+$/, '') + ' para ' + userMessage
+      : userMessage;
+    const before = safeCustomization;
+    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setChatInput('');
     setIsProcessing(true);
 
     try {
-      const updatedConfig = await updateStoreCustomizationWithAI(safeCustomization, userMessage);
-      // Manter o motor visual novo após edições por IA. O modelo pode omitir
-      // alguns campos da resposta e não pode voltar a loja ao template fixo.
-      updateCustomization(safeCustomization.layoutEngine === 'adaptive-v1'
-        ? { ...safeCustomization, ...updatedConfig, layoutEngine: 'adaptive-v1', templateId: safeCustomization.templateId, sections: Array.isArray(updatedConfig?.sections) && updatedConfig.sections.length ? updatedConfig.sections : safeCustomization.sections }
-        : updatedConfig);
-      setMessages((prev) => [...prev, { role: 'ai', content: 'Feito! Atualizei a preview da loja com um visual mais forte e coerente.' }]);
+      const reply = await updateStoreCustomizationWithAI(before, requestForDesigner);
+      setPendingDesignerQuestion(reply.status === 'clarification' ? requestForDesigner : null);
+      if (reply.status === 'updated' && reply.customization && Array.isArray(reply.changes) && reply.changes.length > 0) {
+        const next = normalizeCustomization(reply.customization, store);
+        if (JSON.stringify(next) !== JSON.stringify(before)) {
+          setPreviousAiDesign(before);
+          updateCustomization(next);
+          setMessages(prev => [...prev, {role:'ai', content:reply.message}]);
+        } else {
+          setMessages(prev => [...prev, {role:'ai',content:'A alteração pedida já está aplicada. Não modifiquei o design.'}]);
+        }
+      } else {
+        // As respostas informativas, dúvidas e erros não alteram a loja.
+        setMessages(prev => [...prev, {role:'ai',content:reply.message || 'Não consegui interpretar o pedido. Podes dar mais detalhes?'}]);
+      }
     } catch (error) {
-      console.error(error);
-      setMessages((prev) => [...prev, { role: 'ai', content: 'Não consegui aplicar essa alteração. Tenta escrever de outra forma.' }]);
+      console.error('Falha na comunicação com o designer:', error);
+      setPendingDesignerQuestion(null);
+      setMessages(prev => [...prev, {role:'ai',content:'Não foi possível contactar o designer neste momento. O teu design não foi alterado. Podes tentar outra vez.'}]);
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const undoAiDesign = () => {
+    if (!previousAiDesign || isProcessing) return;
+    updateCustomization(previousAiDesign);
+    setPreviousAiDesign(null);
+    setMessages(prev => [...prev, {role:'ai',content:'Última alteração do designer desfeita na pré-visualização. Clica em Guardar alterações se quiseres publicar esta versão.'}]);
   };
 
   const handleSave = async () => {
@@ -311,6 +338,8 @@ export default function StoreCustomizePage() {
 
     try {
       await updateStoreCustomizationAction(id, safeCustomization);
+      setHasUnsavedChanges(false);
+      setPreviousAiDesign(null);
       setMessages((prev) => [...prev, { role: 'ai', content: 'Alterações guardadas com sucesso.' }]);
     } catch (err) {
       console.error('Error saving customization:', err);
@@ -386,7 +415,7 @@ export default function StoreCustomizePage() {
           <div className="h-6 w-px bg-gray-100" />
           <div>
             <h1 className="text-sm font-bold text-gray-900">{store.name}</h1>
-            <p className="text-[11px] text-gray-400 font-medium">Editor Visual • Em direto</p>
+            <p className="text-[11px] text-gray-400 font-medium">{hasUnsavedChanges ? 'Alterações por guardar' : 'Editor Visual • Em direto'}</p>
           </div>
         </div>
 
@@ -398,7 +427,7 @@ export default function StoreCustomizePage() {
 
           <button onClick={handleSave} disabled={isSaving} className="ml-2 bg-shopify-green text-white px-4 py-2 rounded-lg text-xs font-bold hover:opacity-90 transition-all flex items-center gap-2 disabled:opacity-50">
             {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-            {isSaving ? 'A guardar...' : 'Guardar alterações'}
+            {isSaving ? 'A guardar...' : hasUnsavedChanges ? 'Guardar alterações •' : 'Guardar alterações'}
           </button>
         </div>
       </header>
@@ -418,7 +447,12 @@ export default function StoreCustomizePage() {
                     <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center"><Sparkles className="w-4 h-4 text-white" /></div>
                     <span className="text-sm font-bold text-blue-900">IA Designer</span>
                   </div>
-                  <p className="text-xs text-blue-700 leading-relaxed">Pede mudanças simples ou grandes. Exemplo: “faz uma loja premium, luxuosa, com fundo escuro, hero forte e produtos em destaque”.</p>
+                  <p className="text-xs text-blue-700 leading-relaxed">Pede alterações e acompanha-as na pré-visualização. Mudanças de cores e textos são aplicadas diretamente. Para publicar, clica em <strong>Guardar alterações</strong>.</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {['O que consegues fazer?', 'Muda o banner para azul escuro', 'Coloca os produtos antes do banner'].map(example => (
+                      <button key={example} type="button" onClick={() => setChatInput(example)} disabled={isProcessing} className="rounded-lg border border-blue-200 bg-white/80 px-2.5 py-1.5 text-left text-[11px] font-semibold text-blue-800 hover:bg-white disabled:opacity-50">{example}</button>
+                    ))}
+                  </div>
                 </div>
 
                 <div ref={scrollRef} className="flex-1 space-y-4 mb-4 overflow-y-auto min-h-0 pr-2">
@@ -433,6 +467,7 @@ export default function StoreCustomizePage() {
                   {isProcessing && <div className="bg-gray-100 p-3 rounded-2xl rounded-tl-none inline-flex items-center gap-2"><Loader2 className="w-3 h-3 animate-spin text-gray-400" /><span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">A pensar...</span></div>}
                 </div>
 
+                {previousAiDesign && <div className="mb-3 flex items-center justify-between rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-800"><span>Última edição disponível para desfazer</span><button type="button" onClick={undoAiDesign} disabled={isProcessing} className="rounded-lg bg-white px-3 py-1.5 text-amber-900 shadow-sm disabled:opacity-50">Desfazer</button></div>}
                 <div className="relative mt-auto">
                   <textarea value={chatInput} onChange={(event) => setChatInput(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && !event.shiftKey && (event.preventDefault(), handleSendMessage())} placeholder="O que queres mudar na loja?" className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-shopify-green/20 focus:border-shopify-green transition-all resize-none" rows={3} />
                   <button onClick={handleSendMessage} disabled={!chatInput.trim() || isProcessing} className="absolute right-3 bottom-3 p-2 bg-shopify-green text-white rounded-xl shadow-lg disabled:opacity-50"><Send className="w-4 h-4" /></button>
@@ -503,6 +538,9 @@ export default function StoreCustomizePage() {
                   <section className="bg-white border border-gray-100 rounded-3xl p-4 shadow-sm space-y-3">
                     <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400 flex items-center gap-2"><ImageIcon className="w-3 h-3" /> Hero principal</h3>
                     <input value={heroSection.content?.title || ''} onChange={(event) => updateHeroField('title', event.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-xs outline-none focus:border-shopify-green" placeholder="Título principal" />
+                    <label className="flex items-center justify-between gap-3 text-xs font-bold text-slate-600">Cor do fundo do banner
+                      <input type="color" value={heroSection.styles?.backgroundColor || '#f1f5f9'} onChange={(event) => updateHeroStyle('backgroundColor', event.target.value)} className="h-9 w-14 cursor-pointer rounded-lg border border-gray-200" aria-label="Cor de fundo do banner" />
+                    </label>
                     <textarea value={heroSection.content?.subtitle || ''} onChange={(event) => updateHeroField('subtitle', event.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-xs outline-none h-20 resize-none focus:border-shopify-green" placeholder="Subtítulo" />
                     <input value={heroSection.content?.buttonText || ''} onChange={(event) => updateHeroField('buttonText', event.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-xs outline-none focus:border-shopify-green" placeholder="Texto do botão" />
                     <div className="flex gap-1 bg-gray-50 p-1 rounded-xl">
@@ -632,7 +670,7 @@ export default function StoreCustomizePage() {
               <div className="flex flex-col">
                 {safeCustomization.sections.map((section: any) => {
                   if (section.type === 'hero') {
-                    return <section key={section.id} className="px-6 flex flex-col justify-center transition-all relative overflow-hidden" style={{ minHeight: `${section.styles?.height || safeCustomization.hero.height || 420}px`, background: `linear-gradient(135deg, ${colors.accent}18, transparent 50%), radial-gradient(circle at 80% 20%, ${colors.accent}18, transparent 25%)`, textAlign: section.styles?.textAlign as any }}><div className="absolute inset-x-0 bottom-0 h-px" style={{ backgroundColor: `${colors.accent}22` }} /><div className="max-w-3xl mx-auto space-y-5"><span className="inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest" style={{ backgroundColor: `${colors.accent}18`, color: colors.accent }}>Nova coleção</span><h1 className="text-4xl md:text-6xl font-black tracking-tight leading-tight" style={{ color: colors.accent }}>{section.content?.title}</h1><p className="text-lg font-medium opacity-75 max-w-2xl mx-auto">{section.content?.subtitle}</p>{section.content?.buttonText && <button className="px-8 py-3 rounded-2xl font-black text-sm text-white shadow-xl hover:scale-105 transition-transform" style={{ backgroundColor: colors.accent }}>{section.content.buttonText}</button>}</div></section>;
+                    return <section key={section.id} className="px-6 flex flex-col justify-center transition-all relative overflow-hidden" style={{ minHeight: `${section.styles?.height || safeCustomization.hero.height || 420}px`, background: section.styles?.backgroundColor || `linear-gradient(135deg, ${colors.accent}18, transparent 50%), radial-gradient(circle at 80% 20%, ${colors.accent}18, transparent 25%)`, textAlign: section.styles?.textAlign as any }}><div className="absolute inset-x-0 bottom-0 h-px" style={{ backgroundColor: `${colors.accent}22` }} /><div className="max-w-3xl mx-auto space-y-5"><span className="inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest" style={{ backgroundColor: `${colors.accent}18`, color: colors.accent }}>Nova coleção</span><h1 className="text-4xl md:text-6xl font-black tracking-tight leading-tight" style={{ color: colors.accent }}>{section.content?.title}</h1><p className="text-lg font-medium opacity-75 max-w-2xl mx-auto">{section.content?.subtitle}</p>{section.content?.buttonText && <button className="px-8 py-3 rounded-2xl font-black text-sm text-white shadow-xl hover:scale-105 transition-transform" style={{ backgroundColor: colors.accent }}>{section.content.buttonText}</button>}</div></section>;
                   }
 
                   if (section.type === 'products') {

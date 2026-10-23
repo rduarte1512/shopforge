@@ -334,7 +334,7 @@ export default function StorefrontHomePage() {
       <main className={`${header.sticky ? 'pt-[calc(32px+74px)]' : ''}`}>
         <section
           className="relative overflow-hidden px-6 py-20 md:py-28"
-          style={{ minHeight: `${heroSection?.styles?.height || 700}px`, background: `radial-gradient(circle at 15% 20%, rgba(${rgbAccent}, 0.18), transparent 28%), radial-gradient(circle at 90% 10%, rgba(${rgbAccent}, 0.10), transparent 25%)` }}
+          style={{ minHeight: `${heroSection?.styles?.height || 700}px`, background: heroSection?.styles?.backgroundColor || `radial-gradient(circle at 15% 20%, rgba(${rgbAccent}, 0.18), transparent 28%), radial-gradient(circle at 90% 10%, rgba(${rgbAccent}, 0.10), transparent 25%)` }}
         >
           <div className="absolute inset-x-0 top-0 h-px" style={{ backgroundColor: `rgba(${rgbAccent}, .2)` }} />
           <div className={"mx-auto grid items-center gap-12 " + (templateLayout === 'center' ? 'max-w-4xl text-center' : 'max-w-7xl lg:grid-cols-12')}>
