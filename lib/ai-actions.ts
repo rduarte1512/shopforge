@@ -206,7 +206,7 @@ function detectIntent(prompt: string): StoreIntent {
   return {
     niche: slugify(label),
     label,
-    explicit: false,
+    explicit: true,
     keywords: [],
     nameRoots: [root],
     heroLines: ['Descobre a nossa seleção de ' + label + '.'],
@@ -614,9 +614,16 @@ export async function generateMultipleProducts(prompt: string, count: number = 4
         throw new Error('Produtos incompletos ou com campos inválidos.');
       }
       if (intent.productNames.length) {
-        const unrelated = products.filter((product) =>
-          !productMatchesIntent({ name: product.name, category: product.category }, intent)
-        );
+        const unrelated = products.filter((product) => {
+          const title = normalizeText(String(product.name));
+          const titleMatches = intent.keywords.some((keyword) => matchesNicheKeyword(title, keyword));
+          const clearlyAnotherNiche = STORE_INTENTS.some((other) =>
+            other.niche !== intent.niche &&
+            other.keywords.some((keyword) => matchesNicheKeyword(title, keyword))
+          );
+          return !productMatchesIntent({ name: product.name, category: product.category }, intent)
+            || (clearlyAnotherNiche && !titleMatches);
+        });
         if (unrelated.length) throw new Error('A IA sugeriu produtos fora do nicho ' + intent.label + ': ' + unrelated.map((p) => p.name).join(', '));
       }
       return products.map((product) => ({
