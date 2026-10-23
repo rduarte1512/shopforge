@@ -28,6 +28,10 @@ async function run(){
  const text=planLocalDesignerEdit(base,'altera o título do banner para Novidades de Outono');
  assert.equal(text.status,'updated');
  assert.equal(text.customization.sections[0].content.title,'Novidades de Outono');
+ const titleWithColor=planLocalDesignerEdit(base,'altera o título do banner para Azul da Primavera');
+ assert.equal(titleWithColor.status,'updated');
+ assert.equal(titleWithColor.customization.sections[0].content.title,'Azul da Primavera');
+ assert.equal(titleWithColor.customization.sections[0].styles.backgroundColor,undefined);
  const noOp=planLocalDesignerEdit({...base,sections:[{...base.sections[0],styles:{...base.sections[0].styles,backgroundColor:'#2563eb'}},...base.sections.slice(1)]},'muda a cor do banner para azul');
  assert.notEqual(noOp.status,'updated');
  const invalid=applyDesignerOperations(base,[
