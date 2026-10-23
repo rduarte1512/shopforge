@@ -213,6 +213,7 @@ export default function StoreCustomizePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [previousAiDesign, setPreviousAiDesign] = useState<any>(null);
+  const [pendingDesignerQuestion, setPendingDesignerQuestion] = useState<string | null>(null);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -290,13 +291,18 @@ export default function StoreCustomizePage() {
   const handleSendMessage = async () => {
     if (!chatInput.trim() || isProcessing || !safeCustomization) return;
     const userMessage = chatInput.trim();
+    const looksLikeColorAnswer = /^(?:#[0-9a-f]{3,6}|azul|verde|vermelho|rosa|roxo|amarelo|branco|preto|bege|laranja|dourado|cinza|cinzento|violeta|castanho)(?:\\s+(?:claro|escuro|marinho|choque))?$/i.test(userMessage);
+    const requestForDesigner = pendingDesignerQuestion && looksLikeColorAnswer
+      ? pendingDesignerQuestion.replace(/[?.!]+$/, '') + ' para ' + userMessage
+      : userMessage;
     const before = safeCustomization;
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setChatInput('');
     setIsProcessing(true);
 
     try {
-      const reply = await updateStoreCustomizationWithAI(before, userMessage);
+      const reply = await updateStoreCustomizationWithAI(before, requestForDesigner);
+      setPendingDesignerQuestion(reply.status === 'clarification' ? requestForDesigner : null);
       if (reply.status === 'updated' && reply.customization && Array.isArray(reply.changes) && reply.changes.length > 0) {
         const next = normalizeCustomization(reply.customization, store);
         if (JSON.stringify(next) !== JSON.stringify(before)) {
@@ -312,6 +318,7 @@ export default function StoreCustomizePage() {
       }
     } catch (error) {
       console.error('Falha na comunicação com o designer:', error);
+      setPendingDesignerQuestion(null);
       setMessages(prev => [...prev, {role:'ai',content:'Não foi possível contactar o designer neste momento. O teu design não foi alterado. Podes tentar outra vez.'}]);
     } finally {
       setIsProcessing(false);
