@@ -198,7 +198,8 @@ export function planLocalDesignerEdit(currentConfig: any, message: string): Desi
   }
   const mentionsBanner = /(?:banner|hero|cabecalho principal)/.test(text);
   const wantsColor = /(?:cor|fundo|background|color)/.test(text) || (mentionsBanner && /(?:muda|troca|altera|modifica|mete|poe|coloca|define|aplica)/.test(text) && !!detectColor(input));
-  if (wantsColor && /(?:muda|troca|altera|modifica|mete|poe|coloca|quero|define|aplica|faz)/.test(text)) {
+  const isCopyRequest = /(?:titulo|subtitulo|texto principal|texto do banner|frase)/.test(text) && !/(?:cor do texto|cor das letras)/.test(text);
+  if (wantsColor && !isCopyRequest && /(?:muda|troca|altera|modifica|mete|poe|coloca|quero|define|aplica|faz)/.test(text)) {
     const selected = detectColor(input);
     if (!selected && /(?:quente|fria|pastel|suave|vibrante|moderna|elegante|premium)/.test(text)) return null;
     if (!selected) return {status:'clarification',message:'Claro! Para que cor queres mudar ' + (mentionsBanner ? 'o banner' : 'o design') + '? Podes dizer, por exemplo, “azul escuro”, “verde” ou uma cor HEX como #1e40af.'};
