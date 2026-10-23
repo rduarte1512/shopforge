@@ -29,6 +29,7 @@ import {
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { NotificationPanel } from '@/components/dashboard/NotificationPanel';
 import { setSelectedStoreCookie } from '@/lib/dashboard-actions';
+import { useMockDB } from '@/lib/store';
 
 const navigation = [
   { name: 'Visão Geral', href: '/dashboard', icon: LayoutDashboard },
@@ -55,36 +56,48 @@ interface DashboardLayoutClientProps {
   children: React.ReactNode;
   user: any;
   initialStores: any[];
+  initialSelectedStoreId: string | null;
 }
 
-export default function DashboardLayoutClient({ children, user, initialStores }: DashboardLayoutClientProps) {
+export default function DashboardLayoutClient({ children, user, initialStores, initialSelectedStoreId }: DashboardLayoutClientProps) {
   const { signOut } = useClerk();
-  const [stores] = useState<any[]>(initialStores || []);
-  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
+  const stores = initialStores || [];
+  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(initialSelectedStoreId);
+  const [isSwitchingStore, setIsSwitchingStore] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const currentStore = selectedStoreId ? stores.find((store) => store.id === selectedStoreId) || stores[0] : stores[0];
   const subscriptionTier = user?.publicMetadata?.subscriptionTier || 'STARTER';
 
+  // O cookie é a fonte de verdade da loja ativa. Quando router.refresh()
+  // traz uma nova resposta do servidor, sincronizamos o seletor e os módulos
+  // que ainda consultam o estado Zustand/localStorage.
   useEffect(() => {
-    async function syncStore() {
-      const storedId = localStorage.getItem('selectedStoreId');
-      const activeId = stores.find((store) => store.id === storedId)?.id || stores[0]?.id || null;
-      setSelectedStoreId(activeId);
-      if (activeId) {
-        localStorage.setItem('selectedStoreId', activeId);
-        await setSelectedStoreCookie(activeId);
-      }
-    }
-    void syncStore();
-  }, [stores]);
+    const activeId = stores.find(store => store.id === initialSelectedStoreId)?.id || stores[0]?.id || null;
+    setSelectedStoreId(activeId);
+    useMockDB.getState().setSelectedStore(activeId);
+    if (activeId) localStorage.setItem('selectedStoreId', activeId);
+    setIsSwitchingStore(false);
+  }, [initialSelectedStoreId, initialStores]);
 
   async function changeStore(storeId: string) {
-    setSelectedStoreId(storeId);
-    localStorage.setItem('selectedStoreId', storeId);
-    await setSelectedStoreCookie(storeId);
-    router.refresh();
+    if (isSwitchingStore || storeId === selectedStoreId || !stores.some(store => store.id === storeId)) return;
+    setIsSwitchingStore(true);
+    try {
+      // Esperar pela confirmação do cookie ANTES de pedir o novo payload
+      // do servidor. Um refresh prematuro podia renderizar a loja antiga.
+      await setSelectedStoreCookie(storeId);
+      localStorage.setItem('selectedStoreId', storeId);
+      useMockDB.getState().setSelectedStore(storeId);
+      setSelectedStoreId(storeId);
+      router.refresh();
+    } catch (error) {
+      console.error('Erro ao mudar de loja:', error);
+      setIsSwitchingStore(false);
+      // A loja anterior permanece ativa caso a ação de servidor falhe.
+      alert('Não foi possível mudar de loja. Tenta novamente.');
+    }
   }
 
   async function handleSignOut() {
@@ -105,7 +118,7 @@ export default function DashboardLayoutClient({ children, user, initialStores }:
       </Link>
 
       {stores.length > 0 && (
-        <select value={selectedStoreId || ''} onChange={(event) => changeStore(event.target.value)} className="mx-2 mb-4 rounded-2xl bg-white/10 border border-white/10 px-3 py-3 text-sm font-black text-white">
+        <select aria-label="Selecionar loja" value={selectedStoreId || ''} onChange={(event) => void changeStore(event.target.value)} disabled={isSwitchingStore} className="mx-2 mb-4 rounded-2xl bg-white/10 border border-white/10 px-3 py-3 text-sm font-black text-white disabled:opacity-60">
           {stores.map((store) => <option key={store.id} value={store.id} className="text-slate-950">{store.name}</option>)}
         </select>
       )}
@@ -157,7 +170,10 @@ export default function DashboardLayoutClient({ children, user, initialStores }:
             <div className="hidden md:flex flex-col text-right"><span className="text-[13px] font-black text-text-primary">{user?.firstName || 'Conta'}</span><span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">{subscriptionTier}</span></div>
           </div>
         </header>
-        <main className="flex-1 p-4 lg:p-8 bg-[radial-gradient(circle_at_top_right,_rgba(16,185,129,0.10),_transparent_32%),linear-gradient(180deg,var(--color-bg-main)_0%,var(--color-bg-gray)_100%)] transition-colors duration-300"><div className="max-w-7xl mx-auto">{children}</div></main>
+        <main className="relative flex-1 p-4 lg:p-8 bg-[radial-gradient(circle_at_top_right,_rgba(16,185,129,0.10),_transparent_32%),linear-gradient(180deg,var(--color-bg-main)_0%,var(--color-bg-gray)_100%)] transition-colors duration-300">
+          {isSwitchingStore && <div role="status" aria-live="polite" className="absolute inset-0 z-20 flex items-start justify-center bg-bg-main/80 pt-20 backdrop-blur-sm"><div className="rounded-2xl border border-border bg-card-bg px-5 py-3 text-sm font-bold shadow-lg">A atualizar os dados da loja...</div></div>}
+          <div key={initialSelectedStoreId || 'no-store'} className="max-w-7xl mx-auto">{children}</div>
+        </main>
       </div>
     </div>
   );
