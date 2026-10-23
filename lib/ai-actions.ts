@@ -573,20 +573,26 @@ Return ONLY valid JSON with: name, description, price, stock, category, imageKey
   }
 }
 
+function isGeminiCapacityError(error: unknown) {
+  const status = typeof error === 'object' && error !== null && 'status' in error
+    ? Number((error as { status?: number }).status) : 0;
+  const message = error instanceof Error ? error.message : String(error);
+  return [500, 502, 503, 504].includes(status) || /\b(?:500|502|503|504)\b|service unavailable|high demand|overload|unavailable|temporarily unavailable/i.test(message);
+}
+
+function isGeminiQuotaError(error: unknown) {
+  const status = typeof error === 'object' && error !== null && 'status' in error
+    ? Number((error as { status?: number }).status) : 0;
+  const message = error instanceof Error ? error.message : String(error);
+  return status === 429 || /\b429\b|resource_exhausted|quota exceeded|rate.limit/i.test(message);
+}
+
 export async function generateMultipleProducts(prompt: string, count: number = 4) {
   const request = typeof prompt === 'string' ? prompt.trim() : '';
   const quantity = Math.min(8, Math.max(1, Math.floor(Number(count) || 4)));
   if (request.length < 5) throw new Error('Descreve primeiro o nicho da loja para gerar produtos adequados.');
 
   const intent = detectIntent(request);
-  const model = getModel({
-    generationConfig: {
-      temperature: 0.55,
-      responseMimeType: 'application/json',
-    },
-  });
-  if (!model) throw new Error('A API Gemini não está configurada. Verifica GEMINI_API_KEY na Vercel.');
-
   const instructions = [
     'És um especialista em criação de catálogos de e-commerce. O teu objetivo é seguir ESTRITAMENTE o setor indicado pelo utilizador.',
     'Pedido ORIGINAL (única fonte de verdade): ' + JSON.stringify(request),
@@ -600,19 +606,35 @@ export async function generateMultipleProducts(prompt: string, count: number = 4
   ].join('\n');
 
   let lastError: unknown = null;
+  let overloaded = false;
+  // A segunda tentativa só muda de modelo em caso de indisponibilidade do Flash.
+  // Respostas fora do nicho continuam a ser rejeitadas, nunca são substituídas por
+  // um catálogo pré-definido alheio ao pedido.
   for (let attempt = 0; attempt < 2; attempt++) {
+    const modelName = attempt === 1 && overloaded ? 'gemini-2.5-flash-lite' : 'gemini-2.5-flash';
     try {
-      const result = await model.generateContent(instructions + (attempt ? '\nReformula a resposta anterior, porque estava incompleta ou fora do setor pedido. Confere cada nome de produto.' : ''));
+      const model = getModel({
+        model: modelName,
+        generationConfig: {
+          temperature: 0.55,
+          responseMimeType: 'application/json',
+        },
+      });
+      if (!model) throw new Error('A API Gemini não está configurada. Verifica GEMINI_API_KEY na Vercel.');
+      const extra = attempt && !overloaded ? '\nA resposta anterior tinha produtos inválidos ou fora do nicho. Corrige cada produto.' : '';
+      const result = await model.generateContent(instructions + extra);
       const response = await result.response;
-      const text = response.text();
-      if (!text?.trim()) throw new Error('Resposta vazia do Gemini.');
-      const parsed = parseJsonResponse(text);
+      const raw = response.text();
+      if (!raw?.trim()) throw new Error('Resposta vazia do Gemini.');
+      const parsed = parseJsonResponse(raw);
       if (!Array.isArray(parsed)) throw new Error('A resposta não contém uma lista de produtos.');
 
       const products = parsed.slice(0, quantity);
-      if (products.length !== quantity || products.some((p) => !p || typeof p.name !== 'string' || !p.name.trim() || !Number.isFinite(Number(p.price)) || Number(p.price) < 0)) {
-        throw new Error('Produtos incompletos ou com campos inválidos.');
-      }
+      if (products.length !== quantity || products.some((p) =>
+        !p || typeof p.name !== 'string' || !p.name.trim() ||
+        !Number.isFinite(Number(p.price)) || Number(p.price) < 0
+      )) throw new Error('Produtos incompletos ou com campos inválidos.');
+
       if (intent.productNames.length) {
         const unrelated = products.filter((product) => {
           const title = normalizeText(String(product.name));
@@ -637,11 +659,46 @@ export async function generateMultipleProducts(prompt: string, count: number = 4
       }));
     } catch (error) {
       lastError = error;
-      console.warn('Proposta de produtos rejeitada por formato ou nicho incorreto:', error);
+      if (isGeminiCapacityError(error)) {
+        overloaded = true;
+        console.warn('Gemini temporariamente indisponível:', modelName, error);
+      } else if (isGeminiQuotaError(error)) {
+        console.warn('Limite de quota do Gemini atingido:', error);
+        break; // não multiplicar pedidos quando a quota foi esgotada
+      } else {
+        console.warn('Produtos rejeitados por formato ou nicho incorreto:', error);
+      }
     }
   }
+
   console.error('AI Products Generation Error:', lastError);
+  if (overloaded) throw new Error('O serviço Gemini está temporariamente sobrecarregado. Tenta novamente dentro de alguns minutos. Não foram adicionados produtos.');
+  if (lastError && isGeminiQuotaError(lastError)) throw new Error('A API Gemini atingiu o limite de pedidos. Tenta novamente mais tarde ou verifica a quota da tua chave. Não foram adicionados produtos.');
+  if (lastError instanceof Error && /API Gemini não está configurada/.test(lastError.message)) throw lastError;
   throw new Error('Não foi possível gerar produtos corretos para "' + intent.label + '". Não foram adicionados produtos. Tenta novamente.');
+}
+
+// Server Actions lançadas em produção ocultam o texto do erro do utilizador.
+// Para o formulário de criação devolvemos um resultado seguro, sem expor chaves,
+// pedidos à Google ou stacks e sem apagar os produtos editados.
+export async function generateMultipleProductsForStore(prompt: string, count = 4) {
+  try {
+    const products = await generateMultipleProducts(prompt, count);
+    return { ok: true as const, products };
+  } catch (error) {
+    console.error('Erro ao preparar produtos da loja:', error);
+    const message = error instanceof Error ? error.message : '';
+    if (/sobrecarregado|indisponível|temporariamente/i.test(message)) {
+      return { ok: false as const, error: 'O serviço de IA está temporariamente sobrecarregado. Tentámos outro modelo, mas não foi possível gerar os produtos. Podes tentar novamente daqui a pouco ou adicioná-los manualmente.' };
+    }
+    if (/quota|limite de pedidos/i.test(message)) {
+      return { ok: false as const, error: 'A API Gemini atingiu o limite de pedidos. Verifica a quota ou tenta novamente mais tarde. Podes continuar a adicionar produtos manualmente.' };
+    }
+    if (/não está configurada/i.test(message)) {
+      return { ok: false as const, error: 'A IA ainda não está configurada neste ambiente. É necessário configurar GEMINI_API_KEY na Vercel.' };
+    }
+    return { ok: false as const, error: 'A IA não conseguiu propor produtos adequados ao nicho pedido. Nenhum produto foi adicionado. Tenta gerar novamente ou adiciona-os manualmente.' };
+  }
 }
 
 export async function chatWithAssistant(messages: { role: 'user' | 'assistant'; content: string }[]) {

@@ -36,6 +36,7 @@ const backpacks = [
 
 function loadWithGeminiOutputs(outputs) {
   const captured = [];
+  const models = [];
   const context = {
     exports: {},
     console: { error: () => {}, warn: () => {} },
@@ -44,11 +45,15 @@ function loadWithGeminiOutputs(outputs) {
       if (id !== '@google/generative-ai') throw new Error('Unexpected import ' + id);
       return {
         GoogleGenerativeAI: class {
-          getGenerativeModel() {
+          getGenerativeModel(options) {
             return {
               generateContent: async (prompt) => {
                 captured.push(String(prompt));
+                models.push(options.model);
                 const chosen = outputs[Math.min(captured.length - 1, outputs.length - 1)];
+                if (chosen && chosen.__error) {
+                  throw Object.assign(new Error(chosen.__error), { status: chosen.status });
+                }
                 return { response: { text: () => JSON.stringify(chosen) } };
               },
             };
@@ -58,7 +63,7 @@ function loadWithGeminiOutputs(outputs) {
     },
   };
   vm.runInNewContext(compiled, context, { filename: 'ai-actions.ts', timeout: 3000 });
-  return { api: context.exports, captured };
+  return { api: context.exports, captured, models };
 }
 
 async function main() {
@@ -90,7 +95,28 @@ async function main() {
   assert.equal(proposal.products.length, 0);
   assert.equal(proposal.name, 'Pesca Azul');
 
-  process.stdout.write('PASS: pesca, rejeição de café, nichos novos e loja sem produtos.\n');
+
+  const busy = { __error: '503 Service Unavailable - This model is currently experiencing high demand', status: 503 };
+  const failover = loadWithGeminiOutputs([busy, fishing]);
+  const recovered = await failover.api.generateMultipleProductsForStore('Cria uma loja de canas de pesca', 4);
+  assert.equal(recovered.ok, true);
+  assert.equal(recovered.products.length, 4);
+  assert.deepEqual(failover.models, ['gemini-2.5-flash', 'gemini-2.5-flash-lite']);
+
+  const unavailable = loadWithGeminiOutputs([busy, busy]);
+  const unavailableResponse = await unavailable.api.generateMultipleProductsForStore('Cria uma loja de canas de pesca', 4);
+  assert.equal(unavailableResponse.ok, false);
+  assert.match(unavailableResponse.error, /temporariamente sobrecarregado/);
+  assert.equal(unavailableResponse.products, undefined);
+  assert.doesNotMatch(unavailableResponse.error, /GoogleGenerativeAI|Service Unavailable/);
+
+  const quota = loadWithGeminiOutputs([{ __error: '429 quota exceeded', status: 429 }, fishing]);
+  const quotaResponse = await quota.api.generateMultipleProductsForStore('Cria uma loja de canas de pesca', 4);
+  assert.equal(quotaResponse.ok, false);
+  assert.match(quotaResponse.error, /limite de pedidos/);
+  assert.equal(quota.captured.length, 1);
+
+  process.stdout.write('PASS: pesca, rejeição de café, nichos novos, Gemini 503 com failover e erro seguro no formulário.\\n');
 }
 
 main().catch((error) => {

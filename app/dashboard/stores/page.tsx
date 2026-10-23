@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { generateStoreConfig, generateMultipleProducts } from '@/lib/ai-actions';
+import { generateStoreConfig, generateMultipleProductsForStore } from '@/lib/ai-actions';
 import StoreProductReview, { StoreDraftProduct, toDraftProducts } from '@/components/dashboard/StoreProductReview';
 import { STORE_TEMPLATES, StoreTemplateId, buildTemplateCustomization } from '@/lib/store-templates';
 import { findProductPhotos } from '@/lib/product-image-actions';
@@ -218,8 +218,20 @@ export default function StoresPage() {
     try {
       // O nicho vem exclusivamente do pedido original, não do nome da marca gerado pela IA.
       const description = aiPrompt.trim();
-      const generated = await generateMultipleProducts(description, count);
-      const photos = await findProductPhotos(generated, description);
+      const result = await generateMultipleProductsForStore(description, count);
+      if (!result.ok) {
+        setGenerationError(result.error);
+        return;
+      }
+      const generated = result.products;
+      // Falhar a pesquisa externa de fotografias não deve impedir o
+      // utilizador de rever os produtos nem mostrar um erro de servidor.
+      let photos: string[] = [];
+      try {
+        photos = await findProductPhotos(generated, description);
+      } catch (photoError) {
+        console.warn('Fotografias indisponíveis. Produtos mantidos para revisão:', photoError);
+      }
       const next = toDraftProducts(generated, photos, description);
       // As propostas anteriores são substituídas; os produtos manuais permanecem.
       setDraftProducts((existing) => [...existing.filter((product) => product.source === 'manual'), ...next]);
