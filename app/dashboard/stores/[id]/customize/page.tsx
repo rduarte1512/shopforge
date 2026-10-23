@@ -159,6 +159,13 @@ function buildSection(type: string) {
     };
   }
 
+  if (type === 'categories') return { id, type, content: { title: 'Explora por categoria', subtitle: 'Encontra o que procuras.' }, styles: {} };
+  if (type === 'trust') return { id, type, content: { title: 'O nosso compromisso', items: ['Compra simples', 'Apoio ao cliente', 'Acompanhamento do pedido'] }, styles: {} };
+  if (type === 'story') return { id, type, content: { eyebrow: 'A nossa marca', title: 'A nossa história', text: 'Uma seleção criada com atenção a cada detalhe.', buttonText: 'Explorar produtos' }, styles: {} };
+  if (type === 'reviews') return { id, type, content: { title: 'Porquê escolher-nos', items: ['Seleção cuidada', 'Compra simples', 'Uma experiência feita para ti'] }, styles: {} };
+  if (type === 'faq') return { id, type, content: { title: 'Perguntas frequentes', items: [{ question: 'Como posso comprar?', answer: 'Adiciona os produtos ao carrinho e segue para o checkout.' }] }, styles: {} };
+  if (type === 'newsletter') return { id, type, content: { eyebrow: 'Novidades', title: 'Descobre a nossa coleção', text: 'Conhece os artigos em destaque.', buttonText: 'Explorar produtos' }, styles: {} };
+
   if (type === 'spacer') return { id, type, content: {}, styles: { height: 48 } };
 
   return {
@@ -182,6 +189,12 @@ function sectionLabel(type: string) {
   if (type === 'products') return 'Grelha de Produtos';
   if (type === 'button') return 'Botão de Conversão';
   if (type === 'image') return 'Imagem / Banner';
+  if (type === 'categories') return 'Categorias';
+  if (type === 'trust') return 'Vantagens / Confiança';
+  if (type === 'story') return 'História da Marca';
+  if (type === 'reviews') return 'Compromissos da Marca';
+  if (type === 'faq') return 'Perguntas Frequentes';
+  if (type === 'newsletter') return 'Chamada à Ação';
   if (type === 'spacer') return 'Espaçador';
   return 'Bloco de Texto';
 }
@@ -533,17 +546,35 @@ export default function StoreCustomizePage() {
                               <input value={section.content.title || ''} onChange={(event) => updateSection(section.id, { content: { ...section.content, title: event.target.value } })} className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 text-xs outline-none" placeholder="Título" />
                               <textarea value={section.content.subtitle || ''} onChange={(event) => updateSection(section.id, { content: { ...section.content, subtitle: event.target.value } })} className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 text-xs outline-none h-20 resize-none" placeholder="Subtítulo" />
                               <input value={section.content.buttonText || ''} onChange={(event) => updateSection(section.id, { content: { ...section.content, buttonText: event.target.value } })} className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 text-xs outline-none" placeholder="Texto do botão" />
+                              {safeCustomization.layoutEngine === 'adaptive-v1' && <label className="block text-[11px] font-bold text-gray-500">Formato do Hero
+                                <select value={section.styles?.variant || safeCustomization.heroVariant || 'split'} onChange={event => updateSection(section.id, { styles: { ...section.styles, variant: event.target.value } })} className="mt-1 w-full rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-xs">
+                                  <option value="split">Dividido</option><option value="centered">Centrado</option><option value="editorial">Editorial / Imagem primeiro</option><option value="full-bleed">Imagem de ecrã inteiro</option><option value="product-led">Montra de produtos</option><option value="asymmetric">Assimétrico</option>
+                                </select>
+                              </label>}
                             </>}
                             {section.type === 'text' && <textarea value={section.content.text || ''} onChange={(event) => updateSection(section.id, { content: { ...section.content, text: event.target.value } })} className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 text-xs outline-none h-28 resize-none" />}
                             {section.type === 'products' && <>
                               <input value={section.content.title || ''} onChange={(event) => updateSection(section.id, { content: { ...section.content, title: event.target.value } })} className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 text-xs outline-none" />
                               <select value={section.styles.columns || 4} onChange={(event) => updateSection(section.id, { styles: { ...section.styles, columns: Number(event.target.value) } })} className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 text-xs outline-none"><option value={2}>2 colunas</option><option value={3}>3 colunas</option><option value={4}>4 colunas</option><option value={5}>5 colunas</option></select>
+                              {safeCustomization.layoutEngine === 'adaptive-v1' && <label className="block text-[11px] font-bold text-gray-500">Apresentação dos produtos
+                                <select value={section.styles?.variant || safeCustomization.productVariant || 'cards'} onChange={event => updateSection(section.id, { styles: { ...section.styles, variant: event.target.value } })} className="mt-1 w-full rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-xs">
+                                  <option value="cards">Cartões arredondados</option><option value="editorial">Editorial</option><option value="compact">Compacto</option><option value="bordered">Quadrado e discreto</option>
+                                </select>
+                              </label>}
                             </>}
                             {section.type === 'button' && <>
                               <input value={section.content.text || ''} onChange={(event) => updateSection(section.id, { content: { ...section.content, text: event.target.value } })} className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 text-xs outline-none" />
                               <select value={section.content.action || 'link'} onChange={(event) => updateSection(section.id, { content: { ...section.content, action: event.target.value } })} className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 text-xs outline-none"><option value="link">Abrir link</option><option value="whatsapp">WhatsApp</option><option value="checkout">Checkout</option></select>
                             </>}
                             {section.type === 'image' && <input value={section.content.url || ''} onChange={(event) => updateSection(section.id, { content: { ...section.content, url: event.target.value } })} className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 text-xs outline-none" />}
+                            {['categories', 'story', 'reviews', 'faq', 'newsletter', 'trust'].includes(section.type) && (
+                              <>
+                                <input value={section.content?.title || ''} onChange={event => updateSection(section.id, { content: { ...section.content, title: event.target.value } })} className="w-full rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-xs" placeholder="Título da secção" />
+                                {['story', 'newsletter', 'categories'].includes(section.type) && <textarea value={section.content?.text || section.content?.subtitle || ''} onChange={event => updateSection(section.id, { content: { ...section.content, [section.type === 'categories' ? 'subtitle' : 'text']: event.target.value } })} className="h-20 w-full rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-xs" placeholder="Texto" />}
+                                {['trust', 'reviews'].includes(section.type) && <textarea value={Array.isArray(section.content.items) ? section.content.items.join('\n') : ''} onChange={event => updateSection(section.id, { content: { ...section.content, items: event.target.value.split('\n').filter(Boolean).slice(0, 5) } })} className="h-24 w-full rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-xs" placeholder="Uma vantagem por linha" />}
+                                {section.type === 'faq' && <textarea value={Array.isArray(section.content.items) ? section.content.items.map((q: any) => q.question + ' | ' + q.answer).join('\n') : ''} onChange={event => updateSection(section.id, { content: { ...section.content, items: event.target.value.split('\n').filter(Boolean).slice(0, 6).map(line => { const [question, ...rest] = line.split('|'); return { question: question.trim(), answer: rest.join('|').trim() }; }) } })} className="h-28 w-full rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-xs" placeholder="Pergunta | Resposta, uma por linha" />}
+                              </>
+                            )}
                             <div className="flex gap-1 bg-gray-50 p-1 rounded-lg">
                               {['left', 'center', 'right'].map((align) => <button key={align} onClick={() => updateSection(section.id, { styles: { ...section.styles, textAlign: align } })} className={`flex-1 py-1.5 rounded-md text-[10px] font-bold uppercase ${section.styles?.textAlign === align ? 'bg-white shadow-sm text-shopify-green' : 'text-gray-400'}`}>{align === 'left' ? 'Esq' : align === 'center' ? 'Cen' : 'Dir'}</button>)}
                             </div>
@@ -560,6 +591,10 @@ export default function StoreCustomizePage() {
                       ['button', 'Botão'],
                       ['image', 'Imagem'],
                       ['spacer', 'Espaço'],
+                      ...(safeCustomization.layoutEngine === 'adaptive-v1' ? [
+                        ['categories', 'Categorias'], ['trust', 'Confiança'], ['story', 'História'],
+                        ['reviews', 'Destaques'], ['faq', 'FAQ'], ['newsletter', 'CTA'],
+                      ] : []),
                     ].map(([type, label]) => <button key={type} onClick={() => addSection(type)} className="p-3 bg-gray-50 hover:bg-shopify-green/5 border border-dashed border-gray-200 rounded-xl transition-all group"><Plus className="w-4 h-4 text-gray-400 group-hover:text-shopify-green mx-auto mb-2" /><span className="text-[10px] font-black uppercase text-gray-400 group-hover:text-shopify-green block">{label}</span></button>)}
                   </div>
                 </section>
