@@ -42,6 +42,7 @@ function loadWithGeminiOutputs(outputs) {
     console: { error: () => {}, warn: () => {} },
     process: { env: { GEMINI_API_KEY: 'mock-not-a-real-key' } },
     require: (id) => {
+      if (id === './ai-designer-engine') return { planLocalDesignerEdit: () => null, applyDesignerOperations: () => ({config:{}, changes:[]}) };
       if (id !== '@google/generative-ai') throw new Error('Unexpected import ' + id);
       return {
         GoogleGenerativeAI: class {
