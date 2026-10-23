@@ -79,7 +79,7 @@ export default function StoreSwitcher({ stores, selectedStoreId, isSwitchingStor
   const onSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'ArrowDown') {
       event.preventDefault();
-      setHighlighted(index => Math.min(index + 1, filteredStores.length - 1));
+      setHighlighted(index => filteredStores.length ? Math.min(index + 1, filteredStores.length - 1) : 0);
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
       setHighlighted(index => Math.max(0, index - 1));
@@ -119,7 +119,7 @@ export default function StoreSwitcher({ stores, selectedStoreId, isSwitchingStor
       {open && !isSwitchingStore && (
         <div
           id={dropdownId}
-          className="absolute inset-x-0 top-[calc(100%+9px)] z-[70] overflow-hidden rounded-2xl border border-white/15 bg-[#101827] shadow-[0_24px_65px_rgba(0,0,0,0.50)] ring-1 ring-black/10"
+          className="absolute inset-x-0 top-[calc(100%+9px)] z-[70] origin-top overflow-hidden rounded-2xl border border-white/15 bg-[#101827] shadow-[0_24px_65px_rgba(0,0,0,0.50)] ring-1 ring-black/10 motion-safe:animate-[store-switcher-in_180ms_ease-out_both]"
         >
           <div className="border-b border-white/[0.08] px-3 pb-3 pt-3">
             <div className="mb-3 flex items-center justify-between px-1">
