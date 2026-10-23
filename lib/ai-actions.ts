@@ -539,8 +539,10 @@ Current Store Configuration: ${JSON.stringify(currentConfig)}
 The user wants: "${userRequest}"
 
 Return ONLY the COMPLETE updated JSON object for the customization field.
-Keep all required keys: header, hero, products, colors, fonts, sections.
-Never return an empty sections array.
+Keep all required keys: header, hero, products, colors, fonts, sections and layoutEngine if present.
+If layoutEngine is "adaptive-v1" never change or remove it. You may modify and reorder supported sections: hero, products, trust, categories, story, reviews, faq, newsletter, image, text, button, spacer. Use only supported types.
+For hero styles.variant choose split/centered/editorial/full-bleed/product-led/asymmetric. For products styles.variant choose cards/editorial/compact/bordered.
+Never return an empty sections array. Preserve existing blocks unless the user asks you to replace/remove them, and do not include invented customer reviews, shipping promises or fake guarantees.
 Make the design conversion-focused, visually distinct and consistent with the request.
 Use Portuguese copy in visible text.`;
 
