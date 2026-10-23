@@ -291,7 +291,11 @@ export default function StoreCustomizePage() {
 
     try {
       const updatedConfig = await updateStoreCustomizationWithAI(safeCustomization, userMessage);
-      updateCustomization(updatedConfig);
+      // Manter o motor visual novo após edições por IA. O modelo pode omitir
+      // alguns campos da resposta e não pode voltar a loja ao template fixo.
+      updateCustomization(safeCustomization.layoutEngine === 'adaptive-v1'
+        ? { ...safeCustomization, ...updatedConfig, layoutEngine: 'adaptive-v1', templateId: safeCustomization.templateId, sections: Array.isArray(updatedConfig?.sections) && updatedConfig.sections.length ? updatedConfig.sections : safeCustomization.sections }
+        : updatedConfig);
       setMessages((prev) => [...prev, { role: 'ai', content: 'Feito! Atualizei a preview da loja com um visual mais forte e coerente.' }]);
     } catch (error) {
       console.error(error);
