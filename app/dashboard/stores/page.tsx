@@ -33,6 +33,7 @@ import { generateStoreConfig, generateMultipleProductsForStore } from '@/lib/ai-
 import StoreProductReview, { StoreDraftProduct, toDraftProducts } from '@/components/dashboard/StoreProductReview';
 import { STORE_TEMPLATES, StoreTemplateId, buildTemplateCustomization, buildAdaptiveAiCustomization } from '@/lib/store-templates';
 import { findProductPhotos } from '@/lib/product-image-actions';
+import AdaptiveStorefront from '@/components/storefront/AdaptiveStorefront';
 import { useRouter } from 'next/navigation';
 
 function slugify(value: string) {
@@ -440,6 +441,25 @@ export default function StoresPage() {
                             <h4 className="text-2xl font-black" style={{ fontFamily: aiConfig.customization?.fonts?.heading || 'Inter' }}>{aiConfig.customization?.sections?.find((section: any) => section.type === 'hero')?.content?.title || aiConfig.name}</h4>
                             <p className="text-xs opacity-70">{aiConfig.customization?.hero?.subtitle || aiConfig.description}</p>
                             <span className="inline-block px-4 py-2 rounded-xl text-xs text-white font-bold" style={{ backgroundColor: aiConfig.primaryColor || '#008060' }}>Explorar coleção</span>
+                            <div className="mt-4 flex flex-wrap justify-center gap-1.5">
+                              {(aiConfig.customization?.sections || []).slice(0, 9).map((section: any, index: number) => <span key={index} className="rounded-full border border-current/20 px-2 py-1 text-[10px] font-semibold">{section.type}</span>)}
+                            </div>
+                          </div>
+                          <div className="border-t border-current/10 p-3">
+                            <p className="mb-3 text-left text-xs font-black">Pré-visualização real do layout · desliza para explorar</p>
+                            <div className="h-[340px] overflow-y-auto rounded-lg border border-current/10 text-left">
+                              <div className="pointer-events-none">
+                                <AdaptiveStorefront
+                                  store={{ name: aiConfig.name, domain: aiConfig.domain || 'previsualizacao', description: aiConfig.description, primary_color: aiConfig.primaryColor }}
+                                  customization={buildAdaptiveAiCustomization(aiConfig.customization, { name: aiConfig.name, description: aiConfig.description, primary_color: aiConfig.primaryColor }, aiPrompt)}
+                                  products={draftProducts.filter(p => p.selected).map(p => ({ ...p, id: p.clientId }))}
+                                  formatPrice={(price: number) => Number(price).toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' })}
+                                  currency="EUR" setCurrency={() => {}} availableCurrencies={['EUR']}
+                                  addItem={() => {}} comparisonIds={[]} isInComparison={() => false}
+                                  addProduct={() => {}} removeProduct={() => {}} clearComparison={() => {}}
+                                />
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
