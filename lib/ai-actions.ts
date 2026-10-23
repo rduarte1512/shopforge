@@ -384,7 +384,7 @@ function normalizeStoreConfig(config: any, prompt: string) {
         content: {
           ...section.content,
           title: section.content?.title || merged.name || fallback.name,
-          subtitle: productMatchesIntent({ description: section.content?.subtitle }, intent) ? section.content?.subtitle : pick(intent.heroLines),
+          subtitle: section.content?.subtitle || pick(intent.heroLines),
           buttonText: intent.niche === 'relogios' ? 'Ver relógios' : section.content?.buttonText || 'Explorar coleção',
         },
       };
@@ -420,7 +420,7 @@ function normalizeStoreConfig(config: any, prompt: string) {
       ...fallback.customization,
       ...(customization || {}),
       header: { ...fallback.customization.header, ...(customization?.header || {}) },
-      hero: { ...fallback.customization.hero, ...(customization?.hero || {}), subtitle: intent.explicit ? pick(intent.heroLines) : customization?.hero?.subtitle || fallback.customization.hero.subtitle },
+      hero: { ...fallback.customization.hero, ...(customization?.hero || {}) },
       colors: { ...fallback.customization.colors, ...(customization?.colors || {}) },
       fonts: { ...fallback.customization.fonts, ...(customization?.fonts || {}) },
       products: { ...fallback.customization.products, ...(customization?.products || {}) },
@@ -469,23 +469,42 @@ Generate a complete, production-ready Portuguese online store concept with:
 ${includeProducts ? '- exactly 8 realistic products in EUR related to ' + intent.label : '- NO products. Return "products": [] because products will only be generated later if the customer requests it'}
 - a full original customization object for the visual editor, with unique editorial structure and brand copy
 
-The customization object must have this exact shape:
+Create a DISTINCT conversion-focused storefront composition specifically for this business. Do not reuse the same hero + text + products + button formula.
+Use the entire store brief: niche, clientele, product type, positioning and mood. Example: fishing equipment needs a technically credible catalog and gear categories; fashion benefits from editorial image-first layouts; luxury benefits from large whitespace and story; promotional shops benefit from featured products first.
+The website renderer supports these HERO VARIANTS (choose the best fit):
+"split" (copy beside product), "centered" (large typography and collection thumbnails), "editorial" (image takes half the width), "full-bleed" (immersive image and centered overlay), "product-led" (three product cards lead), "asymmetric" (off-center composition).
+PRODUCT CARD VARIANTS: "cards", "editorial", "compact", "bordered".
+Choose different content blocks AND their ORDER based on user intent. "hero" can be after "products" or "trust" when that is commercially sound. Only one hero and one products block are needed, each exactly once. Other blocks are optional. Use between 5 and 9 total sections (never eight generic blocks automatically).
+SUPPORTED BLOCK TYPES: "hero", "products", "categories", "trust", "story", "reviews", "faq", "newsletter", "image", "text", "button", "spacer".
+These types are rendered by the application, so invent new combinations but NEVER invent unsupported types.
+"reviews" in the layout means brand differentiators/commitments, NOT fake customer testimonials, ratings, figures or invented claims.
+Only promise shipping, returns or guarantees when they are backed by the user's brief; otherwise keep trust statements neutral and truthful.
+"newsletter" is a generic CTA block, do not imply email signup is implemented.
+For each block return meaningful Portuguese copy tailored to the NICHE, avoiding generic luxury slogans. The hero must NOT look like the same default hero each time.
+Return a full customization object using this schema:
 {
-  "templateLayout": "split" | "center" | "image-first",
-  "header": { "sticky": true, "logoPosition": "left" | "center", "height": number },
-  "hero": { "height": number, "textAlign": "left" | "center", "showOverlay": true, "overlayOpacity": number, "title": string, "subtitle": string },
-  "products": { "columns": number, "gap": number, "aspectRatio": "portrait", "showPrice": true, "showStock": true },
-  "colors": { "background": string, "text": string, "accent": string, "muted": string, "primary": string },
-  "fonts": { "heading": "Inter", "body": "Inter" },
-  "sections": [
-    { "id": string, "type": "hero", "content": { "title": string, "subtitle": string, "buttonText": string }, "styles": { "height": number, "textAlign": "left" | "center" } },
-    { "id": string, "type": "text", "content": { "text": string }, "styles": { "textAlign": "left" | "center" } },
-    { "id": string, "type": "image", "content": { "url": string, "alt": string }, "styles": { "textAlign": "center" } },
-    { "id": string, "type": "products", "content": { "title": string }, "styles": { "columns": 3 | 4, "textAlign": "left" } },
-    { "id": string, "type": "button", "content": { "text": string, "action": "checkout", "url": "#produtos" }, "styles": { "textAlign": "center" } }
-  ]
+ "heroVariant": "split" | "centered" | "editorial" | "full-bleed" | "product-led" | "asymmetric",
+ "productVariant": "cards" | "editorial" | "compact" | "bordered",
+ "announcementText": string,
+ "header": {"sticky": true, "logoPosition": "left" | "center", "height": 74},
+ "hero": {"height": number, "textAlign": "left" | "center", "title": string, "subtitle": string},
+ "products": {"columns": 2 | 3 | 4, "gap": 28, "aspectRatio": "portrait", "showPrice": true, "showStock": true},
+ "colors": {"background": "#RRGGBB", "text": "#RRGGBB", "accent": "#RRGGBB", "muted": "#RRGGBB", "primary": "#RRGGBB"},
+ "fonts": {"heading": "Inter" | "Georgia", "body": "Inter"},
+ "sections": [
+   {"id": "hero-1", "type": "hero", "content": {"eyebrow": string, "title": string, "subtitle": string, "buttonText": string}, "styles": {"variant": "split" | "centered" | "editorial" | "full-bleed" | "product-led" | "asymmetric", "height": number}},
+   {"id": "categories-1", "type": "categories", "content": {"title": string, "subtitle": string}, "styles": {}},
+   {"id": "trust-1", "type": "trust", "content": {"title": string, "items": [string,string,string]}, "styles": {}},
+   {"id": "products-1", "type": "products", "content": {"title": string, "subtitle": string, "limit": 8}, "styles": {"columns": 3 | 4, "variant": "cards" | "editorial" | "compact" | "bordered"}},
+   {"id": "story-1", "type": "story", "content": {"eyebrow": string, "title": string, "text": string, "buttonText": string}, "styles": {}},
+   {"id": "reviews-1", "type": "reviews", "content": {"title": string, "items": [string,string,string]}, "styles": {}},
+   {"id": "faq-1", "type": "faq", "content": {"title": string, "items": [{"question":string,"answer":string},{"question":string,"answer":string}]}, "styles": {}},
+   {"id": "newsletter-1", "type": "newsletter", "content": {"eyebrow": string, "title": string, "text": string, "buttonText": string}, "styles": {}}
+ ]
 }
-
+The sections shown above are EXAMPLES, NOT a sequence to copy. Reorder, omit and select them deliberately to create a distinctive storefront.
+For "image" sections use {"url": "", "alt": descriptive-niche-specific-string} and do not invent URLs.
+Return ONLY valid JSON.
 Do not use picsum.photos, source.unsplash.com, generic placeholders or invented image URLs. For image sections return an empty URL with a descriptive niche-specific alt; the application will pick a matching catalog banner. Do not claim that photos are AI-generated.
 Return ONLY valid JSON.`;
 
