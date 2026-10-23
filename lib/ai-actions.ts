@@ -410,7 +410,7 @@ function normalizeStoreConfig(config: any, prompt: string) {
     ...merged,
     name: merged.name || fallback.name,
     domain: slugify(merged.domain || merged.name || fallback.domain),
-    description: intent.explicit ? explicitDescription : merged.description || fallback.description,
+    description: merged.description || explicitDescription || fallback.description,
     theme: merged.theme === 'dark' ? 'dark' : 'light',
     primaryColor: merged.primaryColor || merged.primary_color || fallback.primaryColor,
     bannerKeyword: intent.imageKeyword,
