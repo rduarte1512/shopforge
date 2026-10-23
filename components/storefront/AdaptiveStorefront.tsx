@@ -119,14 +119,17 @@ export default function AdaptiveStorefront({
       const label = c.eyebrow || 'Descobre a nossa coleção';
       const title = c.title || brand, subtitle = c.subtitle || store.description || '';
       const tall = Math.max(400, Math.min(760, Number(s.height) || 550));
+      const heroInk = heroBackground ? contrastOn(heroBackground) : foreground;
+      const heroMuted = heroBackground ? (heroInk === '#ffffff' ? '#f1f5f9' : '#334155') : muted;
+      const heroHeadingStyle = { fontFamily: heading, color: heroInk };
       const cta = <div className="mt-8 flex flex-wrap gap-3">
         <button onClick={navToProducts} className="inline-flex items-center gap-2 rounded-lg px-7 py-4 text-sm font-bold shadow-lg transition-transform hover:scale-[1.03]" style={buttonStyle}>{c.buttonText || 'Explorar produtos'} <ArrowRight className="h-4 w-4" /></button>
         <Link href={'/s/' + store.domain + '/cart'} className="inline-flex items-center rounded-lg border px-6 py-4 text-sm font-semibold" style={{ borderColor: border }}>Ver carrinho</Link>
       </div>;
       const copy = <div className="relative z-10">
-        <span className="text-xs font-bold uppercase tracking-[.22em]" style={{ color: accent }}>{label}</span>
-        <h1 className="mt-5 text-4xl font-semibold leading-[1.08] tracking-tight sm:text-6xl lg:text-7xl" style={headingStyle}>{title}</h1>
-        <p className="mt-6 max-w-xl text-base leading-relaxed sm:text-lg" style={{ color: muted }}>{subtitle}</p>
+        <span className="text-xs font-bold uppercase tracking-[.22em]" style={{ color: heroBackground ? heroInk : accent }}>{label}</span>
+        <h1 className="mt-5 text-4xl font-semibold leading-[1.08] tracking-tight sm:text-6xl lg:text-7xl" style={heroHeadingStyle}>{title}</h1>
+        <p className="mt-6 max-w-xl text-base leading-relaxed sm:text-lg" style={{ color: heroMuted }}>{subtitle}</p>
         {cta}
       </div>;
       if (variant === 'full-bleed') return <section key={section.id} className="relative isolate flex items-center overflow-hidden py-24" style={{ minHeight: tall, background: heroBackground || 'linear-gradient(115deg,' + foreground + ', ' + accent + ')' }}>
@@ -140,11 +143,11 @@ export default function AdaptiveStorefront({
         </div>
       </section>;
       if (variant === 'centered') return <section key={section.id} className="px-5 py-20 sm:py-28" style={{ minHeight: tall, background: heroBackground || 'radial-gradient(ellipse at top,' + accent + '1f,transparent 70%)' }}>
-        <div className="mx-auto max-w-4xl text-center"><span className="text-xs font-bold uppercase tracking-widest" style={{ color: accent }}>{label}</span><h1 className="mt-6 text-5xl font-semibold tracking-tight sm:text-7xl" style={headingStyle}>{title}</h1><p className="mx-auto mt-5 max-w-2xl text-lg" style={{ color: muted }}>{subtitle}</p><div className="mt-8 flex justify-center"><button onClick={navToProducts} className="rounded-lg px-8 py-4 text-sm font-bold" style={buttonStyle}>{c.buttonText || 'Explorar coleção'} <ArrowRight className="ml-1 inline h-4 w-4" /></button></div></div>
+        <div className="mx-auto max-w-4xl text-center"><span className="text-xs font-bold uppercase tracking-widest" style={{ color: heroBackground ? heroInk : accent }}>{label}</span><h1 className="mt-6 text-5xl font-semibold tracking-tight sm:text-7xl" style={heroHeadingStyle}>{title}</h1><p className="mx-auto mt-5 max-w-2xl text-lg" style={{ color: heroMuted }}>{subtitle}</p><div className="mt-8 flex justify-center"><button onClick={navToProducts} className="rounded-lg px-8 py-4 text-sm font-bold" style={buttonStyle}>{c.buttonText || 'Explorar coleção'} <ArrowRight className="ml-1 inline h-4 w-4" /></button></div></div>
         <div className="mx-auto mt-12 grid max-w-4xl grid-cols-3 gap-3">{products.slice(0, 3).map((p: any) => <Link key={p.id} href={'/s/' + store.domain + '/product/' + p.id} className="relative aspect-[4/3] overflow-hidden rounded-lg bg-slate-100">{imageOf(p) && <Image src={imageOf(p)} alt={p.name} fill className="object-cover" />}</Link>)}</div>
       </section>;
       if (variant === 'product-led') return <section key={section.id} className={baseWidth + ' py-16 sm:py-24'} style={{ minHeight: tall, backgroundColor: heroBackground || undefined }}>
-        <div className="mx-auto max-w-3xl text-center"><span className="text-xs font-bold uppercase tracking-widest" style={{ color: accent }}>{label}</span><h1 className="mt-5 text-4xl font-bold sm:text-6xl" style={headingStyle}>{title}</h1><p className="mx-auto mt-5 max-w-xl" style={{ color: muted }}>{subtitle}</p></div>
+        <div className="mx-auto max-w-3xl text-center"><span className="text-xs font-bold uppercase tracking-widest" style={{ color: heroBackground ? heroInk : accent }}>{label}</span><h1 className="mt-5 text-4xl font-bold sm:text-6xl" style={heroHeadingStyle}>{title}</h1><p className="mx-auto mt-5 max-w-xl" style={{ color: heroMuted }}>{subtitle}</p></div>
         <div className="mt-10 grid gap-5 sm:grid-cols-3">{products.slice(0, 3).map((p: any, i: number) => <ProductTile key={p.id} product={p} index={i} variant="compact" />)}</div>
         {products.length === 0 && <button onClick={navToProducts} className="mx-auto mt-8 block rounded-lg px-8 py-3 font-semibold" style={buttonStyle}>{c.buttonText || 'Ver catálogo'}</button>}
       </section>;
