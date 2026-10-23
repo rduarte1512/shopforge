@@ -31,7 +31,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { generateStoreConfig, generateMultipleProductsForStore } from '@/lib/ai-actions';
 import StoreProductReview, { StoreDraftProduct, toDraftProducts } from '@/components/dashboard/StoreProductReview';
-import { STORE_TEMPLATES, StoreTemplateId, buildTemplateCustomization } from '@/lib/store-templates';
+import { STORE_TEMPLATES, StoreTemplateId, buildTemplateCustomization, buildAdaptiveAiCustomization } from '@/lib/store-templates';
 import { findProductPhotos } from '@/lib/product-image-actions';
 import { useRouter } from 'next/navigation';
 
@@ -289,14 +289,7 @@ export default function StoresPage() {
       base_currency: 'EUR',
       enableAccounts: true,
     };
-    const customization = normalizeCustomization(aiConfig.customization, storePayload);
-    customization.templateId = 'ai-custom';
-    customization.templateLayout = aiConfig.customization?.templateLayout || 'split';
-    customization.sections = customization.sections.map((section: any) =>
-      section.type === 'hero'
-        ? { ...section, content: { ...section.content, title: storePayload.name } }
-        : section
-    );
+    const customization = buildAdaptiveAiCustomization(normalizeCustomization(aiConfig.customization, storePayload), storePayload, aiPrompt);
     await finishCreation(storePayload, customization, aiPrompt);
   };
 
@@ -492,12 +485,20 @@ export default function StoresPage() {
                         aria-pressed={newStore.templateId === template.id}
                         className={'text-left overflow-hidden rounded-2xl border-2 transition-all ' + (newStore.templateId === template.id ? 'border-emerald-600 shadow-md' : 'border-slate-200 hover:border-emerald-300')}
                       >
-                        <div className="h-24 p-3" style={{ backgroundColor: template.background, color: template.text }}>
-                          <div className="flex justify-between items-center text-[10px] font-black"><span>{template.name}</span><span className="rounded-full w-3 h-3" style={{ backgroundColor: template.accent }} /></div>
-                          <div className="mt-3 h-3 w-2/3 rounded" style={{ backgroundColor: template.text, opacity: .8 }} />
-                          <div className="mt-2 h-2 w-1/2 rounded" style={{ backgroundColor: template.text, opacity: .25 }} />
-                          <div className="mt-2 h-2 w-1/3 rounded" style={{ backgroundColor: template.accent }} />
-                        </div>
+                        <div className="h-28 p-3 overflow-hidden" style={{ backgroundColor: template.background, color: template.text }}>
+                          <div className="flex justify-between items-center text-[9px] font-black"><span>{template.name}</span><span className="rounded-full w-3 h-3" style={{ backgroundColor: template.accent }} /></div>
+                          <div className={'mt-2 flex gap-2 ' + (template.heroVariant === 'editorial' || template.heroVariant === 'asymmetric' ? 'flex-row-reverse' : template.heroVariant === 'full-bleed' || template.heroVariant === 'centered' ? 'justify-center' : '')}>
+                            <div className={'flex flex-col gap-1 ' + (template.heroVariant === 'full-bleed' ? 'w-full items-center py-2' : 'w-3/5')}>
+                              <span className="h-2 w-full max-w-28 rounded-sm" style={{ backgroundColor: template.text, opacity: .85 }} />
+                              <span className="h-1 w-4/5 rounded-sm" style={{ backgroundColor: template.text, opacity: .28 }} />
+                              <span className="mt-1 h-2 w-3/5 rounded-sm" style={{ backgroundColor: template.accent }} />
+                            </div>
+                            {!['full-bleed','centered','product-led'].includes(template.heroVariant) && <div className="h-12 w-2/5 rounded-md" style={{ backgroundColor: template.accent, opacity: .3 }} />}
+                          </div>
+                          <div className="mt-2 flex gap-1">
+                            {template.sectionOrder.slice(0, 6).map((section, i) => <span key={i} className="h-3 flex-1 rounded-sm" style={{ backgroundColor: section === 'products' ? template.accent : template.text, opacity: section === 'products' ? .75 : .14 }} />)}
+                          </div>
+                        </div>                   </div>
                         <div className="bg-white p-3">
                           <p className="text-xs font-black text-slate-900">{template.name}</p>
                           <p className="text-[11px] text-slate-500">{template.description}</p>
