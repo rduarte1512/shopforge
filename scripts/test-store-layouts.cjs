@@ -1,7 +1,7 @@
 /* Teste do compositor de temas sem rede nem API Gemini. */
 const fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript'),assert=require('node:assert/strict'),path=require('node:path');
 const js=ts.transpileModule(fs.readFileSync(path.join(__dirname,'../lib/store-templates.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2021}}).outputText;
-const context={exports:{},require:(id)=>{if(id==='./smart-images')return {getBannerSmartImage:()=> 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',isRandomPlaceholderImage:()=>false};throw Error(id)}};
+const context={exports:{},require:(id)=>{if(id==='./smart-images')return {getBannerSmartImage:()=> 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',detectImageTheme:(text)=>/pesca|relogio|moda/.test(text) ? 'pesca' : 'generic'};throw Error(id)}};
 vm.runInNewContext(js,context);
 const {STORE_TEMPLATES,buildTemplateCustomization,buildAdaptiveAiCustomization}=context.exports;
 assert.equal(STORE_TEMPLATES.length,6);
