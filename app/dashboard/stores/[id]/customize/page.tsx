@@ -291,7 +291,7 @@ export default function StoreCustomizePage() {
   const handleSendMessage = async () => {
     if (!chatInput.trim() || isProcessing || !safeCustomization) return;
     const userMessage = chatInput.trim();
-    const looksLikeColorAnswer = /^(?:#[0-9a-f]{3,6}|azul|verde|vermelho|rosa|roxo|amarelo|branco|preto|bege|laranja|dourado|cinza|cinzento|violeta|castanho)(?:\\s+(?:claro|escuro|marinho|choque))?$/i.test(userMessage);
+    const looksLikeColorAnswer = /^(?:#[0-9a-f]{3,6}|azul|verde|vermelho|rosa|roxo|amarelo|branco|preto|bege|laranja|dourado|cinza|cinzento|violeta|castanho)(?:\s+(?:claro|escuro|marinho|choque))?$/i.test(userMessage);
     const requestForDesigner = pendingDesignerQuestion && looksLikeColorAnswer
       ? pendingDesignerQuestion.replace(/[?.!]+$/, '') + ' para ' + userMessage
       : userMessage;
