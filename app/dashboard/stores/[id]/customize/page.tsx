@@ -617,6 +617,7 @@ export default function StoreCustomizePage() {
                   />
                 </div>
               ) : (
+                <>
               <header className={`${header.sticky ? 'sticky top-0' : ''} z-40 border-b border-gray-100 px-6 py-4 transition-all`} style={{ height: `${header.height}px`, backgroundColor: `${colors.background}F2`, backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center' }}>
                 <div className={`w-full flex ${header.logoPosition === 'center' ? 'justify-center' : 'justify-between'} items-center`}>
                   <span className="text-lg font-black tracking-tight">{store.name}</span>
@@ -643,6 +644,7 @@ export default function StoreCustomizePage() {
                   return null;
                 })}
               </div>
+                </>
               )}
             </div>
           </div>
