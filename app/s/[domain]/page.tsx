@@ -74,13 +74,20 @@ function ProductCard({ product, index, store, formatPrice, addItem, isInComparis
   return (
     <article className={"group relative border border-black/5 bg-white/90 p-3 shadow-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-black/10 " + (store?.customization?.templateId === "editorial" ? "rounded-none" : store?.customization?.templateId === "tech" ? "rounded-lg" : "rounded-[32px]")}>
       <Link href={`/s/${store.domain}/product/${product.id}`} className="block relative aspect-[4/5] overflow-hidden rounded-[24px] bg-slate-100">
-        <Image
-          src={getProductImage(product, index)}
-          alt={product.name}
-          fill
-          className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
-          referrerPolicy="no-referrer"
-        />
+        {getProductImage(product, index) ? (
+          <Image
+            src={getProductImage(product, index)}
+            alt={product.name}
+            fill
+            className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-slate-400">
+            <ShoppingBag className="h-10 w-10" />
+            <span className="text-xs font-bold">Fotografia por adicionar</span>
+          </div>
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
         <div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-700 shadow-sm backdrop-blur">
           {product.category || 'Premium'}
@@ -361,7 +368,7 @@ export default function StorefrontHomePage() {
               <div className="absolute -left-8 top-12 h-36 w-36 rounded-full blur-3xl" style={{ backgroundColor: `rgba(${rgbAccent}, .35)` }} />
               <div className="relative rounded-[44px] border border-white/70 bg-white/70 p-4 shadow-2xl shadow-black/10 backdrop-blur-xl">
                 <div className="relative aspect-[4/5] overflow-hidden rounded-[34px] bg-slate-100">
-                  {heroProduct ? (
+                  {heroProduct && getProductImage(heroProduct, 0) ? (
                     <Image src={getProductImage(heroProduct, 0)} alt={heroProduct.name} fill className="object-cover" referrerPolicy="no-referrer" />
                   ) : (
                     <div className="flex h-full items-center justify-center" style={{ background: `linear-gradient(135deg, rgba(${rgbAccent}, .18), rgba(${rgbAccent}, .04))` }}><ShoppingBag className="h-20 w-20 opacity-20" /></div>
@@ -385,7 +392,7 @@ export default function StorefrontHomePage() {
                   <div className="flex -space-x-3">
                     {featuredProducts.map((product, index) => (
                       <div key={product.id} className="relative h-14 w-14 overflow-hidden rounded-2xl border-2 border-white bg-slate-100">
-                        <Image src={getProductImage(product, index)} alt={product.name} fill className="object-cover" referrerPolicy="no-referrer" />
+                        {getProductImage(product, index) ? <Image src={getProductImage(product, index)} alt={product.name} fill className="object-cover" referrerPolicy="no-referrer" /> : <div className="flex h-full w-full items-center justify-center"><ShoppingBag className="h-5 w-5 text-slate-400" /></div>}
                       </div>
                     ))}
                   </div>
