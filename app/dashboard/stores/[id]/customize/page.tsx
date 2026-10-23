@@ -30,6 +30,7 @@ import {
   updateStoreCustomizationAction,
 } from '@/lib/actions';
 import { updateStoreCustomizationWithAI } from '@/lib/ai-actions';
+import AdaptiveStorefront from '@/components/storefront/AdaptiveStorefront';
 
 type EditorTab = 'ai' | 'manual';
 type PreviewMode = 'desktop' | 'mobile';
@@ -570,6 +571,17 @@ export default function StoreCustomizePage() {
         <main className="flex-1 flex flex-col items-center justify-center p-8 relative bg-[radial-gradient(circle_at_top,rgba(0,128,96,0.06),transparent_35%)]">
           <div className={`bg-white shadow-2xl rounded-3xl overflow-hidden transition-all duration-500 border border-gray-100 ${previewMode === 'desktop' ? 'w-full h-full' : 'w-[390px] h-[760px]'}`}>
             <div className="w-full h-full overflow-y-auto" style={{ backgroundColor: colors.background, color: colors.text, fontFamily: safeCustomization.fonts.body }}>
+              {safeCustomization.layoutEngine === 'adaptive-v1' ? (
+                <div className="pointer-events-none w-full min-h-full">
+                  <AdaptiveStorefront
+                    store={store} customization={safeCustomization} products={storeProducts}
+                    formatPrice={(price: number) => Number(price).toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' })}
+                    currency="EUR" setCurrency={() => {}} availableCurrencies={['EUR']}
+                    addItem={() => {}} comparisonIds={[]} isInComparison={() => false}
+                    addProduct={() => {}} removeProduct={() => {}} clearComparison={() => {}}
+                  />
+                </div>
+              ) : (
               <header className={`${header.sticky ? 'sticky top-0' : ''} z-40 border-b border-gray-100 px-6 py-4 transition-all`} style={{ height: `${header.height}px`, backgroundColor: `${colors.background}F2`, backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center' }}>
                 <div className={`w-full flex ${header.logoPosition === 'center' ? 'justify-center' : 'justify-between'} items-center`}>
                   <span className="text-lg font-black tracking-tight">{store.name}</span>
@@ -596,6 +608,7 @@ export default function StoreCustomizePage() {
                   return null;
                 })}
               </div>
+              )}
             </div>
           </div>
         </main>
