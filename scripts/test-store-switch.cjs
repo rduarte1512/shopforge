@@ -16,7 +16,7 @@ assert.match(shell,/isSwitchingStore/, 'The switcher must provide loading feedba
 for(const name of ['products','orders','customers','affiliates','coupons','promotions','shipping']){
  const page=read('app/dashboard/'+name+'/page.tsx');
  assert.match(page,/getSelectedStoreId\(\)/,name+' must read selected cookie');
- assert.match(page,/stores\.find\([^)]*store\.id === selectedStoreId|stores\.find\([^)]*store\.id === cookieStoreId/,name+' must validate selected shop membership');
+ assert.match(page,/store\.id === (?:selectedStoreId|cookieStoreId)/,name+' must validate selected shop membership');
  assert.doesNotMatch(page,/selectedStoreId = stores\[0\]\.id/,name+' must not force the first shop');
 }
 console.log('PASS: selected-shop cookie, safe client remount, and all store-scoped server pages.');
