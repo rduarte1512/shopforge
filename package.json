@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "test:ai-niche": "node scripts/test-ai-niche.cjs",
-    "build": "npm run test:ai-niche && next build",
+    "test:layouts": "node scripts/test-store-layouts.cjs",
+    "build": "npm run test:ai-niche && npm run test:layouts && next build",
     "start": "next start",
     "lint": "eslint .",
     "clean": "next clean"

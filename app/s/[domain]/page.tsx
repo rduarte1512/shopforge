@@ -1,6 +1,7 @@
 'use client';
 
 import { getProductSmartImage } from '@/lib/smart-images';
+import AdaptiveStorefront from '@/components/storefront/AdaptiveStorefront';
 
 import { getStorefrontDataAction } from '@/lib/actions';
 import { useParams } from 'next/navigation';
@@ -277,6 +278,20 @@ export default function StorefrontHomePage() {
   if (!store) return null;
 
   const activePromo = promotions.length > 0 ? promotions[0] : null;
+
+  // O motor adaptativo só é utilizado nas lojas novas. Lojas antigas não
+  // mudam de layout até o proprietário escolher explicitamente um novo design.
+  if (customization.layoutEngine === 'adaptive-v1') {
+    return (
+      <AdaptiveStorefront
+        store={store} customization={customization} products={products} promotions={promotions}
+        formatPrice={formatPrice} currency={currency} setCurrency={setCurrency}
+        availableCurrencies={availableCurrencies} addItem={addItem}
+        comparisonIds={comparisonIds} isInComparison={isInComparison}
+        addProduct={addProduct} removeProduct={removeProduct} clearComparison={clearComparison}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen overflow-hidden" style={{ backgroundColor: colors.background, color: colors.text, fontFamily: fonts.body }}>

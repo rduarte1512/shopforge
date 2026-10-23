@@ -31,8 +31,9 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { generateStoreConfig, generateMultipleProductsForStore } from '@/lib/ai-actions';
 import StoreProductReview, { StoreDraftProduct, toDraftProducts } from '@/components/dashboard/StoreProductReview';
-import { STORE_TEMPLATES, StoreTemplateId, buildTemplateCustomization } from '@/lib/store-templates';
+import { STORE_TEMPLATES, StoreTemplateId, buildTemplateCustomization, buildAdaptiveAiCustomization } from '@/lib/store-templates';
 import { findProductPhotos } from '@/lib/product-image-actions';
+import AdaptiveStorefront from '@/components/storefront/AdaptiveStorefront';
 import { useRouter } from 'next/navigation';
 
 function slugify(value: string) {
@@ -289,14 +290,7 @@ export default function StoresPage() {
       base_currency: 'EUR',
       enableAccounts: true,
     };
-    const customization = normalizeCustomization(aiConfig.customization, storePayload);
-    customization.templateId = 'ai-custom';
-    customization.templateLayout = aiConfig.customization?.templateLayout || 'split';
-    customization.sections = customization.sections.map((section: any) =>
-      section.type === 'hero'
-        ? { ...section, content: { ...section.content, title: storePayload.name } }
-        : section
-    );
+    const customization = buildAdaptiveAiCustomization(normalizeCustomization(aiConfig.customization, storePayload), storePayload, aiPrompt);
     await finishCreation(storePayload, customization, aiPrompt);
   };
 
@@ -447,6 +441,25 @@ export default function StoresPage() {
                             <h4 className="text-2xl font-black" style={{ fontFamily: aiConfig.customization?.fonts?.heading || 'Inter' }}>{aiConfig.customization?.sections?.find((section: any) => section.type === 'hero')?.content?.title || aiConfig.name}</h4>
                             <p className="text-xs opacity-70">{aiConfig.customization?.hero?.subtitle || aiConfig.description}</p>
                             <span className="inline-block px-4 py-2 rounded-xl text-xs text-white font-bold" style={{ backgroundColor: aiConfig.primaryColor || '#008060' }}>Explorar coleção</span>
+                            <div className="mt-4 flex flex-wrap justify-center gap-1.5">
+                              {(aiConfig.customization?.sections || []).slice(0, 9).map((section: any, index: number) => <span key={index} className="rounded-full border border-current/20 px-2 py-1 text-[10px] font-semibold">{section.type}</span>)}
+                            </div>
+                          </div>
+                          <div className="border-t border-current/10 p-3">
+                            <p className="mb-3 text-left text-xs font-black">Pré-visualização real do layout · desliza para explorar</p>
+                            <div className="h-[340px] overflow-y-auto rounded-lg border border-current/10 text-left">
+                              <div className="pointer-events-none">
+                                <AdaptiveStorefront
+                                  store={{ name: aiConfig.name, domain: aiConfig.domain || 'previsualizacao', description: aiConfig.description, primary_color: aiConfig.primaryColor }}
+                                  customization={buildAdaptiveAiCustomization(aiConfig.customization, { name: aiConfig.name, description: aiConfig.description, primary_color: aiConfig.primaryColor }, aiPrompt)}
+                                  products={draftProducts.filter(p => p.selected).map(p => ({ ...p, id: p.clientId }))}
+                                  formatPrice={(price: number) => Number(price).toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' })}
+                                  currency="EUR" setCurrency={() => {}} availableCurrencies={['EUR']}
+                                  addItem={() => {}} comparisonIds={[]} isInComparison={() => false}
+                                  addProduct={() => {}} removeProduct={() => {}} clearComparison={() => {}}
+                                />
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -492,11 +505,19 @@ export default function StoresPage() {
                         aria-pressed={newStore.templateId === template.id}
                         className={'text-left overflow-hidden rounded-2xl border-2 transition-all ' + (newStore.templateId === template.id ? 'border-emerald-600 shadow-md' : 'border-slate-200 hover:border-emerald-300')}
                       >
-                        <div className="h-24 p-3" style={{ backgroundColor: template.background, color: template.text }}>
-                          <div className="flex justify-between items-center text-[10px] font-black"><span>{template.name}</span><span className="rounded-full w-3 h-3" style={{ backgroundColor: template.accent }} /></div>
-                          <div className="mt-3 h-3 w-2/3 rounded" style={{ backgroundColor: template.text, opacity: .8 }} />
-                          <div className="mt-2 h-2 w-1/2 rounded" style={{ backgroundColor: template.text, opacity: .25 }} />
-                          <div className="mt-2 h-2 w-1/3 rounded" style={{ backgroundColor: template.accent }} />
+                        <div className="h-28 p-3 overflow-hidden" style={{ backgroundColor: template.background, color: template.text }}>
+                          <div className="flex justify-between items-center text-[9px] font-black"><span>{template.name}</span><span className="rounded-full w-3 h-3" style={{ backgroundColor: template.accent }} /></div>
+                          <div className={'mt-2 flex gap-2 ' + (template.heroVariant === 'editorial' || template.heroVariant === 'asymmetric' ? 'flex-row-reverse' : template.heroVariant === 'full-bleed' || template.heroVariant === 'centered' ? 'justify-center' : '')}>
+                            <div className={'flex flex-col gap-1 ' + (template.heroVariant === 'full-bleed' ? 'w-full items-center py-2' : 'w-3/5')}>
+                              <span className="h-2 w-full max-w-28 rounded-sm" style={{ backgroundColor: template.text, opacity: .85 }} />
+                              <span className="h-1 w-4/5 rounded-sm" style={{ backgroundColor: template.text, opacity: .28 }} />
+                              <span className="mt-1 h-2 w-3/5 rounded-sm" style={{ backgroundColor: template.accent }} />
+                            </div>
+                            {!['full-bleed','centered','product-led'].includes(template.heroVariant) && <div className="h-12 w-2/5 rounded-md" style={{ backgroundColor: template.accent, opacity: .3 }} />}
+                          </div>
+                          <div className="mt-2 flex gap-1">
+                            {template.sectionOrder.slice(0, 6).map((section, i) => <span key={i} className="h-3 flex-1 rounded-sm" style={{ backgroundColor: section === 'products' ? template.accent : template.text, opacity: section === 'products' ? .75 : .14 }} />)}
+                          </div>
                         </div>
                         <div className="bg-white p-3">
                           <p className="text-xs font-black text-slate-900">{template.name}</p>
