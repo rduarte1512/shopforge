@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { NotificationPanel } from '@/components/dashboard/NotificationPanel';
+import StoreSwitcher from '@/components/dashboard/StoreSwitcher';
 import { setSelectedStoreCookie } from '@/lib/dashboard-actions';
 import { useMockDB } from '@/lib/store';
 
@@ -118,9 +119,12 @@ export default function DashboardLayoutClient({ children, user, initialStores, i
       </Link>
 
       {stores.length > 0 && (
-        <select aria-label="Selecionar loja" value={selectedStoreId || ''} onChange={(event) => void changeStore(event.target.value)} disabled={isSwitchingStore} className="mx-2 mb-4 rounded-2xl bg-white/10 border border-white/10 px-3 py-3 text-sm font-black text-white disabled:opacity-60">
-          {stores.map((store) => <option key={store.id} value={store.id} className="text-slate-950">{store.name}</option>)}
-        </select>
+        <StoreSwitcher
+          stores={stores}
+          selectedStoreId={selectedStoreId}
+          isSwitchingStore={isSwitchingStore}
+          onSelectStore={changeStore}
+        />
       )}
 
       <nav className="flex-1 overflow-y-auto space-y-1.5 px-2 no-scrollbar">
