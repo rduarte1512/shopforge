@@ -146,10 +146,13 @@ export function getSmartImageUrl(input: string, index = 0, type: 'product' | 'ba
 export function getProductSmartImage(product: any, index = 0, storeContext = '') {
   if (product?.image_url && !isRandomPlaceholderImage(product.image_url)) return product.image_url;
 
-  const productDescription = [
-    product?.name, product?.category, product?.imageKeyword, product?.description,
-  ].filter(Boolean).join(' ');
+  // O nome e a categoria têm prioridade absoluta. Uma descrição ou palavra
+  // visual incorreta da IA não pode transformar uma cana de pesca num café.
+  const productDescription = [product?.name, product?.category].filter(Boolean).join(' ');
   const normalized = normalizeText(productDescription);
+  if (/(?:^|[^a-z])(?:pesca|pescar|pescador|canas?|carretos?|anz[oó]is?|iscas?|spinning|surfcasting|fishing|portacanas)(?:$|[^a-z])/.test(normalized)) {
+    return ''; // usar pesquisa externa ou pedir fotografia ao cliente, nunca mostrar outro setor
+  }
   // A fotografia é escolhida primeiro pelo tipo de produto, não pelo
   // segmento da loja. Evita mostrar relógios num produto de joalharia.
   const specific: Array<[RegExp, string, number]> = [
