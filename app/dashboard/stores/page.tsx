@@ -216,7 +216,8 @@ export default function StoresPage() {
     setIsGeneratingProducts(true);
     setGenerationError(null);
     try {
-      const description = aiPrompt + '. Nome da loja: ' + (aiConfig.name || '') + '. ' + (aiConfig.description || '');
+      // O nicho vem exclusivamente do pedido original, não do nome da marca gerado pela IA.
+      const description = aiPrompt.trim();
       const generated = await generateMultipleProducts(description, count);
       const photos = await findProductPhotos(generated, description);
       const next = toDraftProducts(generated, photos, description);

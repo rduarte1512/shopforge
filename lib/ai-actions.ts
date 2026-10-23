@@ -18,6 +18,17 @@ type StoreIntent = {
 
 const STORE_INTENTS: StoreIntent[] = [
   {
+    niche: 'pesca',
+    label: 'equipamento de pesca',
+    explicit: false,
+    keywords: ['pesca', 'pescar', 'pescador', 'pescadores', 'cana de pesca', 'canas de pesca', 'cana', 'canas', 'fishing', 'fishing rod', 'carreto', 'carretos', 'molinete', 'mulinete', 'anzol', 'anzois', 'anzóis', 'isca', 'iscas', 'amostra', 'amostras', 'spinning', 'surfcasting', 'casting', 'boia', 'bóia', 'boias', 'linhas de pesca', 'chumbada', 'fluorocarbono', 'monofilamento', 'passagua', 'passaguá', 'portacanas'],
+    nameRoots: ['Maré Alta', 'OceanCast', 'Pesca Pro', 'BlueHook', 'Mar Aberto'],
+    heroLines: ['Encontra as canas, carretos e acessórios certos para a tua próxima pescaria.', 'Equipamento de pesca para quem leva cada captura a sério.', 'Prepara a próxima aventura com a nossa seleção de artigos de pesca.'],
+    productNames: ['Cana de Pesca Spinning Carbono 2,40 m', 'Carreto Spinning 4000 com Travão Frontal', 'Cana Surfcasting 4,20 m', 'Conjunto de Anzóis de Pesca Resistentes', 'Linha de Pesca Fluorocarbono 150 m', 'Kit de Iscas Artificiais para Robalo', 'Boia de Pesca Deslizante', 'Saco de Transporte Portacanas'],
+    categories: ['Canas de Pesca', 'Carretos', 'Acessórios de Pesca', 'Iscas e Anzóis'],
+    imageKeyword: 'fishing rod reel tackle equipment',
+  },
+  {
     niche: 'relogios',
     label: 'relógios premium',
     explicit: false,
@@ -165,12 +176,44 @@ function pick<T>(items: T[]) {
   return items[Math.floor(Math.random() * items.length)];
 }
 
+// Evita correspondências acidentais: "chá" não deve identificar "mochila" como café.
+function matchesNicheKeyword(text: string, keyword: string) {
+  const normalizedKeyword = normalizeText(keyword).trim().replace(/[^a-z0-9 ]/g, (char) => '\\' + char);
+  return new RegExp('(?:^|[^a-z0-9])' + normalizedKeyword + '(?:s|es)?(?=$|[^a-z0-9])', 'i').test(text);
+}
+
+function getRequestedNiche(prompt: string) {
+  const normalized = prompt.trim().replace(/\s+/g, ' ');
+  const match = normalized.match(/\b(?:loja|site|marca|e-commerce|ecommerce|neg[oó]cio)\s+(?:online\s+)?(?:de|da|do|para|com)\s+([^.,!?\n;]+)/i);
+  const subject = (match?.[1] || normalized)
+    .split(/\s+(?:com um|com uma|com estilo|com design|com cores|com produtos|que tenha|onde|para vender|no estilo|e um site|e uma loja)\b/i)[0]
+    .trim()
+    .slice(0, 72);
+  return subject || 'produtos da loja';
+}
+
+// O catálogo pré-definido serve apenas nichos reconhecidos. Para qualquer
+// outro negócio, mantém o nicho pedido em vez de sortear café, moda, etc.
 function detectIntent(prompt: string): StoreIntent {
   const normalized = normalizeText(prompt);
-  const found = STORE_INTENTS.find((intent) => intent.keywords.some((keyword) => normalized.includes(normalizeText(keyword))));
-
+  const found = STORE_INTENTS.find((intent) =>
+    intent.keywords.some((keyword) => matchesNicheKeyword(normalized, keyword))
+  );
   if (found) return { ...found, explicit: true };
-  return { ...pick(STORE_INTENTS), explicit: false };
+
+  const label = getRequestedNiche(prompt);
+  const root = label.slice(0, 38);
+  return {
+    niche: slugify(label),
+    label,
+    explicit: true,
+    keywords: [],
+    nameRoots: [root],
+    heroLines: ['Descobre a nossa seleção de ' + label + '.'],
+    productNames: [],
+    categories: [],
+    imageKeyword: label,
+  };
 }
 
 function productMatchesIntent(product: any, intent: StoreIntent) {
@@ -291,6 +334,8 @@ function buildFallbackStoreConfig(prompt: string) {
 
 function normalizeProductsForIntent(products: any[], intent: StoreIntent) {
   const safeProducts = Array.isArray(products) ? products : [];
+  // Nichos novos nunca são preenchidos com produtos de um catálogo antigo.
+  if (!intent.productNames.length) return safeProducts.filter((p) => p && typeof p.name === 'string').slice(0, 8);
   const matchingCount = safeProducts.filter((product) => productMatchesIntent(product, intent)).length;
 
   if (intent.explicit && matchingCount < Math.max(2, Math.ceil(safeProducts.length * 0.6))) {
@@ -397,7 +442,7 @@ export async function generateStoreConfig(prompt: string, includeProducts: boole
       },
     });
 
-    if (!model) return includeProducts ? fallback : { ...fallback, products: [] };
+    if (!model) throw new Error('A API Gemini não está configurada. Verifica GEMINI_API_KEY na Vercel.');
 
     const creativeBrief = `
 You are an elite e-commerce brand strategist, store designer and conversion copywriter.
@@ -448,12 +493,12 @@ Return ONLY valid JSON.`;
     const response = await result.response;
     const aiText = response.text();
 
-    if (!aiText) return includeProducts ? fallback : { ...fallback, products: [] };
+    if (!aiText) throw new Error('A IA não devolveu uma proposta de loja. Tenta novamente.');
     const config = normalizeStoreConfig(parseJsonResponse(aiText), prompt);
     return includeProducts ? config : { ...config, products: [] };
   } catch (error: any) {
     console.error('AI Generation Critical Error:', error);
-    return includeProducts ? fallback : { ...fallback, products: [] };
+    throw new Error(error?.message || 'Não foi possível preparar a loja com IA. Tenta novamente.');
   }
 }
 
@@ -503,7 +548,7 @@ export async function generateProduct(prompt: string, category?: string) {
       },
     });
 
-    if (!model) return buildIntentProducts(intent)[0];
+    if (!model) throw new Error('A API Gemini não está configurada.');
 
     const categoryContext = category ? `Categoria do produto: ${category}.` : '';
     const fullPrompt = `Act as an e-commerce product expert.
@@ -517,10 +562,11 @@ Return ONLY valid JSON with: name, description, price, stock, category, imageKey
     const response = await result.response;
     const aiText = response.text();
 
-    if (!aiText) return buildIntentProducts(intent)[0];
+    if (!aiText) throw new Error('A IA não devolveu nenhum produto.');
 
     const product = parseJsonResponse(aiText);
-    return productMatchesIntent(product, intent) || !intent.explicit ? product : buildIntentProducts(intent)[0];
+    if (intent.productNames.length && !productMatchesIntent(product, intent)) throw new Error('O produto gerado não corresponde ao nicho pedido.');
+    return product;
   } catch (error: any) {
     console.error('AI Product Generation Error:', error);
     throw new Error(error.message || 'Erro desconhecido na geração de produto');
@@ -528,38 +574,74 @@ Return ONLY valid JSON with: name, description, price, stock, category, imageKey
 }
 
 export async function generateMultipleProducts(prompt: string, count: number = 4) {
-  const intent = detectIntent(prompt);
+  const request = typeof prompt === 'string' ? prompt.trim() : '';
+  const quantity = Math.min(8, Math.max(1, Math.floor(Number(count) || 4)));
+  if (request.length < 5) throw new Error('Descreve primeiro o nicho da loja para gerar produtos adequados.');
 
-  try {
-    const model = getModel({
-      generationConfig: {
-        temperature: 0.75,
-        responseMimeType: 'application/json',
-      },
-    });
+  const intent = detectIntent(request);
+  const model = getModel({
+    generationConfig: {
+      temperature: 0.55,
+      responseMimeType: 'application/json',
+    },
+  });
+  if (!model) throw new Error('A API Gemini não está configurada. Verifica GEMINI_API_KEY na Vercel.');
 
-    if (!model) return buildIntentProducts(intent).slice(0, count);
+  const instructions = [
+    'És um especialista em criação de catálogos de e-commerce. O teu objetivo é seguir ESTRITAMENTE o setor indicado pelo utilizador.',
+    'Pedido ORIGINAL (única fonte de verdade): ' + JSON.stringify(request),
+    'Setor identificado: ' + intent.label + '.',
+    'IMPORTANTE: NÃO inventes outro nicho. Nunca substituas produtos por café, relógios, cosméticos ou outros catálogos não pedidos.',
+    'Se o setor é pesca, os produtos devem ser canas de pesca, carretos, linhas, anzóis, iscas e acessórios de pesca. Nunca produtos alimentares ou cafés.',
+    'Gera exatamente ' + quantity + ' produtos diferentes, vendáveis, com nomes específicos, sem marcas comerciais inventadas.',
+    'Usa EUR e português de Portugal. Dá valores realistas e informações não enganosas.',
+    'Devolve APENAS um array JSON com name, description, price (número), stock (inteiro), category, imageKeyword (descrição visual específica do artigo), sku, weight, material, tags, isActive.',
+    'O nome de CADA produto deve deixar claro a que artigo real se refere. Não uses placeholders genéricos.',
+  ].join('\n');
 
-    const fullPrompt = `Act as an e-commerce product expert.
-The user asked for: "${prompt}"
-Detected niche: ${intent.label}.
-Generate ${count} complete product details in Portuguese.
-Every product MUST be related to ${intent.label}; do not create unrelated products.
-Return ONLY a valid JSON array with ${count} product objects. Each must include name, description, price, stock, category, imageKeyword, sku, weight, material, brand, tags, isActive.`;
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const result = await model.generateContent(instructions + (attempt ? '\nReformula a resposta anterior, porque estava incompleta ou fora do setor pedido. Confere cada nome de produto.' : ''));
+      const response = await result.response;
+      const text = response.text();
+      if (!text?.trim()) throw new Error('Resposta vazia do Gemini.');
+      const parsed = parseJsonResponse(text);
+      if (!Array.isArray(parsed)) throw new Error('A resposta não contém uma lista de produtos.');
 
-    const result = await model.generateContent(fullPrompt);
-    const response = await result.response;
-    const aiText = response.text();
-
-    if (!aiText) return buildIntentProducts(intent).slice(0, count);
-
-    const products = parseJsonResponse(aiText);
-    const productArray = Array.isArray(products) ? products : [products];
-    return normalizeProductsForIntent(productArray, intent).slice(0, count);
-  } catch (error: any) {
-    console.error('AI Products Generation Error:', error);
-    throw new Error(error.message || 'Erro desconhecido na geração de produtos');
+      const products = parsed.slice(0, quantity);
+      if (products.length !== quantity || products.some((p) => !p || typeof p.name !== 'string' || !p.name.trim() || !Number.isFinite(Number(p.price)) || Number(p.price) < 0)) {
+        throw new Error('Produtos incompletos ou com campos inválidos.');
+      }
+      if (intent.productNames.length) {
+        const unrelated = products.filter((product) => {
+          const title = normalizeText(String(product.name));
+          const titleMatches = intent.keywords.some((keyword) => matchesNicheKeyword(title, keyword));
+          const clearlyAnotherNiche = STORE_INTENTS.some((other) =>
+            other.niche !== intent.niche &&
+            other.keywords.some((keyword) => matchesNicheKeyword(title, keyword))
+          );
+          return !productMatchesIntent({ name: product.name, category: product.category }, intent)
+            || (clearlyAnotherNiche && !titleMatches);
+        });
+        if (unrelated.length) throw new Error('A IA sugeriu produtos fora do nicho ' + intent.label + ': ' + unrelated.map((p) => p.name).join(', '));
+      }
+      return products.map((product) => ({
+        ...product,
+        name: String(product.name).trim(),
+        category: String(product.category || intent.label).trim(),
+        description: String(product.description || ''),
+        imageKeyword: String(product.imageKeyword || product.name),
+        price: Number(product.price),
+        stock: Math.max(0, Math.floor(Number(product.stock) || 0)),
+      }));
+    } catch (error) {
+      lastError = error;
+      console.warn('Proposta de produtos rejeitada por formato ou nicho incorreto:', error);
+    }
   }
+  console.error('AI Products Generation Error:', lastError);
+  throw new Error('Não foi possível gerar produtos corretos para "' + intent.label + '". Não foram adicionados produtos. Tenta novamente.');
 }
 
 export async function chatWithAssistant(messages: { role: 'user' | 'assistant'; content: string }[]) {
