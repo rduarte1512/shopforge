@@ -498,7 +498,7 @@ export default function StoresPage() {
                           <div className="mt-2 flex gap-1">
                             {template.sectionOrder.slice(0, 6).map((section, i) => <span key={i} className="h-3 flex-1 rounded-sm" style={{ backgroundColor: section === 'products' ? template.accent : template.text, opacity: section === 'products' ? .75 : .14 }} />)}
                           </div>
-                        </div>                   </div>
+                        </div>
                         <div className="bg-white p-3">
                           <p className="text-xs font-black text-slate-900">{template.name}</p>
                           <p className="text-[11px] text-slate-500">{template.description}</p>
