@@ -113,6 +113,7 @@ export default function AdaptiveStorefront({
     const align = safeAlign(s.textAlign);
     const baseWidth = 'mx-auto max-w-7xl px-5 sm:px-8';
     const headingStyle = { fontFamily: heading, color: foreground };
+    const heroBackground = typeof s.backgroundColor === 'string' && /^#[a-f0-9]{6}$/i.test(s.backgroundColor) ? s.backgroundColor : null;
 
     if (type === 'hero') {
       const label = c.eyebrow || 'Descobre a nossa coleção';
@@ -128,7 +129,7 @@ export default function AdaptiveStorefront({
         <p className="mt-6 max-w-xl text-base leading-relaxed sm:text-lg" style={{ color: muted }}>{subtitle}</p>
         {cta}
       </div>;
-      if (variant === 'full-bleed') return <section key={section.id} className="relative isolate flex items-center overflow-hidden py-24" style={{ minHeight: tall, background: 'linear-gradient(115deg,' + foreground + ', ' + accent + ')' }}>
+      if (variant === 'full-bleed') return <section key={section.id} className="relative isolate flex items-center overflow-hidden py-24" style={{ minHeight: tall, background: heroBackground || 'linear-gradient(115deg,' + foreground + ', ' + accent + ')' }}>
         {primaryImage && <div className="absolute inset-0 opacity-25"><Image src={primaryImage} alt="" fill className="object-cover" /></div>}
         <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-black/20" />
         <div className="relative mx-auto w-full max-w-5xl px-6 text-center">
@@ -138,20 +139,20 @@ export default function AdaptiveStorefront({
           <button onClick={navToProducts} className="mt-8 rounded-lg bg-white px-8 py-4 text-sm font-bold text-slate-950">{c.buttonText || 'Explorar coleção'} <ArrowRight className="ml-1 inline h-4 w-4" /></button>
         </div>
       </section>;
-      if (variant === 'centered') return <section key={section.id} className="px-5 py-20 sm:py-28" style={{ minHeight: tall, background: 'radial-gradient(ellipse at top,' + accent + '1f,transparent 70%)' }}>
+      if (variant === 'centered') return <section key={section.id} className="px-5 py-20 sm:py-28" style={{ minHeight: tall, background: heroBackground || 'radial-gradient(ellipse at top,' + accent + '1f,transparent 70%)' }}>
         <div className="mx-auto max-w-4xl text-center"><span className="text-xs font-bold uppercase tracking-widest" style={{ color: accent }}>{label}</span><h1 className="mt-6 text-5xl font-semibold tracking-tight sm:text-7xl" style={headingStyle}>{title}</h1><p className="mx-auto mt-5 max-w-2xl text-lg" style={{ color: muted }}>{subtitle}</p><div className="mt-8 flex justify-center"><button onClick={navToProducts} className="rounded-lg px-8 py-4 text-sm font-bold" style={buttonStyle}>{c.buttonText || 'Explorar coleção'} <ArrowRight className="ml-1 inline h-4 w-4" /></button></div></div>
         <div className="mx-auto mt-12 grid max-w-4xl grid-cols-3 gap-3">{products.slice(0, 3).map((p: any) => <Link key={p.id} href={'/s/' + store.domain + '/product/' + p.id} className="relative aspect-[4/3] overflow-hidden rounded-lg bg-slate-100">{imageOf(p) && <Image src={imageOf(p)} alt={p.name} fill className="object-cover" />}</Link>)}</div>
       </section>;
-      if (variant === 'product-led') return <section key={section.id} className={baseWidth + ' py-16 sm:py-24'} style={{ minHeight: tall }}>
+      if (variant === 'product-led') return <section key={section.id} className={baseWidth + ' py-16 sm:py-24'} style={{ minHeight: tall, backgroundColor: heroBackground || undefined }}>
         <div className="mx-auto max-w-3xl text-center"><span className="text-xs font-bold uppercase tracking-widest" style={{ color: accent }}>{label}</span><h1 className="mt-5 text-4xl font-bold sm:text-6xl" style={headingStyle}>{title}</h1><p className="mx-auto mt-5 max-w-xl" style={{ color: muted }}>{subtitle}</p></div>
         <div className="mt-10 grid gap-5 sm:grid-cols-3">{products.slice(0, 3).map((p: any, i: number) => <ProductTile key={p.id} product={p} index={i} variant="compact" />)}</div>
         {products.length === 0 && <button onClick={navToProducts} className="mx-auto mt-8 block rounded-lg px-8 py-3 font-semibold" style={buttonStyle}>{c.buttonText || 'Ver catálogo'}</button>}
       </section>;
-      if (variant === 'editorial') return <section key={section.id} className="grid min-h-[500px] lg:grid-cols-2" style={{ minHeight: tall }}>
+      if (variant === 'editorial') return <section key={section.id} className="grid min-h-[500px] lg:grid-cols-2" style={{ minHeight: tall, backgroundColor: heroBackground || undefined }}>
         <Visual className="min-h-80 lg:min-h-[580px]" />
-        <div className="flex items-center px-8 py-16 sm:px-14 lg:px-20" style={{ backgroundColor: accent + '13' }}><div>{copy}</div></div>
+        <div className="flex items-center px-8 py-16 sm:px-14 lg:px-20" style={{ backgroundColor: heroBackground || accent + '13' }}><div>{copy}</div></div>
       </section>;
-      return <section key={section.id} className={baseWidth + ' py-14 sm:py-24'} style={{ minHeight: tall, background: variant === 'asymmetric' ? 'linear-gradient(125deg,' + accent + '18,transparent 60%)' : 'transparent' }}>
+      return <section key={section.id} className={baseWidth + ' py-14 sm:py-24'} style={{ minHeight: tall, background: heroBackground || (variant === 'asymmetric' ? 'linear-gradient(125deg,' + accent + '18,transparent 60%)' : 'transparent') }}>
         <div className={'grid items-center gap-12 lg:grid-cols-12 ' + (variant === 'asymmetric' ? 'lg:gap-20' : '')}>
           <div className={'lg:col-span-6 ' + (variant === 'asymmetric' ? 'lg:order-2' : '')}>{copy}</div>
           <Visual className={'lg:col-span-6 min-h-[390px] sm:min-h-[490px] ' + (variant === 'asymmetric' ? 'lg:order-1 rounded-[50%_50%_12px_12px]' : 'rounded-2xl')} />
