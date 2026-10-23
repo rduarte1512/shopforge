@@ -178,13 +178,7 @@ function pick<T>(items: T[]) {
 
 // Evita correspondências acidentais: "chá" não deve identificar "mochila" como café.
 function matchesNicheKeyword(text: string, keyword: string) {
-  const normalizedKeyword = normalizeText(keyword).trim().replace(/[-/\\^$*+?.()|[\]{}]/g, '\\function detectIntent(prompt: string): StoreIntent {
-  const normalized = normalizeText(prompt);
-  const found = STORE_INTENTS.find((intent) => intent.keywords.some((keyword) => normalized.includes(normalizeText(keyword))));
-
-  if (found) return { ...found, explicit: true };
-  return { ...pick(STORE_INTENTS), explicit: false };
-}');
+  const normalizedKeyword = normalizeText(keyword).trim().replace(/[^a-z0-9 ]/g, (char) => '\\' + char);
   return new RegExp('(?:^|[^a-z0-9])' + normalizedKeyword + '(?:s|es)?(?=$|[^a-z0-9])', 'i').test(text);
 }
 
