@@ -538,6 +538,9 @@ export default function StoreCustomizePage() {
                   <section className="bg-white border border-gray-100 rounded-3xl p-4 shadow-sm space-y-3">
                     <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400 flex items-center gap-2"><ImageIcon className="w-3 h-3" /> Hero principal</h3>
                     <input value={heroSection.content?.title || ''} onChange={(event) => updateHeroField('title', event.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-xs outline-none focus:border-shopify-green" placeholder="Título principal" />
+                    <label className="flex items-center justify-between gap-3 text-xs font-bold text-slate-600">Cor do fundo do banner
+                      <input type="color" value={heroSection.styles?.backgroundColor || '#f1f5f9'} onChange={(event) => updateHeroStyle('backgroundColor', event.target.value)} className="h-9 w-14 cursor-pointer rounded-lg border border-gray-200" aria-label="Cor de fundo do banner" />
+                    </label>
                     <textarea value={heroSection.content?.subtitle || ''} onChange={(event) => updateHeroField('subtitle', event.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-xs outline-none h-20 resize-none focus:border-shopify-green" placeholder="Subtítulo" />
                     <input value={heroSection.content?.buttonText || ''} onChange={(event) => updateHeroField('buttonText', event.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-xs outline-none focus:border-shopify-green" placeholder="Texto do botão" />
                     <div className="flex gap-1 bg-gray-50 p-1 rounded-xl">
