@@ -1,4 +1,4 @@
-import { getBannerSmartImage, isRandomPlaceholderImage } from './smart-images';
+import { detectImageTheme, getBannerSmartImage } from './smart-images';
 
 export type StoreTemplateId = 'minimal' | 'noir' | 'editorial' | 'vibrant' | 'nature' | 'tech';
 export type HeroVariant = 'split' | 'centered' | 'editorial' | 'full-bleed' | 'product-led' | 'asymmetric';
@@ -59,7 +59,7 @@ export function createDesignSections(
       { question: 'Como acompanho o meu pedido?', answer: 'Consulta as informações de acompanhamento disponibilizadas pela loja.' },
     ] },
     newsletter: { eyebrow: 'Novidades', title: 'Descobre primeiro as novidades', text: 'Acompanha os lançamentos e as coleções da nossa loja.', buttonText: 'Ver coleção' },
-    image: { url: getBannerSmartImage(name + ' ' + description), alt: name + ' — imagem editorial' },
+    image: { url: detectImageTheme(name + ' ' + description) !== 'generic' ? getBannerSmartImage(name + ' ' + description) : '', alt: name + ' — imagem editorial' },
     text: { text: description },
     button: { text: 'Ver coleção', action: 'products', url: '#produtos' },
     spacer: {},
@@ -122,7 +122,15 @@ export function buildAdaptiveAiCustomization(raw: any, store: { name?: string; d
   const rawSections = Array.isArray(suggested.sections) ? suggested.sections.slice(0, 14) : [];
   const baseByType = new Map(base.sections.map(s => [s.type, s]));
   const used = new Set<string>();
-  let sections: DraftSection[] = rawSections.filter((s: any) => s && validSectionTypes.includes(s.type)).map((section: any, index: number) => {
+  const seenUnique = new Set<string>();
+  let sections: DraftSection[] = rawSections.filter((s: any) => {
+    if (!s || !validSectionTypes.includes(s.type)) return false;
+    if (['hero', 'products'].includes(s.type)) {
+      if (seenUnique.has(s.type)) return false;
+      seenUnique.add(s.type);
+    }
+    return true;
+  }).map((section: any, index: number) => {
     const type = section.type as string;
     const fallback = baseByType.get(type) || createDesignSections([type], store, { heroVariant: variant, productVariant: card, accent: base.colors.accent })[0];
     const sourceContent = section.content && typeof section.content === 'object' && !Array.isArray(section.content) ? section.content : {};
