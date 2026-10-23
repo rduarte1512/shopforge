@@ -175,7 +175,10 @@ export function getProductSmartImage(product: any, index = 0, storeContext = '')
   if (detectImageTheme(productDescription) !== 'generic') {
     return getSmartImageUrl(productDescription, index, 'product');
   }
-  return getSmartImageUrl(storeContext || productDescription, index, 'product');
+  // Em nichos sem imagens verificadas não usar fotos genéricas de outro setor.
+  // A UI apresenta um espaço para imagem até o utilizador escolher ou pesquisar uma foto real.
+  if (detectImageTheme(storeContext) === 'generic') return '';
+  return getSmartImageUrl(storeContext, index, 'product');
 }
 
 export function getBannerSmartImage(storeOrText: any, index = 0) {
