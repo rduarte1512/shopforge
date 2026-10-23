@@ -44,7 +44,7 @@ async function run(){
   {type:'move-section',target:'products',position:'first'},
   {type:'add-section',value:'trust'},
  ]);
- assert.deepEqual(complex.config.sections.map(s=>s.type),['products','hero','faq','trust']);
+ assert.equal(JSON.stringify(complex.config.sections.map(s=>s.type)),JSON.stringify(['products','hero','faq','trust']));
  assert.equal(complex.config.sections.find(s=>s.type==='hero').styles.variant,'full-bleed');
  assert.equal(complex.config.layoutEngine,'adaptive-v1');
 
