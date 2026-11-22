@@ -18,6 +18,7 @@ export type TrafficOverview = {
     paidOrders: number;
   };
   daily: Array<{ date: string; visitors: number; pageViews: number }>;
+  hourly: Array<{ hour: string; visitors: number; pageViews: number }>;
   topProducts: Array<{ id: string; name: string; views: number; addToCarts: number }>;
   note: string;
 };
@@ -78,10 +79,10 @@ export async function getStoreTrafficOverview(storeId: string, period: TrafficPe
   const beforeSince = new Date(now.getTime() - period * 2 * 24 * 60 * 60 * 1000).toISOString();
   const fallback = (available: boolean, note: string): TrafficOverview => ({
     available, period, generatedAt: new Date().toISOString(),
-    summary: { ...EMPTY_SUMMARY }, daily: [], topProducts: [], note,
+    summary: { ...EMPTY_SUMMARY }, daily: [], hourly: [], topProducts: [], note,
   });
   try {
-    const [eventTotals, visits, live, returning, previous, daily, productViews, paidOrders] = await Promise.all([
+    const [eventTotals, visits, live, returning, previous, daily, hourly, productViews, paidOrders] = await Promise.all([
       sql`SELECT
         COUNT(DISTINCT visitor_id) FILTER (WHERE event_type = 'page_view')::int AS visitors,
         COUNT(*) FILTER (WHERE event_type = 'page_view')::int AS page_views,
@@ -107,6 +108,13 @@ export async function getStoreTrafficOverview(storeId: string, period: TrafficPe
           COUNT(*) FILTER (WHERE event_type = 'page_view')::int AS page_views
         FROM store_traffic_events
         WHERE store_id = ${storeId} AND created_at >= ${since}::timestamptz
+        GROUP BY 1 ORDER BY 1 ASC`,
+      sql`SELECT
+          to_char(date_trunc('hour', created_at AT TIME ZONE 'UTC'), 'YYYY-MM-DD HH24:00') AS hour,
+          COUNT(DISTINCT visitor_id) FILTER (WHERE event_type = 'page_view')::int AS visitors,
+          COUNT(*) FILTER (WHERE event_type = 'page_view')::int AS page_views
+        FROM store_traffic_events
+        WHERE store_id = ${storeId} AND created_at >= now() - interval '24 hours'
         GROUP BY 1 ORDER BY 1 ASC`,
       sql`SELECT e.product_id::text AS id,
           COALESCE(MAX(p.name), 'Produto removido') AS name,
@@ -142,6 +150,9 @@ export async function getStoreTrafficOverview(storeId: string, period: TrafficPe
         date: String(row.day),
         visitors: toNumber(row.visitors),
         pageViews: toNumber(row.page_views),
+      })),
+      hourly: hourly.rows.map(row => ({
+        hour: String(row.hour), visitors: toNumber(row.visitors), pageViews: toNumber(row.page_views),
       })),
       topProducts: productViews.rows.map(row => ({
         id: String(row.id), name: String(row.name),
