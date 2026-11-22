@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Activity, ArrowRight, ArrowUpRight, BadgeCheck, BrainCircuit, Check, CheckCircle2, ChevronRight, Clock3, Eye, FlaskConical, History, Lightbulb, Loader2, Package, Palette, RotateCcw, ShieldCheck, Sparkles, TrendingUp, WandSparkles, X } from 'lucide-react';
 import {
   applyForgePilotImprovementAction,
@@ -13,6 +13,7 @@ import {
 } from '@/lib/forgepilot-actions';
 import type { ForgePilotBrand, ImprovementId } from '@/lib/forgepilot-engine';
 import AdaptiveStorefront from '@/components/storefront/AdaptiveStorefront';
+import ForgePilotGrowthLab from '@/components/dashboard/ForgePilotGrowthLab';
 
 type Overview = NonNullable<Awaited<ReturnType<typeof getForgePilotOverviewAction>>>;
 type Tab = 'insights' | 'brand' | 'history' | 'growth';
@@ -75,6 +76,10 @@ function RealStorePreview({ overview, customization }: { overview: Overview; cus
 export default function ForgePilotClient({ initial }: { initial: Overview | null }) {
   const [overview, setOverview] = useState<Overview | null>(initial);
   const [tab, setTab] = useState<Tab>('insights');
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get('tab');
+    if (requested === 'growth' || requested === 'brand' || requested === 'history' || requested === 'insights') setTab(requested);
+  }, []);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [draft, setDraft] = useState<ForgePilotBrand>(initial?.brand || { audience: '', positioning: '', tone: '', tagline: '' });
   const [loading, setLoading] = useState<string | null>(null);
@@ -160,7 +165,7 @@ export default function ForgePilotClient({ initial }: { initial: Overview | null
   ];
   return (
     <div className="space-y-6 pb-12">
-      <section className="relative overflow-hidden rounded-[2rem] bg-[#0a1429] p-6 text-white shadow-2xl sm:p-9">
+      <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#0b1429] via-[#172449] to-[#153f38] p-6 text-white shadow-2xl sm:p-9">
         <div className="pointer-events-none absolute -right-16 -top-28 h-80 w-80 rounded-full bg-emerald-400/20 blur-3xl" />
         <div className="pointer-events-none absolute bottom-0 left-1/3 h-44 w-80 rounded-full bg-violet-600/20 blur-3xl" />
         <div className="relative flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
@@ -168,10 +173,11 @@ export default function ForgePilotClient({ initial }: { initial: Overview | null
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[.18em] text-emerald-200">
               <BrainCircuit className="h-4 w-4" /> ForgePilot · Inteligência para a tua loja
             </div>
-            <h1 className="text-4xl font-black tracking-tight sm:text-5xl">A tua loja. Sempre a evoluir.</h1>
-            <p className="mt-3 max-w-lg text-sm leading-7 text-slate-300 sm:text-base">Descobre o que podes melhorar em <strong className="text-white">{store.name}</strong>. Vê o resultado antes de guardar. Tu manténs sempre o controlo.</p>
+            <h1 className="text-4xl font-black tracking-tight sm:text-5xl">O próximo nível da tua loja.</h1>
+            <p className="mt-3 max-w-lg text-sm leading-7 text-slate-300 sm:text-base">Design, diagnóstico e crescimento num único espaço. Acompanhamos <strong className="text-white">{store.name}</strong> com melhorias concretas, pré-visualizações e dados reais.</p>
             <div className="mt-6 flex flex-wrap gap-3">
               <button onClick={() => setTab('insights')} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-emerald-300"><WandSparkles className="h-4 w-4" /> Ver melhorias</button>
+              <button onClick={() => setTab('growth')} className="inline-flex items-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/20"><FlaskConical className="h-4 w-4" /> Abrir Growth Lab</button>
               <Link href={'/s/' + store.domain} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/20"><ArrowUpRight className="h-4 w-4" /> Abrir loja</Link>
             </div>
           </div>
@@ -184,7 +190,7 @@ export default function ForgePilotClient({ initial }: { initial: Overview | null
         </div>
       </section>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      {tab === 'insights' && <div className="grid gap-3 sm:grid-cols-3">
         {[
           { label: 'Produtos na loja', value: audit.productCount, icon: Package, detail: 'Catálogo atual' },
           { label: 'Produtos com fotografia', value: audit.imageCount + ' / ' + audit.productCount, icon: Eye, detail: 'Imagens próprias registadas' },
@@ -193,11 +199,16 @@ export default function ForgePilotClient({ initial }: { initial: Overview | null
           <div className="rounded-2xl bg-emerald-500/10 p-3 text-emerald-600"><item.icon className="h-5 w-5" /></div>
           <div><p className="text-xs font-semibold text-text-secondary">{item.label}</p><p className="mt-1 text-2xl font-black text-text-primary">{item.value}</p><p className="text-[11px] text-text-muted">{item.detail}</p></div>
         </div>)}
-      </div>
+      </div>}
 
-      <div className="flex flex-wrap gap-2 border-b border-border pb-3" role="tablist" aria-label="Secções do ForgePilot">
-        {navigation.map(item => <button key={item.id} type="button" role="tab" aria-selected={tab === item.id} onClick={() => { setTab(item.id); setError(null); setNotice(null); }} className={'inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ' + (tab === item.id ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950' : 'text-text-secondary hover:bg-gray-100 dark:hover:bg-white/10')}>
-          <item.icon className="h-4 w-4" />{item.title}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" role="tablist" aria-label="Secções do ForgePilot">
+        {navigation.map(item => <button key={item.id} type="button" role="tab" aria-selected={tab === item.id} onClick={() => { setTab(item.id); setError(null); setNotice(null); }} className={'group min-w-0 rounded-2xl border p-4 text-left transition duration-200 hover:-translate-y-0.5 sm:p-5 ' + (tab === item.id ? 'border-emerald-500/50 bg-emerald-500/10 shadow-[0_9px_28px_rgba(16,185,129,.10)]' : 'border-border bg-card-bg shadow-sm hover:border-emerald-500/20')}>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <span className={'inline-flex rounded-xl p-2.5 ' + (tab === item.id ? 'bg-emerald-500 text-white' : 'bg-bg-main text-text-secondary')}><item.icon className="h-5 w-5" /></span>
+            <ArrowUpRight className={'h-4 w-4 transition ' + (tab === item.id ? 'text-emerald-500' : 'text-text-muted opacity-50 group-hover:opacity-100')}/>
+          </div>
+          <span className="block text-sm font-black text-text-primary">{item.title}</span>
+          <span className="mt-1 block text-[11px] leading-4 text-text-muted">{item.id === 'insights' ? 'Diagnóstico e melhorias' : item.id === 'brand' ? 'Personalidade da marca' : item.id === 'history' ? 'Versões e segurança' : 'Dados e crescimento'}</span>
         </button>)}
       </div>
 
@@ -205,11 +216,11 @@ export default function ForgePilotClient({ initial }: { initial: Overview | null
       {error && <div role="alert" className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm font-semibold text-rose-700 dark:text-rose-200">{error} <button onClick={() => { setError(null); void refresh(); }} className="ml-2 underline">Atualizar</button></div>}
 
       {tab === 'insights' && <>
-        <section className="rounded-[1.5rem] border border-border bg-card-bg p-5 sm:p-6">
-          <div className="flex items-start gap-3"><div className="rounded-xl bg-violet-500/10 p-2.5 text-violet-600"><Sparkles className="h-5 w-5" /></div><div>
-            <h2 className="text-lg font-black">Simples de utilizar, sem surpresas</h2>
-            <p className="mt-1 text-sm leading-6 text-text-secondary">1. Escolhe uma sugestão. 2. Compara a página atual com a nova. 3. Guarda apenas se gostares. Podes desfazer tudo no Histórico.</p>
-          </div></div>
+        <section className="rounded-[1.5rem] border border-border bg-card-bg p-5 shadow-sm sm:p-6">
+          <div className="mb-4 flex items-start gap-3"><span className="rounded-xl bg-violet-500/10 p-2.5 text-violet-600"><Sparkles className="h-5 w-5" /></span><div><h2 className="text-lg font-black">Uma evolução de cada vez</h2><p className="mt-1 text-xs leading-5 text-text-secondary">Não precisas de conhecimentos técnicos para aplicar as sugestões.</p></div></div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {[{ n: '01', title: 'Descobre', copy: 'Analisa as prioridades da tua loja.' }, { n: '02', title: 'Compara', copy: 'Vê o antes e o depois.' }, { n: '03', title: 'Decide', copy: 'Publica ou volta atrás quando quiseres.' }].map(step => <div key={step.n} className="flex gap-3 rounded-xl bg-bg-main p-4"><span className="text-sm font-black text-emerald-600 dark:text-emerald-300">{step.n}</span><div><p className="text-sm font-black">{step.title}</p><p className="mt-1 text-xs leading-5 text-text-muted">{step.copy}</p></div></div>)}
+          </div>
         </section>
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_330px]">
           <div className="space-y-4">
@@ -280,11 +291,7 @@ export default function ForgePilotClient({ initial }: { initial: Overview | null
         </div>)}</div>}
       </section>}
 
-      {tab === 'growth' && <section className="rounded-[1.5rem] border border-border bg-card-bg p-7 sm:p-10">
-        <div className="max-w-2xl"><div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-500/10 text-violet-600"><FlaskConical className="h-7 w-7" /></div><span className="rounded-full bg-violet-500/10 px-3 py-1.5 text-xs font-black text-violet-700 dark:text-violet-300">Próxima etapa de desenvolvimento</span><h2 className="mt-5 text-3xl font-black">Growth Lab: melhorias orientadas por resultados</h2>
-        <p className="mt-4 text-sm leading-7 text-text-secondary">Os testes A/B e a medição de visitas ainda não estão ativos. Para não apresentar números inventados, esta área só mostrará métricas quando existirem eventos reais e uma recolha de dados devidamente configurada.</p>
-        <div className="mt-6 grid gap-3 sm:grid-cols-2"><div className="rounded-xl border border-border bg-bg-main p-4"><ShieldCheck className="mb-2 h-5 w-5 text-emerald-500" /><h3 className="font-bold">Privacidade em primeiro lugar</h3><p className="mt-1 text-xs text-text-secondary">Eventos mínimos, com respeito pelo consentimento e pela legislação aplicável.</p></div><div className="rounded-xl border border-border bg-bg-main p-4"><FlaskConical className="mb-2 h-5 w-5 text-violet-500" /><h3 className="font-bold">Sem promessas falsas</h3><p className="mt-1 text-xs text-text-secondary">Nenhuma conclusão de teste sem dados e tamanho de amostra adequados.</p></div></div></div>
-      </section>}
+      {tab === 'growth' && <ForgePilotGrowthLab storeId={store.id} />}
 
       {preview && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 p-3 backdrop-blur-md sm:p-6" role="dialog" aria-modal="true" aria-label="Comparar melhoria da loja">
         <div className="flex max-h-[94vh] w-full max-w-[1450px] flex-col overflow-hidden rounded-[1.5rem] bg-card-bg shadow-2xl">
