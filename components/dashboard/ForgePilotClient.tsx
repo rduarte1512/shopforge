@@ -9,6 +9,7 @@ import {
   previewForgePilotImprovementAction,
   restoreForgePilotHistoryAction,
   saveForgePilotBrandAction,
+  suggestForgePilotBrandWithAIAction,
 } from '`/lib/forgepilot-actions';
 import type { ForgePilotBrand, ImprovementId } from '`/lib/forgepilot-engine';
 import AdaptiveStorefront from '`/components/storefront/AdaptiveStorefront';
@@ -109,6 +110,16 @@ export default function ForgePilotClient({ initial }: { initial: Overview | null
     } catch (err) { setError(err instanceof Error ? err.message : 'Ocorreu um erro ao aplicar a melhoria.'); }
     finally { setLoading(null); }
   }
+  async function handleSuggestBrand() {
+    if (!overview || loading) return;
+    setLoading('ai-brand'); setError(null); setNotice(null);
+    try {
+      const suggestion = await suggestForgePilotBrandWithAIAction(overview.store.id);
+      setDraft(suggestion);
+      setNotice('A IA preparou uma nova proposta. Revê os campos e carrega em Guardar identidade se gostares.');
+    } catch (err) { setError(err instanceof Error ? err.message : 'Não foi possível obter uma sugestão.'); }
+    finally { setLoading(null); }
+  }
   async function handleBrandSave() {
     if (!overview || loading) return;
     setLoading('brand'); setError(null); setNotice(null);
@@ -141,7 +152,6 @@ export default function ForgePilotClient({ initial }: { initial: Overview | null
   }
   const { store, audit, products, brand, history } = overview;
   const done = audit.checks.filter(item => item.passed).length;
-  const sections = Array.isArray(store.customization?.sections) ? store.customization.sections : [];
   const navigation: Array<{ id: Tab; title: string; icon: typeof Sparkles }> = [
     { id: 'insights', title: 'Oportunidades', icon: Lightbulb },
     { id: 'brand', title: 'Identidade', icon: Palette },
@@ -234,7 +244,10 @@ export default function ForgePilotClient({ initial }: { initial: Overview | null
 
       {tab === 'brand' && <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="rounded-[1.5rem] border border-border bg-card-bg p-6 sm:p-8">
-          <div className="mb-6"><h2 className="text-2xl font-black">Brand DNA</h2><p className="mt-2 text-sm text-text-secondary">Diz ao ForgePilot quem é a tua marca. A identidade guardada ajuda a orientar as próximas recomendações. Não altera a loja publicada sem aprovação.</p></div>
+          <div className="mb-6"><h2 className="text-2xl font-black">Brand DNA</h2><p className="mt-2 text-sm text-text-secondary">Diz ao ForgePilot quem é a tua marca. A identidade guardada ajuda a orientar as próximas recomendações. Não altera a loja publicada sem aprovação.</p>
+            <button onClick={() => void handleSuggestBrand()} disabled={Boolean(loading)} className="mt-4 inline-flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-sm font-bold text-emerald-700 transition hover:bg-emerald-500/15 disabled:opacity-50 dark:text-emerald-200">
+              {loading === 'ai-brand' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Sugerir identidade com IA
+            </button><p className="mt-2 text-xs text-text-muted">A proposta aparece nos campos para reveres. Nada é guardado automaticamente.</p></div>
           <div className="space-y-5">{([
             ['audience', 'Para quem vendes?', 'Ex.: Pessoas que procuram acessórios de pesca resistentes.'],
             ['positioning', 'O que torna a tua loja especial?', 'Explica a proposta da marca numa frase.'],
