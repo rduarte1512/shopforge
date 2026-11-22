@@ -1,4 +1,4 @@
-import { sql } from '`vercel/postgres';
+import { sql } from '@vercel/postgres';
 
 export type TrafficPeriod = 1 | 7 | 30;
 export type TrafficOverview = {
