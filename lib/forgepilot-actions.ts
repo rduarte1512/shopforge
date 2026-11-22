@@ -1,7 +1,7 @@
 'use server';
 
-import { auth } from '`clerk/nextjs/server';
-import { sql } from '`vercel/postgres';
+import { auth } from '@clerk/nextjs/server';
+import { sql } from '@vercel/postgres';
 import { createHash, randomUUID } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
 import { getProducts } from './db';
