@@ -10,9 +10,9 @@ import {
   restoreForgePilotHistoryAction,
   saveForgePilotBrandAction,
   suggestForgePilotBrandWithAIAction,
-} from '`/lib/forgepilot-actions';
-import type { ForgePilotBrand, ImprovementId } from '`/lib/forgepilot-engine';
-import AdaptiveStorefront from '`/components/storefront/AdaptiveStorefront';
+} from '@/lib/forgepilot-actions';
+import type { ForgePilotBrand, ImprovementId } from '@/lib/forgepilot-engine';
+import AdaptiveStorefront from '@/components/storefront/AdaptiveStorefront';
 
 type Overview = NonNullable<Awaited<ReturnType<typeof getForgePilotOverviewAction>>>;
 type Tab = 'insights' | 'brand' | 'history' | 'growth';
