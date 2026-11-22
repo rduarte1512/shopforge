@@ -120,8 +120,8 @@ export default function ForgePilotClient({ initial }: { initial: Overview | null
     setLoading('ai-brand'); setError(null); setNotice(null);
     try {
       const suggestion = await suggestForgePilotBrandWithAIAction(overview.store.id);
-      setDraft(suggestion);
-      setNotice('A IA preparou uma nova proposta. Revê os campos e carrega em Guardar identidade se gostares.');
+      setDraft(suggestion.brand);
+      setNotice(suggestion.notice);
     } catch (err) { setError(err instanceof Error ? err.message : 'Não foi possível obter uma sugestão.'); }
     finally { setLoading(null); }
   }
