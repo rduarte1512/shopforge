@@ -9,11 +9,12 @@
     "test:ai-designer": "node scripts/test-ai-designer.cjs",
     "test:store-switch": "node scripts/test-store-switch.cjs",
     "test:store-switch-ui": "node scripts/test-store-switch-ui.cjs",
-    "build": "npm run test:ai-niche && npm run test:layouts && npm run test:ai-designer && npm run test:store-switch && npm run test:store-switch-ui && npm run test:forgepilot && next build",
+    "build": "npm run test:ai-niche && npm run test:layouts && npm run test:ai-designer && npm run test:store-switch && npm run test:store-switch-ui && npm run test:forgepilot && npm run test:growth-lab && next build",
     "start": "next start",
     "lint": "eslint .",
     "clean": "next clean",
-    "test:forgepilot": "node scripts/test-forgepilot.cjs"
+    "test:forgepilot": "node scripts/test-forgepilot.cjs",
+    "test:growth-lab": "node scripts/test-growth-lab.cjs"
   },
   "dependencies": {
     "@clerk/localizations": "^4.5.8",
