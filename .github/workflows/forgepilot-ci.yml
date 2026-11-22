@@ -1,0 +1,32 @@
+name: ForgePilot checks
+
+on:
+  push:
+    branches:
+      - feature/forgepilot-mvp
+  pull_request:
+    paths:
+      - 'lib/forgepilot-*.ts'
+      - 'components/dashboard/ForgePilotClient.tsx'
+      - 'app/dashboard/forgepilot/**'
+      - 'app/dashboard/DashboardLayoutClient.tsx'
+      - 'scripts/test-forgepilot.cjs'
+      - 'package.json'
+      - '.github/workflows/forgepilot-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:forgepilot
+      - run: npx tsc --noEmit
