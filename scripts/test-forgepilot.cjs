@@ -75,7 +75,15 @@ const sql = async (strings, ...params) => {
   }
   throw Error('Unexpected query: ' + query);
 };
-const server = { exports: {}, console, require: id => {
+const server = { exports: {}, console, process: { env: { GEMINI_API_KEY: 'test-key' } }, require: id => {
+  if (id === '@google/generative-ai') return { GoogleGenerativeAI: class {
+    getGenerativeModel() {
+      return { generateContent: async () => ({ response: { text: () => JSON.stringify({
+        audience: 'Pescadores amadores e experientes', positioning: 'Equipamento para quem gosta de pesca',
+        tone: 'Profissional e próximo', tagline: 'Tudo para a próxima captura',
+      }) } }) };
+    }
+  } };
   if (id === '@clerk/nextjs/server') return { auth: async () => ({ userId: 'owner' }) };
   if (id === '@vercel/postgres') return { sql };
   if (id === 'next/cache') return { revalidatePath: () => {} };
@@ -104,7 +112,10 @@ async function run() {
   const brand = { audience: 'Amantes de pesca', positioning: 'Equipamentos selecionados', tone: 'Objetivo e claro', tagline: 'Pescar mais e melhor' };
   await server.exports.saveForgePilotBrandAction('s1', brand, brandView.version);
   assert.equal(state.customization.forgepilot.brand.tagline, brand.tagline);
+  const suggestion = await server.exports.suggestForgePilotBrandWithAIAction('s1');
+  assert.equal(suggestion.tagline, 'Tudo para a próxima captura');
+  assert.equal(state.customization.forgepilot.brand.tagline, brand.tagline, 'AI suggestions must not auto-save');
   await assert.rejects(server.exports.saveForgePilotBrandAction('s2', brand, brandView.version), /acesso/);
-  console.log('PASS: ForgePilot — scoring real, previews sem escrita, alterações reversíveis, versões concorrentes, Brand DNA e acesso por proprietário.');
+  console.log('PASS: ForgePilot — scoring real, previews sem escrita, alterações reversíveis, versões concorrentes, Brand DNA por IA com confirmação explícita e acesso por proprietário.');
 }
 run().catch(error => { console.error(error); process.exitCode = 1; });
