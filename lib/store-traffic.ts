@@ -98,7 +98,7 @@ export async function getStoreTrafficOverview(storeId: string, period: TrafficPe
           GROUP BY visitor_id
           HAVING MIN(started_at) < ${since}::timestamptz
             AND MAX(last_seen) >= ${since}::timestamptz
-        ) AS returning`,
+        ) AS returning_visitors`,
       sql`SELECT COUNT(DISTINCT visitor_id)::int AS count FROM store_traffic_events
         WHERE store_id = ${storeId} AND event_type = 'page_view'
           AND created_at >= ${beforeSince}::timestamptz AND created_at < ${since}::timestamptz`,

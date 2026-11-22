@@ -75,13 +75,23 @@ const sql = async (strings, ...params) => {
   }
   throw Error('Unexpected query: ' + query);
 };
+const validBrandJson = JSON.stringify({
+  audience: 'Pescadores amadores e experientes',
+  positioning: 'Equipamento para quem gosta de pesca',
+  tone: 'Profissional e próximo',
+  tagline: 'Tudo para a próxima captura',
+});
+const responses = [];
+let aiCalls = 0;
 const server = { exports: {}, console, process: { env: { GEMINI_API_KEY: 'test-key' } }, require: id => {
   if (id === '@google/generative-ai') return { GoogleGenerativeAI: class {
     getGenerativeModel() {
-      return { generateContent: async () => ({ response: { text: () => JSON.stringify({
-        audience: 'Pescadores amadores e experientes', positioning: 'Equipamento para quem gosta de pesca',
-        tone: 'Profissional e próximo', tagline: 'Tudo para a próxima captura',
-      }) } }) };
+      return { generateContent: async () => {
+        aiCalls++;
+        const response = responses.length ? responses.shift() : validBrandJson;
+        if (response instanceof Error) throw response;
+        return { response: { text: () => response } };
+      } };
     }
   } };
   if (id === '@clerk/nextjs/server') return { auth: async () => ({ userId: 'owner' }) };
@@ -113,8 +123,36 @@ async function run() {
   await server.exports.saveForgePilotBrandAction('s1', brand, brandView.version);
   assert.equal(state.customization.forgepilot.brand.tagline, brand.tagline);
   const aiBrandSuggestion = await server.exports.suggestForgePilotBrandWithAIAction('s1');
-  assert.equal(aiBrandSuggestion.tagline, 'Tudo para a próxima captura');
-  assert.equal(state.customization.forgepilot.brand.tagline, brand.tagline, 'AI suggestions must not auto-save');
+  assert.equal(aiBrandSuggestion.source, 'ai');
+  assert.equal(aiBrandSuggestion.brand.tagline, 'Tudo para a próxima captura');
+
+  // Teste do erro real: resposta Gemini interrompida a meio de uma string JSON.
+  const truncated = '{"audience":"Pescadores apaixonados por';
+  responses.push(truncated, validBrandJson);
+  const callsBeforeRetry = aiCalls;
+  const retriedSuggestion = await server.exports.suggestForgePilotBrandWithAIAction('s1');
+  assert.equal(retriedSuggestion.source, 'ai');
+  assert.equal(retriedSuggestion.brand.tagline, 'Tudo para a próxima captura');
+  assert.equal(aiCalls, callsBeforeRetry + 2, 'Malformed JSON must retry once');
+
+  // Se os dois modelos falharem, o utilizador recebe uma proposta realista,
+  // em vez do erro Server Components sem detalhes.
+  responses.push(truncated, truncated);
+  const fallbackSuggestion = await server.exports.suggestForgePilotBrandWithAIAction('s1');
+  assert.equal(fallbackSuggestion.source, 'fallback');
+  assert.equal(fallbackSuggestion.brand.tone, 'Prático e especializado');
+  assert.match(fallbackSuggestion.notice, /indisponível/);
+
+  server.process.env.GEMINI_API_KEY = '';
+  const unavailableSuggestion = await server.exports.suggestForgePilotBrandWithAIAction('s1');
+  assert.equal(unavailableSuggestion.source, 'fallback');
+  assert.match(unavailableSuggestion.notice, /não está configurada/);
+  server.process.env.GEMINI_API_KEY = 'test-key';
+  assert.equal(state.customization.forgepilot.brand.tagline, brand.tagline, 'AI suggestions and fallback must not auto-save');
+
+  const trafficSql = fs.readFileSync(path.join(root, 'lib/store-traffic.ts'), 'utf8');
+  assert(trafficSql.includes('AS returning_visitors'), 'SQL cannot alias a subquery with a reserved word');
+  assert(!trafficSql.includes('AS returning`'), 'Reserved alias must not be reintroduced');
   await assert.rejects(server.exports.saveForgePilotBrandAction('s2', brand, brandView.version), /acesso/);
   console.log('PASS: ForgePilot — scoring real, previews sem escrita, alterações reversíveis, versões concorrentes, Brand DNA por IA com confirmação explícita e acesso por proprietário.');
 }
