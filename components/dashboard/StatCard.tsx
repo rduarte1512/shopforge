@@ -77,7 +77,7 @@ export function StatCard({
       </div>
 
       <div className="relative mt-5 flex items-center gap-2">
-        <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-black border ${
+        {previousValue !== undefined && <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-black border ${
           trend.percentage === 0 
             ? 'bg-slate-100 text-text-muted border-slate-200 dark:bg-white/5 dark:border-white/10' 
             : trend.isPositive 
@@ -92,7 +92,7 @@ export function StatCard({
             <TrendingDown className="w-3 h-3" />
           )}
           <span>{trend.percentage.toFixed(1)}%</span>
-        </div>
+        </div>}
         <span className="text-[11px] font-bold text-text-muted">{period}</span>
       </div>
     </motion.div>

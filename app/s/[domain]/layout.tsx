@@ -7,6 +7,7 @@ import { Loader2, ShoppingCart } from 'lucide-react';
 import { useState, ReactNode, useEffect } from 'react';
 import { CartProvider, useCart } from '@/components/CartProvider';
 import { StoreAccountWidget } from '@/components/storefront/StoreAccountWidget';
+import StoreTrafficTracker, { openStoreTrafficPreferences } from '@/components/storefront/StoreTrafficTracker';
 
 function StoreLayoutInner({ children, store }: { children: ReactNode, store: any }) {
   const { cartCount } = useCart();
@@ -28,6 +29,7 @@ function StoreLayoutInner({ children, store }: { children: ReactNode, store: any
       className={`min-h-screen flex flex-col ${isDark ? 'bg-black text-white' : 'bg-white text-black'}`}
       style={isDark ? { '--primary': store.primary_color, color: 'white' } as any : { '--primary': store.primary_color } as any}
     >
+      <StoreTrafficTracker storeId={store.id} domain={store.domain} />
       <header className="border-b" style={{ borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }}>
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <Link href={`/s/${store.domain}`} className="text-2xl font-bold tracking-tight">
@@ -66,6 +68,7 @@ function StoreLayoutInner({ children, store }: { children: ReactNode, store: any
 
       <footer className="py-12 text-center" style={{ borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>
         <p className="opacity-60 text-sm">© {new Date().getFullYear()} {store.name}. Powered by ShopForge.</p>
+        <button type="button" onClick={openStoreTrafficPreferences} className="mt-3 text-xs underline underline-offset-4 opacity-60 hover:opacity-100">Preferências de privacidade</button>
       </footer>
     </div>
   );

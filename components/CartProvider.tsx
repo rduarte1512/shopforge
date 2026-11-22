@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
 import { saveAbandonedCartAction } from '@/lib/abandoned-cart-actions';
+import { emitStorefrontTraffic } from '@/components/storefront/StoreTrafficTracker';
 
 type CartItem = {
   productId: string;
@@ -98,6 +99,7 @@ export function CartProvider({ children, storeId, storeDomain }: { children: Rea
   }, [cartItems, cartStorageKey, hydrated, storeId, storeKey]);
 
   const addItem = (productId: string, variantId?: string | null) => {
+    if (storeId) emitStorefrontTraffic({ storeId, eventType: 'add_to_cart', productId });
     setCartItems(prev => {
       const key = `${productId}-${variantId || 'base'}`;
       const existing = prev.find(i => `${i.productId}-${i.variantId || 'base'}` === key);

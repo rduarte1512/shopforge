@@ -11,6 +11,7 @@ import { createStorefrontOrderAction } from '@/lib/checkout-actions';
 import { recoverAbandonedCartAction } from '@/lib/abandoned-cart-actions';
 import { getEnabledPaymentMethods, StorefrontPaymentMethod } from '@/lib/payment-methods';
 import { useCart } from '@/components/CartProvider';
+import { emitStorefrontTraffic } from '@/components/storefront/StoreTrafficTracker';
 import { useCurrency } from '@/hooks/useCurrency';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -191,6 +192,7 @@ export default function CartPage() {
     }
     if (!checkoutName || !checkoutEmail) return alert('Confirme o nome e email do cliente.');
 
+    if (store?.id) emitStorefrontTraffic({ storeId: store.id, eventType: 'checkout_started' });
     setIsCheckingOut(true);
 
     try {

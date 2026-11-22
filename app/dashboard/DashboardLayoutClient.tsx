@@ -9,6 +9,7 @@ import {
   CreditCard,
   Eye,
   LayoutDashboard,
+  Sparkles,
   Link as LinkIcon,
   LogOut,
   Mail,
@@ -34,6 +35,7 @@ import { useMockDB } from '@/lib/store';
 
 const navigation = [
   { name: 'Visão Geral', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'ForgePilot AI', href: '/dashboard/forgepilot', icon: Sparkles },
   { name: 'Minhas Lojas', href: '/dashboard/stores', icon: StoreIcon },
   { name: 'Produtos', href: '/dashboard/products', icon: Package },
   { name: 'Encomendas', href: '/dashboard/orders', icon: ShoppingCart },

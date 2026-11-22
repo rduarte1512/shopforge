@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { StatusBadge, StatCard } from '@/components/dashboard';
 import { motion } from 'motion/react';
+import TrafficPulse from '@/components/dashboard/TrafficPulse';
 
 interface DashboardClientProps {
   user: any;
@@ -55,9 +56,10 @@ export default function DashboardClient({ user, stores, products, orders, select
     : safeStores[0];
 
   const stats = useMemo(() => {
-    const totalSales = safeOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
+    const paidOrders = safeOrders.filter(order => ['paid', 'shipped', 'delivered'].includes(String(order.status || '').toLowerCase()));
+    const totalSales = paidOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
     const activeProducts = safeProducts.filter(p => Number(p.stock || 0) > 0).length;
-    const avgOrderValue = safeOrders.length > 0 ? totalSales / safeOrders.length : 0;
+    const avgOrderValue = paidOrders.length > 0 ? totalSales / paidOrders.length : 0;
     
     return {
       totalSales,
@@ -75,7 +77,7 @@ export default function DashboardClient({ user, stores, products, orders, select
     });
 
     return last7Days.map(date => {
-      const dayOrders = safeOrders.filter(o => normalizeDateValue(o.created_at).startsWith(date));
+      const dayOrders = safeOrders.filter(o => ['paid', 'shipped', 'delivered'].includes(String(o.status || '').toLowerCase()) && normalizeDateValue(o.created_at).startsWith(date));
       const total = dayOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
       return {
         name: new Date(date).toLocaleDateString('pt-PT', { weekday: 'short' }),
@@ -130,47 +132,49 @@ export default function DashboardClient({ user, stores, products, orders, select
           className="flex items-center gap-2.5 px-4 py-2 bg-card-bg/90 dark:bg-white/[0.06] border border-border rounded-2xl shadow-premium backdrop-blur-xl"
         >
           <Calendar className="w-4 h-4 text-primary" />
-          <span className="text-[13px] font-bold text-text-secondary">Últimos 30 dias</span>
+          <span className="text-[13px] font-bold text-text-secondary">Visão geral da loja</span>
           <div className="w-px h-4 bg-border mx-1" />
-          <span className="text-[12px] font-black text-emerald-500 dark:text-emerald-300 uppercase tracking-wider">Tempo Real</span>
+          <span className="text-[12px] font-black text-emerald-500 dark:text-emerald-300 uppercase tracking-wider">Encomendas registadas</span>
         </motion.div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
-          label="Vendas Totais" 
+          label="Receita de pedidos pagos" 
           currentValue={stats.totalSales} 
-          previousValue={stats.totalSales * 0.9}
+          
           icon={DollarSign}
           format="currency"
-          period="Este mês"
+          period="Total histórico · sem cancelados"
         />
         <StatCard 
           label="Encomendas" 
           currentValue={stats.ordersCount} 
-          previousValue={Math.floor(stats.ordersCount * 0.8)}
+          
           icon={ShoppingCart}
-          period="Últimos 7 dias"
+          period="Total histórico"
           iconColor="var(--color-accent)"
         />
         <StatCard 
           label="Produtos Ativos" 
           currentValue={stats.activeProducts} 
-          previousValue={stats.activeProducts}
+          
           icon={Package}
-          period="Stock atual"
+          period="Produtos com stock"
           iconColor="#f59e0b"
         />
         <StatCard 
           label="Receita Média" 
           currentValue={stats.avgOrderValue} 
-          previousValue={stats.avgOrderValue * 0.95}
+          
           icon={TrendingUp}
           format="currency"
-          period="Por pedido"
+          period="Por encomenda paga"
           iconColor="var(--color-primary)"
         />
       </div>
+
+      <TrafficPulse storeId={currentStore.id} />
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         <div className="xl:col-span-2 space-y-6">
@@ -296,9 +300,7 @@ export default function DashboardClient({ user, stores, products, orders, select
               <p className="text-sm text-emerald-50 mb-6 font-medium leading-relaxed">
                 A nossa IA está pronta para ajudar-te a configurar a tua loja e aumentar as vendas.
               </p>
-              <button className="w-full py-3 bg-white text-primary font-black rounded-xl text-sm shadow-lg hover:shadow-white/20 transition-all active:scale-95">
-                Falar com Assistente
-              </button>
+              <Link href="/dashboard/forgepilot" className="block w-full py-3 bg-white text-center text-primary font-black rounded-xl text-sm shadow-lg hover:shadow-white/20 transition-all active:scale-95">Explorar ForgePilot</Link>
             </div>
           </div>
         </div>
