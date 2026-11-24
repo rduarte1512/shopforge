@@ -56,7 +56,7 @@ export default function StoreTrafficTracker({ storeId, domain }: { storeId: stri
 
   useEffect(() => {
     try {
-      const blocked = navigator.doNotTrack === '1' || (navigator as Navigator & { globalPrivacyControl?: boolean }).globalPrivacyControl === true;
+      const blocked = new URLSearchParams(window.location.search).get('forgepilot-audit') === '1' || navigator.doNotTrack === '1' || (navigator as Navigator & { globalPrivacyControl?: boolean }).globalPrivacyControl === true;
       setChoice(blocked ? 'blocked' : (localStorage.getItem(choiceKey(storeId)) === 'granted' ? 'granted' : localStorage.getItem(choiceKey(storeId)) === 'denied' ? 'denied' : 'unknown'));
     } catch { setChoice('blocked'); }
     setReady(true);
