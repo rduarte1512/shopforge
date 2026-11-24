@@ -4,13 +4,16 @@ on:
   push:
     branches:
       - feature/forgepilot-mvp
+      - feat/forgepilot-copilot-missions-20261123
   pull_request:
     paths:
       - 'lib/forgepilot-*.ts'
       - 'components/dashboard/ForgePilotClient.tsx'
+      - 'components/dashboard/ForgePilotCopilot.tsx'
       - 'app/dashboard/forgepilot/**'
       - 'app/dashboard/DashboardLayoutClient.tsx'
       - 'scripts/test-forgepilot.cjs'
+      - 'scripts/test-forgepilot-missions.cjs'
       - 'package.json'
       - '.github/workflows/forgepilot-ci.yml'
 
@@ -29,4 +32,5 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:forgepilot
+      - run: npm run test:missions
       - run: npx tsc --noEmit

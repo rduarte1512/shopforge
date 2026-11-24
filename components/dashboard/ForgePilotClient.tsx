@@ -14,9 +14,11 @@ import {
 import type { ForgePilotBrand, ImprovementId } from '@/lib/forgepilot-engine';
 import AdaptiveStorefront from '@/components/storefront/AdaptiveStorefront';
 import ForgePilotGrowthLab from '@/components/dashboard/ForgePilotGrowthLab';
+import ForgePilotCopilot from '@/components/dashboard/ForgePilotCopilot';
+import { forgePilotAuditDimensions } from '@/lib/forgepilot-missions';
 
 type Overview = NonNullable<Awaited<ReturnType<typeof getForgePilotOverviewAction>>>;
-type Tab = 'insights' | 'brand' | 'history' | 'growth';
+type Tab = 'copilot' | 'insights' | 'brand' | 'history' | 'growth';
 type Preview = { id: ImprovementId; title: string; customization: any; version: string };
 const currency = (amount: number) => new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(Number(amount) || 0);
 const noOp = () => {};
@@ -75,10 +77,10 @@ function RealStorePreview({ overview, customization }: { overview: Overview; cus
 
 export default function ForgePilotClient({ initial }: { initial: Overview | null }) {
   const [overview, setOverview] = useState<Overview | null>(initial);
-  const [tab, setTab] = useState<Tab>('insights');
+  const [tab, setTab] = useState<Tab>('copilot');
   useEffect(() => {
     const requested = new URLSearchParams(window.location.search).get('tab');
-    if (requested === 'growth' || requested === 'brand' || requested === 'history' || requested === 'insights') setTab(requested);
+    if (requested === 'copilot' || requested === 'growth' || requested === 'brand' || requested === 'history' || requested === 'insights') setTab(requested);
   }, []);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [draft, setDraft] = useState<ForgePilotBrand>(initial?.brand || { audience: '', positioning: '', tone: '', tagline: '' });
@@ -158,6 +160,7 @@ export default function ForgePilotClient({ initial }: { initial: Overview | null
   const { store, audit, products, brand, history } = overview;
   const done = audit.checks.filter(item => item.passed).length;
   const navigation: Array<{ id: Tab; title: string; icon: typeof Sparkles }> = [
+    { id: 'copilot', title: 'Copilot & Missions', icon: BrainCircuit },
     { id: 'insights', title: 'Oportunidades', icon: Lightbulb },
     { id: 'brand', title: 'Identidade', icon: Palette },
     { id: 'history', title: 'Histórico', icon: History },
@@ -176,7 +179,7 @@ export default function ForgePilotClient({ initial }: { initial: Overview | null
             <h1 className="text-4xl font-black tracking-tight sm:text-5xl">O próximo nível da tua loja.</h1>
             <p className="mt-3 max-w-lg text-sm leading-7 text-slate-300 sm:text-base">Design, diagnóstico e crescimento num único espaço. Acompanhamos <strong className="text-white">{store.name}</strong> com melhorias concretas, pré-visualizações e dados reais.</p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <button onClick={() => setTab('insights')} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-emerald-300"><WandSparkles className="h-4 w-4" /> Ver melhorias</button>
+              <button onClick={() => setTab('copilot')} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-emerald-300"><BrainCircuit className="h-4 w-4" /> Abrir Copilot</button>
               <button onClick={() => setTab('growth')} className="inline-flex items-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/20"><FlaskConical className="h-4 w-4" /> Abrir Growth Lab</button>
               <Link href={'/s/' + store.domain} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/20"><ArrowUpRight className="h-4 w-4" /> Abrir loja</Link>
             </div>
@@ -201,14 +204,16 @@ export default function ForgePilotClient({ initial }: { initial: Overview | null
         </div>)}
       </div>}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" role="tablist" aria-label="Secções do ForgePilot">
+      {tab === 'insights' && <section className="rounded-[1.5rem] border border-border bg-card-bg p-5 sm:p-6"><h2 className="mb-4 text-base font-black">Diagnóstico por dimensão</h2><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">{forgePilotAuditDimensions(audit).map(dimension => <div key={dimension.id}><div className="mb-2 flex items-center justify-between gap-2"><span className="text-xs font-bold text-text-secondary">{dimension.label}</span><span className="text-xs font-black tabular-nums">{dimension.score}%</span></div><div className="h-2 overflow-hidden rounded-full bg-bg-main"><div className="h-full rounded-full bg-emerald-500" style={{ width: dimension.score + '%' }}/></div><p className="mt-1.5 text-[10px] text-text-muted">{dimension.achieved}/{dimension.total} pontos técnicos</p></div>)}</div><p className="mt-4 text-[11px] text-text-muted">Estas dimensões medem critérios de preparação; não são previsões de conversão.</p></section>}
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5" role="tablist" aria-label="Secções do ForgePilot">
         {navigation.map(item => <button key={item.id} type="button" role="tab" aria-selected={tab === item.id} onClick={() => { setTab(item.id); setError(null); setNotice(null); }} className={'group min-w-0 rounded-2xl border p-4 text-left transition duration-200 hover:-translate-y-0.5 sm:p-5 ' + (tab === item.id ? 'border-emerald-500/50 bg-emerald-500/10 shadow-[0_9px_28px_rgba(16,185,129,.10)]' : 'border-border bg-card-bg shadow-sm hover:border-emerald-500/20')}>
           <div className="mb-3 flex items-center justify-between gap-2">
             <span className={'inline-flex rounded-xl p-2.5 ' + (tab === item.id ? 'bg-emerald-500 text-white' : 'bg-bg-main text-text-secondary')}><item.icon className="h-5 w-5" /></span>
             <ArrowUpRight className={'h-4 w-4 transition ' + (tab === item.id ? 'text-emerald-500' : 'text-text-muted opacity-50 group-hover:opacity-100')}/>
           </div>
           <span className="block text-sm font-black text-text-primary">{item.title}</span>
-          <span className="mt-1 block text-[11px] leading-4 text-text-muted">{item.id === 'insights' ? 'Diagnóstico e melhorias' : item.id === 'brand' ? 'Personalidade da marca' : item.id === 'history' ? 'Versões e segurança' : 'Dados e crescimento'}</span>
+          <span className="mt-1 block text-[11px] leading-4 text-text-muted">{item.id === 'copilot' ? 'IA e planos guiados' : item.id === 'insights' ? 'Diagnóstico e melhorias' : item.id === 'brand' ? 'Personalidade da marca' : item.id === 'history' ? 'Versões e segurança' : 'Dados e crescimento'}</span>
         </button>)}
       </div>
 
@@ -252,6 +257,8 @@ export default function ForgePilotClient({ initial }: { initial: Overview | null
           </aside>
         </div>
       </>}
+
+      {tab === 'copilot' && <ForgePilotCopilot storeId={store.id} storeName={store.name} audit={audit} version={overview.version} activeMission={store.customization?.forgepilot?.activeMission} busy={Boolean(loading)} onPreview={id => void handlePreview(id)} onMissionSaved={refresh} onOpenGrowth={() => setTab('growth')} />}
 
       {tab === 'brand' && <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="rounded-[1.5rem] border border-border bg-card-bg p-6 sm:p-8">
