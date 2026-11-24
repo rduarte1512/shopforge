@@ -28,7 +28,7 @@ export default function ProductsClient({ user, initialProducts, selectedStoreId 
 
   const {user:planUser}=useAuth();
   const plan = effectiveForgePlan(planUser?.subscriptionTier,planUser?.subscriptionStatus);
-  const isAiRestricted = plan.id === 'STARTER' || plan.id === 'GROWTH';
+  const isAiRestricted = !hasFeature(plan.id,'active','aiProducts');
   const canCreateMoreProducts = products.length < (plan?.limits?.products || 50);
   
   const [isModalOpen, setIsModalOpen] = useState(false);

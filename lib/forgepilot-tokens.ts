@@ -44,5 +44,5 @@ export async function getForgeTokenWallet(userId:string){
   if(!rows[0])throw new ForgeTokenError('Perfil indisponível.');
   const row=rows[0];const plan=effectiveForgePlan(row.subscription_tier,row.subscription_status);
   const recent=await sql.query("SELECT id,operation,tokens,status,created_at FROM forgepilot_token_ledger WHERE user_id=$1 AND period_start="+periodSql+" ORDER BY created_at DESC LIMIT 12",[userId]);
-  return {plan:plan.name,limit:plan.tokens,used:Number(row.used),remaining:Math.max(0,plan.tokens-Number(row.used)),renews:String(row.renews),recent:recent.rows.map(r=>({id:String(r.id),operation:r.operation as ForgeOperation,tokens:Number(r.tokens),status:String(r.status),date:new Date(r.created_at).toISOString()}))};
+  return {tier:plan.id,plan:plan.name,limit:plan.tokens,used:Number(row.used),remaining:Math.max(0,plan.tokens-Number(row.used)),renews:String(row.renews),recent:recent.rows.map(r=>({id:String(r.id),operation:r.operation as ForgeOperation,tokens:Number(r.tokens),status:String(r.status),date:new Date(r.created_at).toISOString()}))};
 }

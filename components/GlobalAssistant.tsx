@@ -2,6 +2,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@clerk/nextjs';
+import { useAuth as usePlanAuth } from '@/lib/auth-context';
+import { hasFeature } from '@/lib/plans';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { ArrowUp, BarChart3, Check, Copy, History, Loader2, Maximize2, Mic, Minimize2, Package, PanelRightOpen, Plus, Sparkles, Square, TrendingUp, X } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { chatWithAssistant } from '@/lib/ai-actions';
@@ -55,6 +59,8 @@ function AssistantMark({ large = false }: { large?: boolean }) {
 
 export default function GlobalAssistant() {
   const { userId } = useAuth();
+  const {user:planUser,loading:planLoading}=usePlanAuth();
+  const pathname=usePathname();
   const reducedMotion = useReducedMotion();
   const [isOpen, setIsOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -285,6 +291,8 @@ export default function GlobalAssistant() {
     }
   }
 
+  if(!userId||!pathname.startsWith('/dashboard')||planLoading)return null;
+  if(!hasFeature(planUser?.subscriptionTier,planUser?.subscriptionStatus,'assistant'))return <Link href="/dashboard/subscription" className="fixed bottom-4 right-4 z-50 inline-flex items-center gap-2 rounded-full border border-border bg-card-bg px-4 py-3 text-sm font-semibold text-text-primary shadow-lg"><Sparkles size={17} className="text-emerald-500"/> Assistente IA · Growth</Link>;
   return (
     <>
       <AnimatePresence>

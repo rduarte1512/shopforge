@@ -137,7 +137,7 @@ export default function StoresPage() {
   const subscriptionTier = user?.subscriptionTier || 'STARTER';
   const plan = effectiveForgePlan(user?.subscriptionTier,user?.subscriptionStatus);
   const canCreateMoreStores = stores.length < plan.limits.stores;
-  const isAiRestricted = plan.id === 'STARTER' || plan.id === 'GROWTH';
+  const isAiRestricted = !hasFeature(plan.id,'active','aiStore');
 
   const steps = [
     'Conceito e posicionamento da marca',
