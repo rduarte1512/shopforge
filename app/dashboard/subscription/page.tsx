@@ -15,7 +15,7 @@ export default function SubscriptionPage() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
 
   const handleSelectPlan = (tier: SubscriptionTier) => {
-    if (tier === user?.subscriptionTier || (user && user.subscriptionTier !== 'STARTER' && ['active','trialing'].includes(user.subscriptionStatus))) return;
+    if ((tier === user?.subscriptionTier && ['active','trialing'].includes(user.subscriptionStatus)) || (user && user.subscriptionTier !== 'STARTER' && ['active','trialing'].includes(user.subscriptionStatus))) return;
     router.push(`/dashboard/subscription/checkout?plan=${tier}&billing=${billingCycle}`);
   };
 
@@ -135,7 +135,7 @@ export default function SubscriptionPage() {
       {user && user.subscriptionTier !== 'STARTER' && ['active','trialing'].includes(user.subscriptionStatus) && <p className="rounded-xl border border-border bg-card-bg p-4 text-sm text-text-secondary">A tua subscrição atual mantém o preço contratado. Para evitar uma segunda cobrança, a troca automática de planos pagos ainda não está disponível.</p>}
       <div className="relative grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
         {SUBSCRIPTION_PLANS.map((plan, index) => {
-          const isCurrent = user?.subscriptionTier === plan.id;
+          const isCurrent = user?.subscriptionTier === plan.id && ['active','trialing'].includes(user.subscriptionStatus);
           const isPro = plan.id === 'PRO';
           const displayedPrice = billingCycle === 'yearly' ? Math.round(plan.price * 0.8) : plan.price;
           const yearlyTotal = Math.round(plan.price * 12 * 0.8);

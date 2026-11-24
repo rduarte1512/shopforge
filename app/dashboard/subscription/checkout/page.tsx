@@ -3,6 +3,7 @@
 import { useMemo, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { SUBSCRIPTION_PLANS, SubscriptionTier } from '@/lib/store';
+import { tokenFormat } from '@/lib/plans';
 import { CreditCard, ArrowLeft, ShieldCheck, CheckCircle2, Loader2, Wallet, Smartphone, Sparkles, LockKeyhole, BadgePercent, AlertCircle, ArrowRight } from 'lucide-react';
 
 type PaymentMethod = 'card' | 'paypal' | 'revolut';
@@ -254,8 +255,8 @@ function CheckoutContent() {
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
-                  <span className="text-text-muted font-bold">IVA</span>
-                  <span className="text-text-primary font-black">€0,00</span>
+                  <span className="text-text-muted font-bold">Tokens ForgePilot / mês</span>
+                  <span className="text-text-primary font-black">{tokenFormat(plan.tokens)}</span>
                 </div>
                 <div className="flex justify-between pt-5 border-t border-border text-xl">
                   <span className="text-text-primary font-black">Total hoje</span>

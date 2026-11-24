@@ -53,6 +53,7 @@ assert.match(read('app/api/cron/prune-traffic/route.ts'),/CRON_SECRET/);
 
 let writes=0;
 const state={exports:{},console,Date,process:{env:{}},require:name=>{
+  if(name==='./forgepilot-tokens')return {withForgeTokens:async(_user,_op,generate)=>generate(),ForgeTokenError:class extends Error{}};
   if(name==='@clerk/nextjs/server')return {auth:async()=>({userId:'owner'})};
   if(name==='@vercel/postgres')return {sql:{query:async(q,p)=>{
     if(q.startsWith('SELECT id,name,description,domain'))return {rows:p[0]===storeId&&p[1]==='owner'?[store]:[]};

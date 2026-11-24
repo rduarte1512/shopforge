@@ -43,7 +43,7 @@ const db=async(q,p=[])=>{
  if(q.startsWith('UPDATE'))return {rows:[{id:storeId}]};
  return {rows:[]};
 };
-const actions=load('lib/forgepilot-batch-actions.ts',{'@clerk/nextjs/server':{auth:async()=>({userId:'owner'})},'@vercel/postgres':{sql:{query:db,connect:async()=>({query:db,release:()=>{calls.push('RELEASE');}})}},'next/cache':{revalidatePath:()=>{}},'@google/generative-ai':{},'./forgepilot-batch':batch,'./forgepilot-engine':engine,'./forgepilot-pro':pro});
+const actions=load('lib/forgepilot-batch-actions.ts',{'@clerk/nextjs/server':{auth:async()=>({userId:'owner'})},'@vercel/postgres':{sql:{query:db,connect:async()=>({query:db,release:()=>{calls.push('RELEASE');}})}},'next/cache':{revalidatePath:()=>{}},'@google/generative-ai':{},'./forgepilot-tokens':{withForgeTokens:async(_user,_op,generate)=>generate(),ForgeTokenError:class extends Error{}},'./forgepilot-batch':batch,'./forgepilot-engine':engine,'./forgepilot-pro':pro});
 async function run(){
  const p=await actions.previewForgePilotBatchAction(storeId,changes);
  assert.equal(p.items.length,3);
