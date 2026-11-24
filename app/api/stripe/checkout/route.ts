@@ -50,7 +50,11 @@ export async function POST(request: Request) {
     const email = clerkUser?.primaryEmailAddress?.emailAddress ?? clerkUser?.emailAddresses?.[0]?.emailAddress ?? undefined;
     const name = [clerkUser?.firstName, clerkUser?.lastName].filter(Boolean).join(' ') || clerkUser?.username || undefined;
 
-    await ensureProfileFromAuth({ userId, email, name });
+    const profile = await ensureProfileFromAuth({ userId, email, name });
+    // Do not create overlapping paid subscriptions. Existing subscriptions retain their price.
+    if (profile.subscription_tier !== 'STARTER' && ['active','trialing'].includes(profile.subscription_status)) {
+      return NextResponse.json({error:'Já tens uma subscrição paga ativa. A troca automática de plano ainda não está disponível; gere a subscrição atual primeiro.'},{status:409});
+    }
 
     const origin = request.headers.get('origin') ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
     const amountCents = getCheckoutAmountCents(plan, billingCycle);

@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import ForgeTokenWallet from '@/components/dashboard/ForgeTokenWallet';
+import { tokenFormat } from '@/lib/plans';
 import { Check, Zap, Star, Crown, Rocket, Building2, ShieldCheck, ArrowRight, Sparkles, Globe, Headphones, BarChart3, BadgePercent, CreditCard, LockKeyhole } from 'lucide-react';
 import { SUBSCRIPTION_PLANS, SubscriptionTier } from '@/lib/store';
 import { useAuth } from '@/lib/auth-context';
@@ -13,7 +15,7 @@ export default function SubscriptionPage() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
 
   const handleSelectPlan = (tier: SubscriptionTier) => {
-    if (tier === user?.subscriptionTier) return;
+    if (tier === user?.subscriptionTier || (user && user.subscriptionTier !== 'STARTER' && ['active','trialing'].includes(user.subscriptionStatus))) return;
     router.push(`/dashboard/subscription/checkout?plan=${tier}&billing=${billingCycle}`);
   };
 
@@ -129,6 +131,8 @@ export default function SubscriptionPage() {
         </div>
       </div>
 
+      <ForgeTokenWallet history/>
+      {user && user.subscriptionTier !== 'STARTER' && ['active','trialing'].includes(user.subscriptionStatus) && <p className="rounded-xl border border-border bg-card-bg p-4 text-sm text-text-secondary">A tua subscrição atual mantém o preço contratado. Para evitar uma segunda cobrança, a troca automática de planos pagos ainda não está disponível.</p>}
       <div className="relative grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
         {SUBSCRIPTION_PLANS.map((plan, index) => {
           const isCurrent = user?.subscriptionTier === plan.id;
@@ -180,6 +184,7 @@ export default function SubscriptionPage() {
                   )}
                 </div>
 
+                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">ForgePilot IA</p><p className="mt-1 text-lg font-black">{tokenFormat(plan.tokens)} tokens</p><p className="text-xs text-text-muted">por mês, todas as lojas</p></div>
                 <div className="space-y-4 pt-4 border-t border-border">
                   {plan.features.map((feature, idx) => (
                     <div key={idx} className="flex items-start gap-3">
@@ -194,7 +199,7 @@ export default function SubscriptionPage() {
 
               <button
                 onClick={() => handleSelectPlan(plan.id)}
-                disabled={isCurrent || isFree}
+                disabled={isCurrent || isFree || Boolean(user && user.subscriptionTier !== 'STARTER' && ['active','trialing'].includes(user.subscriptionStatus))}
                 className={`w-full mt-8 py-4 rounded-2xl font-black text-[14px] transition-all flex items-center justify-center gap-2 border-none cursor-pointer group ${
                   isCurrent
                     ? 'bg-gray-100 text-text-muted cursor-not-allowed dark:bg-white/[0.06]'
@@ -205,7 +210,7 @@ export default function SubscriptionPage() {
                     : 'bg-slate-950 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200'
                 }`}
               >
-                {isCurrent ? 'Plano atual' : isFree ? 'Incluído grátis' : (
+                {isCurrent ? 'Plano atual' : isFree ? 'Incluído grátis' : user && user.subscriptionTier !== 'STARTER' && ['active','trialing'].includes(user.subscriptionStatus) ? 'Troca indisponível' : (
                   <>
                     Selecionar {plan.name}
                     <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import ForgeTokenWallet from './ForgeTokenWallet';
 import { useEffect, useState } from 'react';
 import { Activity, ArrowRight, ArrowUpRight, BadgeCheck, BrainCircuit, Check, CheckCircle2, ChevronRight, Clock3, Eye, FlaskConical, History, Lightbulb, Loader2, Package, Palette, RotateCcw, ShieldCheck, Sparkles, TrendingUp, WandSparkles, X } from 'lucide-react';
 import {
@@ -183,6 +184,7 @@ export default function ForgePilotClient({ initial }: { initial: Overview | null
         <div className="flex items-center gap-3"><div className="rounded-2xl bg-emerald-500/10 p-3 text-emerald-600"><BrainCircuit className="h-7 w-7"/></div><div><p className="text-[10px] font-black uppercase tracking-[.2em] text-emerald-600">ShopForge Intelligence</p><h1 className="text-2xl font-black">ForgePilot Command Center</h1><p className="mt-1 text-xs text-text-muted">Loja selecionada · {store.name}</p></div></div>
         <div className="flex flex-wrap gap-2"><button onClick={()=>setTab('copilot')} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white"><BrainCircuit className="h-4 w-4"/> Copilot</button><Link href={'/s/'+store.domain} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-bold"><ArrowUpRight className="h-4 w-4"/> Abrir loja</Link></div>
       </header>
+      <ForgeTokenWallet/>
 
       {tab === 'insights' && <div className="grid gap-3 sm:grid-cols-3">
         {[

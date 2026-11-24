@@ -5,6 +5,7 @@ import { sql } from '@vercel/postgres';
 import { createHash,randomUUID } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { withForgeTokens, ForgeTokenError } from './forgepilot-tokens';
 import { buildBatch,parseBatchPlan,validateBatch,type BatchItem,type BatchPlan,type BatchPreview } from './forgepilot-batch';
 import { inferBrand,safeConfig } from './forgepilot-engine';
 import { advancedDiagnostics } from './forgepilot-pro';
@@ -93,11 +94,13 @@ export async function generateForgePilotBatchAction(storeId:string,brief:string)
   for(const name of ['gemini-2.5-flash','gemini-2.5-flash-lite']){
     try{
       const model=new GoogleGenerativeAI(key).getGenerativeModel({model:name,generationConfig:{temperature:0.3,maxOutputTokens:8192,responseMimeType:'application/json'}});
-      const response=await model.generateContent(prompt,{timeout:20000});
-      const plan=parseBatchPlan(response.response.text());
-      buildBatch(store,sample,plan.changes);
-      return plan;
-    }catch(error){console.warn('ForgePilot batch: tentativa falhou',{model:name,reason:error instanceof Error?error.name:'unknown'});}
+      return await withForgeTokens(userId,'batch',async()=>{
+        const response=await model.generateContent(prompt.slice(0,48000),{timeout:20000});
+        const plan=parseBatchPlan(response.response.text());
+        buildBatch(store,sample,plan.changes);
+        return plan;
+      });
+    }catch(error){if(error instanceof ForgeTokenError)throw error;console.warn('ForgePilot batch: tentativa falhou',{model:name,reason:error instanceof Error?error.name:'unknown'});}
   }
   throw Error('Não foi possível gerar uma proposta válida. Experimenta um objetivo mais específico ou prepara alterações manualmente.');
 }

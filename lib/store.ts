@@ -2,7 +2,9 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 export type UserRole = 'ADMIN' | 'CLIENT';
-export type SubscriptionTier = 'STARTER' | 'GROWTH' | 'PRO' | 'BUSINESS' | 'ENTERPRISE';
+import type { SubscriptionTier } from './plans';
+export type { SubscriptionTier, Plan } from './plans';
+export { SUBSCRIPTION_PLANS } from './plans';
 export type SubscriptionStatus = 'active' | 'expired' | 'trialing' | 'none';
 
 export interface User {
@@ -15,66 +17,6 @@ export interface User {
   subscriptionExpiry?: string;
 }
 
-export interface Plan {
-  id: SubscriptionTier;
-  name: string;
-  price: number;
-  interval: 'monthly' | 'yearly';
-  features: string[];
-  description: string;
-  limits: {
-    stores: number;
-    products: number;
-  };
-}
-
-export const SUBSCRIPTION_PLANS: Plan[] = [
-  {
-    id: 'STARTER',
-    name: 'Starter',
-    description: 'Ideal para validar a sua primeira ideia de negócio.',
-    price: 0,
-    interval: 'monthly',
-    features: ['1 Loja Ativa', 'Até 50 Produtos', 'Temas Básicos', 'SSL Gratuito', 'Suporte Comunitário'],
-    limits: { stores: 1, products: 50 }
-  },
-  {
-    id: 'GROWTH',
-    name: 'Growth',
-    description: 'Para empreendedores que estão a começar a escalar.',
-    price: 19,
-    interval: 'monthly',
-    features: ['3 Lojas Ativas', 'Até 500 Produtos', 'Temas Premium', 'Recuperação de Carrinho', 'Analytics Básico', 'Suporte por Email'],
-    limits: { stores: 3, products: 500 }
-  },
-  {
-    id: 'PRO',
-    name: 'Professional',
-    description: 'A solução completa para negócios em plena expansão.',
-    price: 49,
-    interval: 'monthly',
-    features: ['10 Lojas Ativas', 'Produtos Ilimitados', 'Geração de Loja por IA', 'Automações de Marketing', 'Analytics Avançado', 'Suporte Prioritário 24/7'],
-    limits: { stores: 10, products: 1000000 }
-  },
-  {
-    id: 'BUSINESS',
-    name: 'Business',
-    description: 'Para agências e gestores de múltiplas marcas.',
-    price: 99,
-    interval: 'monthly',
-    features: ['25 Lojas Ativas', 'Produtos Ilimitados', 'API de Integração', 'Relatórios Customizados', 'Gestão de Equipa', 'Manager de Conta Dedicado'],
-    limits: { stores: 25, products: 1000000 }
-  },
-  {
-    id: 'ENTERPRISE',
-    name: 'Enterprise',
-    description: 'Infraestrutura robusta para operações globais.',
-    price: 249,
-    interval: 'monthly',
-    features: ['Lojas Ilimitadas', 'Volume Customizado', 'SLA Garantido', 'White-label Analytics', 'Segurança Avançada', 'Onboarding Presencial'],
-    limits: { stores: 1000000, products: 1000000 }
-  }
-];
 
 export interface Store {
   id: string;

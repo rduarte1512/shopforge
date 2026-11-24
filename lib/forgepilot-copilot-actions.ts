@@ -2,6 +2,7 @@
 
 import { auth } from '@clerk/nextjs/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { withForgeTokens, ForgeTokenError } from './forgepilot-tokens';
 import { sql } from '@vercel/postgres';
 import { createHash } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
@@ -212,17 +213,21 @@ export async function runForgePilotCopilotAction(
           model: modelName,
           generationConfig: { temperature: 0.45, maxOutputTokens: 4096 },
         });
-        const result = await model.generateContent(instructions, { timeout: 15000 });
+        const generated = await withForgeTokens(userId,'chat',async()=>{
+        const result = await model.generateContent(instructions.slice(0,48000), { timeout: 15000 });
         const finishReason = result.response.candidates?.[0]?.finishReason;
         if (finishReason && !['STOP', 'MAX_TOKENS'].includes(String(finishReason))) throw new Error('Resposta bloqueada');
         const text = parseAnswer(result.response.text());
         // Se o modelo esgotou os tokens sem concluir, tentar outro modelo.
         if (finishReason === 'MAX_TOKENS' && modelName === 'gemini-2.5-flash') throw new Error('Resposta incompleta');
-        answer = text;
+        return text;
+        });
+        answer = generated;
         source = 'ai';
         notice = undefined;
         break;
       } catch (error) {
+        if(error instanceof ForgeTokenError){notice=error.message;answer=error.message;break;}
         const reason = failureReason(error);
         errors.push(reason);
         console.warn('ForgePilot Copilot: geração falhou', { model: modelName, reason });

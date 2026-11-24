@@ -1,4 +1,5 @@
 import { sql } from '@vercel/postgres';
+import { SUBSCRIPTION_PLANS } from './plans';
 
 export type SubscriptionTier = 'STARTER' | 'GROWTH' | 'PRO' | 'BUSINESS' | 'ENTERPRISE';
 export type SubscriptionStatus = 'active' | 'expired' | 'trialing' | 'none';
@@ -21,13 +22,7 @@ export interface AuthUserProfile {
   subscriptionStatus: SubscriptionStatus;
 }
 
-export const SERVER_SUBSCRIPTION_PLANS: ServerSubscriptionPlan[] = [
-  { id: 'STARTER', name: 'Starter', description: 'Ideal para validar a sua primeira ideia de negócio.', monthlyPrice: 0, features: ['1 Loja Ativa', 'Até 50 Produtos', 'Temas Básicos', 'SSL Gratuito', 'Suporte Comunitário'] },
-  { id: 'GROWTH', name: 'Growth', description: 'Para empreendedores que estão a começar a escalar.', monthlyPrice: 19, features: ['3 Lojas Ativas', 'Até 500 Produtos', 'Temas Premium', 'Recuperação de Carrinho', 'Analytics Básico', 'Suporte por Email'] },
-  { id: 'PRO', name: 'Professional', description: 'A solução completa para negócios em plena expansão.', monthlyPrice: 49, features: ['10 Lojas Ativas', 'Produtos Ilimitados', 'Geração de Loja por IA', 'Automações de Marketing', 'Analytics Avançado', 'Suporte Prioritário 24/7'] },
-  { id: 'BUSINESS', name: 'Business', description: 'Para agências e gestores de múltiplas marcas.', monthlyPrice: 99, features: ['25 Lojas Ativas', 'Produtos Ilimitados', 'API de Integração', 'Relatórios Customizados', 'Gestão de Equipa', 'Manager de Conta Dedicado'] },
-  { id: 'ENTERPRISE', name: 'Enterprise', description: 'Infraestrutura robusta para operações globais.', monthlyPrice: 249, features: ['Lojas Ilimitadas', 'Volume Customizado', 'SLA Garantido', 'White-label Analytics', 'Segurança Avançada', 'Onboarding Presencial'] },
-];
+export const SERVER_SUBSCRIPTION_PLANS: ServerSubscriptionPlan[] = SUBSCRIPTION_PLANS.map(p=>({id:p.id,name:p.name,description:p.description,monthlyPrice:p.price,features:[p.tokens+' tokens ForgePilot por mês',...p.features]}));
 
 export function isValidSubscriptionTier(value: unknown): value is SubscriptionTier {
   return typeof value === 'string' && SERVER_SUBSCRIPTION_PLANS.some((plan) => plan.id === value);

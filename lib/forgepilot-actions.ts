@@ -2,6 +2,7 @@
 
 import { auth } from '@clerk/nextjs/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { withForgeTokens, ForgeTokenError } from './forgepilot-tokens';
 import { sql } from '@vercel/postgres';
 import { createHash, randomUUID } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
@@ -172,7 +173,7 @@ function parseSuggestedBrand(raw: string): ForgePilotBrand {
 }
 
 export async function suggestForgePilotBrandWithAIAction(storeId: string): Promise<ForgePilotBrandSuggestion> {
-  const { store } = await ownedStore(storeId);
+  const { store, userId } = await ownedStore(storeId);
   if (!store) throw new Error('Loja não encontrada.');
   const products = await getProducts(store.id);
   // A alternativa não depende de chamadas externas e respeita o nicho da loja.
@@ -217,15 +218,17 @@ export async function suggestForgePilotBrandWithAIAction(storeId: string): Promi
           maxOutputTokens: 2048,
         },
       });
-      const result = await model.generateContent(prompt);
-      const raw = (await result.response).text();
-      const brand = parseSuggestedBrand(raw);
+      const brand = await withForgeTokens(userId,'brand',async()=>{
+        const result = await model.generateContent(prompt,{timeout:15000});
+        return parseSuggestedBrand(result.response.text());
+      });
       return {
         brand,
         source: 'ai',
         notice: 'A IA preparou uma proposta para a tua loja. Revê os quatro campos e guarda apenas se gostares.',
       };
     } catch (error) {
+      if(error instanceof ForgeTokenError)return {...fallbackResponse,notice:error.message+' Podes usar a proposta automática gratuita.'};
       // Sem dados sensíveis nem resposta gerada nos logs.
       console.warn('ForgePilot Brand DNA: tentativa de geração falhou', {
         model: modelName,
