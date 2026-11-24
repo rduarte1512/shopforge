@@ -29,8 +29,9 @@ type Props = {
   onPreview: (id: ImprovementId) => void;
   onMissionSaved: () => Promise<void>;
   onOpenGrowth: () => void;
+  onPrepareChanges: (brief: string) => void;
 };
-export default function ForgePilotCopilot({ storeId, storeName, audit, version, activeMission, busy, onPreview, onMissionSaved, onOpenGrowth }: Props) {
+export default function ForgePilotCopilot({ storeId, storeName, audit, version, activeMission, busy, onPreview, onMissionSaved, onOpenGrowth, onPrepareChanges }: Props) {
   const [goal, setGoal] = useState<ForgePilotMissionId>(isForgePilotMissionId(activeMission) ? activeMission : 'conversion');
   const [replyPlan, setReplyPlan] = useState<MissionPlan | null>(null);
   const [messages, setMessages] = useState<ForgePilotChatEntry[]>([]);
@@ -153,6 +154,7 @@ export default function ForgePilotCopilot({ storeId, storeName, audit, version, 
             <span className={'shrink-0 rounded-xl p-2 ' + (item.role === 'user' ? 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-white' : 'bg-emerald-500/10 text-emerald-600')}>{item.role === 'user' ? <UserRound className="h-4 w-4" /> : <Bot className="h-4 w-4" />}</span>
             <div className={'max-w-[88%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-6 shadow-sm ' + (item.role === 'user' ? 'rounded-tr-sm bg-slate-800 text-white' : 'rounded-tl-sm bg-card-bg text-text-secondary')}>{item.content}</div>
           </div>)}
+          {messages.length>0&&!sending&&<div className="flex justify-start"><button type="button" onClick={()=>onPrepareChanges(messages.filter(m=>m.role==='user').at(-1)?.content||'Melhorar a loja')} className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-300"><Sparkles className="h-4 w-4"/> Preparar alterações no Action Engine</button></div>}
           {sending && <div className="flex items-center gap-2 text-sm text-text-muted"><Loader2 className="h-4 w-4 animate-spin text-emerald-500" /> O ForgePilot está a analisar...</div>}
         </div>
         {error && <p role="alert" className="mx-4 mt-3 rounded-lg bg-rose-500/10 p-3 text-xs font-semibold text-rose-600">{error}</p>}

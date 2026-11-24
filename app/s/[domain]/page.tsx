@@ -2,6 +2,7 @@
 
 import { getProductSmartImage } from '@/lib/smart-images';
 import AdaptiveStorefront from '@/components/storefront/AdaptiveStorefront';
+import { useForgePilotExperiment } from '@/hooks/useForgePilotExperiment';
 
 import { getStorefrontDataAction } from '@/lib/actions';
 import { useParams } from 'next/navigation';
@@ -152,8 +153,7 @@ export default function StorefrontHomePage() {
           setProducts(p || []);
           setPromotions(pr || []);
           setLoading(false);
-          fetchedRef.current = true;
-          return;
+          // Show cache immediately, then fetch the latest published version.
         } catch (e) {
           sessionStorage.removeItem(cacheKey);
         }
@@ -185,7 +185,7 @@ export default function StorefrontHomePage() {
 
   const comparedProducts = products.filter((product) => comparisonIds.includes(product.id));
 
-  const customization = store?.customization || {};
+  const customization = useForgePilotExperiment(store, store?.customization || {});
   const templateLayout = customization.templateLayout || 'split';
   const isDarkTheme = customization.templateId === 'tech' || store?.theme === 'dark';
   const colors = customization.colors || {

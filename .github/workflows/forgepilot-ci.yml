@@ -10,6 +10,10 @@ on:
       - 'lib/forgepilot-*.ts'
       - 'components/dashboard/ForgePilotClient.tsx'
       - 'components/dashboard/ForgePilotCopilot.tsx'
+      - 'components/dashboard/ForgePilotCommand.tsx'
+      - 'scripts/test-forgepilot-pro.cjs'
+      - 'app/api/forgepilot/**'
+      - 'hooks/useForgePilotExperiment.ts'
       - 'app/dashboard/forgepilot/**'
       - 'app/dashboard/DashboardLayoutClient.tsx'
       - 'scripts/test-forgepilot.cjs'
@@ -33,4 +37,5 @@ jobs:
       - run: npm ci
       - run: npm run test:forgepilot
       - run: npm run test:missions
+      - run: npm run test:forgepilot-pro
       - run: npx tsc --noEmit
