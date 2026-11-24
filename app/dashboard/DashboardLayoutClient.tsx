@@ -49,6 +49,7 @@ const navigation = [
   { name: 'Afiliados', href: '/dashboard/affiliates', icon: LinkIcon },
   { name: 'Relatórios', href: '/dashboard/reports', icon: BarChart3 },
   { name: 'Automações', href: '/dashboard/automations', icon: Zap },
+  { name: 'ForgeAds', href: '/dashboard/ads', icon: Megaphone },
   { name: 'Promoções', href: '/dashboard/promotions', icon: Megaphone },
   { name: 'Cupões', href: '/dashboard/coupons', icon: Ticket },
   { name: 'Frete e Envio', href: '/dashboard/shipping', icon: Truck },

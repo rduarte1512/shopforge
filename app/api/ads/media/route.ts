@@ -1,0 +1,15 @@
+
+import {NextRequest,NextResponse} from 'next/server';
+import {randomUUID} from 'node:crypto';
+import {sql} from '@vercel/postgres';
+import {requireFeature,requireOwnedStore} from '@/lib/plan-access';
+export const runtime='nodejs';
+const allowed=['image/jpeg','image/png','image/webp','video/mp4','video/webm'];
+function matches(b:Buffer,m:string){if(m==='image/jpeg')return b[0]===255&&b[1]===216&&b[2]===255;if(m==='image/png')return b.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]));if(m==='image/webp')return b.toString('ascii',0,4)==='RIFF'&&b.toString('ascii',8,12)==='WEBP';if(m==='video/mp4')return b.toString('ascii',4,8)==='ftyp';return b.subarray(0,4).equals(Buffer.from([26,69,223,163]))}
+export async function POST(req:NextRequest){
+ try{const {userId}=await requireFeature('ads');if(req.headers.get('origin')!==req.nextUrl.origin&&req.headers.get('origin')!==process.env.ADS_APP_URL?.replace(/\/$/,''))return NextResponse.json({error:'Origem inválida.'},{status:403});
+ const form=await req.formData();const store=String(form.get('storeId')||'');await requireOwnedStore(userId,store);const f=form.get('file');if(!(f instanceof File)||!allowed.includes(f.type)||f.size<1||f.size>3000000)return NextResponse.json({error:'Usa JPG, PNG, WebP, MP4 ou WebM até 3 MB.'},{status:400});const data=Buffer.from(await f.arrayBuffer());if(!matches(data,f.type))return NextResponse.json({error:'Formato de ficheiro inválido.'},{status:400});
+ const client=await sql.connect();try{await client.query('BEGIN');await client.query('SELECT id FROM stores WHERE id=$1 AND user_id=$2 FOR UPDATE',[store,userId]);const r=await client.query('SELECT coalesce(sum(octet_length(data)),0)::int AS size,count(*)::int AS n FROM forgeads_assets WHERE store_id=$1 AND user_id=$2',[store,userId]);if(r.rows[0].size+data.length>30000000||r.rows[0].n>=100)throw Error('Limite de criativos atingido.');const id=randomUUID();await client.query('INSERT INTO forgeads_assets(id,store_id,user_id,name,mime,data) VALUES($1,$2,$3,$4,$5,$6)',[id,store,userId,f.name.slice(0,160),f.type,data]);await client.query('COMMIT');return NextResponse.json({id,name:f.name.slice(0,160),mime:f.type})}catch(e){await client.query('ROLLBACK').catch(()=>{});throw e}finally{client.release()}
+ }catch{return NextResponse.json({error:'Não foi possível guardar o criativo. Confirma o plano e o limite da biblioteca.'},{status:400})}
+}
+export async function GET(req:NextRequest){try{const {userId}=await requireFeature('ads');const id=req.nextUrl.searchParams.get('id')||'';if(!/^[a-f0-9-]{36}$/i.test(id))return new NextResponse(null,{status:404});const r=await sql.query('SELECT a.data,a.mime FROM forgeads_assets a JOIN stores s ON s.id=a.store_id WHERE a.id=$1 AND a.user_id=$2 AND s.user_id=$2',[id,userId]);if(!r.rows[0]||!allowed.includes(r.rows[0].mime))return new NextResponse(null,{status:404});return new NextResponse(new Uint8Array(r.rows[0].data),{headers:{'Content-Type':r.rows[0].mime,'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}})}catch{return new NextResponse(null,{status:404})}}
