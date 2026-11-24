@@ -10,6 +10,8 @@ export async function GET(request: Request) {
   }
   try {
     await sql`SELECT prune_store_traffic()`;
+    // Privacidade: as conversas antigas do Copilot também expiram aos 90 dias.
+    await sql`DELETE FROM forgepilot_chat_messages WHERE created_at < NOW() - INTERVAL '90 days'`;
     return NextResponse.json({ ok: true, retentionDays: 90 });
   } catch (error) {
     console.error('ForgePilot cleanup failed:', error instanceof Error ? error.message : 'unknown');
