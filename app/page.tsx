@@ -100,36 +100,57 @@ const faqs = [
 
 
 
-function LaunchStudio(){
+type HeroProduct = 'jacket' | 'bag' | 'shoe' | 'bottle';
+
+function HeroProductArt({kind}:{kind:HeroProduct}) {
+  const backgrounds={jacket:'#b6c8ba',bag:'#d8c5ae',shoe:'#c8c5dd',bottle:'#b5d8d0'};
+  return <svg viewBox="0 0 180 160" className="h-full w-full" aria-hidden="true">
+    <rect width="180" height="160" rx="12" fill={backgrounds[kind]}/>
+    <circle cx="138" cy="32" r="58" fill="#fff" opacity=".18"/>
+    <ellipse cx="90" cy="140" rx="55" ry="8" fill="#14291e" opacity=".13"/>
+    {kind==='jacket'&&<g strokeLinejoin="round"><path d="M64 44Q65 13 90 13T116 44L102 60H78Z" fill="#243f36"/><path d="M62 43L35 55 18 125 40 132 57 89 57 142H123V89L140 132 162 125 145 55 118 43 106 56H74Z" fill="#55796b" stroke="#365548" strokeWidth="2"/><path d="M62 43L74 56 90 62 106 56 118 43M90 63V141M60 102H79M101 102H120" fill="none" stroke="#c5d8cc" strokeWidth="2"/><path d="M58 88L88 94V142H58ZM92 94L122 88V142H92Z" fill="#8ca99c"/><path d="M90 63V142" stroke="#273f36" strokeWidth="3"/></g>}
+    {kind==='bag'&&<g><path d="M66 56V41Q66 22 90 22T114 41V56" stroke="#624b36" strokeWidth="9" fill="none"/><path d="M46 55H134L146 133Q90 145 34 133Z" fill="#967451" stroke="#624b36" strokeWidth="2"/><path d="M52 56L47 128M128 56L133 128M41 72H139" fill="none" stroke="#bfa381" strokeWidth="2"/><rect x="80" y="80" width="20" height="13" rx="3" fill="#d8bc8a"/><path d="M48 59L59 135M132 59L121 135" stroke="#6d5239" strokeWidth="4" opacity=".6"/></g>}
+    {kind==='shoe'&&<g transform="rotate(-10 90 90)"><path d="M23 104Q27 87 55 84L77 40 103 44 111 73 138 91Q155 96 161 110V119H23Z" fill="#69678d" stroke="#4d4b70" strokeWidth="2"/><path d="M64 82L77 49 101 50 112 78 87 92Z" fill="#a6a3c4"/><path d="M77 61L102 64M73 70L107 74M69 79L112 84" stroke="#f4efff" strokeWidth="3" strokeLinecap="round"/><path d="M22 111Q95 120 161 109V124Q95 137 23 125Z" fill="#eee5d6" stroke="#8d879c" strokeWidth="2"/><path d="M118 96L139 106" stroke="#ded8f3" strokeWidth="5" strokeLinecap="round"/></g>}
+    {kind==='bottle'&&<g><rect x="69" y="21" width="42" height="26" rx="5" fill="#263d35"/><rect x="56" y="42" width="68" height="94" rx="19" fill="#eae4d6" stroke="#c0b8a8" strokeWidth="2"/><rect x="56" y="73" width="68" height="43" fill="#ecbca9"/><path d="M68 52V65" stroke="#fff" opacity=".7" strokeWidth="5" strokeLinecap="round"/><text x="90" y="91" textAnchor="middle" fontSize="9" fontWeight="700" fill="#624d42">NORTH</text><text x="90" y="103" textAnchor="middle" fontSize="5.5" letterSpacing="1.1" fill="#624d42">DAILY CARE</text></g>}
+  </svg>;
+}
+
+function LaunchStudio({href,cta}:{href:string;cta:string}){
   const reduce=useReducedMotion();
   const [run,setRun]=useState(0);
-  const [complete,setComplete]=useState(false);
-  const steps=['Estrutura da loja','Catálogo e identidade','Pré-visualização'];
-  return <div className="relative mx-auto max-w-[1060px]">
-    <div className="mb-3 flex items-center justify-between gap-3 text-xs text-[#506459]"><span className="font-semibold">ShopForge / Editor de loja</span><span>Experiência ilustrativa</span></div>
-    <div className="overflow-hidden rounded-xl border border-[#c9d5cd] bg-[#f8faf8] shadow-[0_40px_90px_-45px_#2b4935]">
-      <div className="flex items-center justify-between border-b border-[#dbe4dd] bg-[#ffffff] px-3 py-3 sm:px-5"><div className="flex items-center gap-2"><span className="grid h-7 w-7 place-items-center rounded-md bg-[#245439] text-white"><ShoppingBag size={15}/></span><span className="text-xs font-bold sm:text-sm">ShopForge Studio</span></div><div className="flex items-center gap-2"><span className="hidden text-xs text-[#53685a] sm:block">Loja de exemplo</span><span className="rounded-md bg-[#245439] px-2.5 py-1.5 text-[10px] font-semibold text-white">Pré-visualização</span></div></div>
-      <div className="grid sm:grid-cols-[190px_1fr] lg:grid-cols-[225px_1fr]">
-        <div className="border-b border-[#dbe4dd] bg-[#f0f4f0] p-4 sm:border-b-0 sm:border-r sm:p-5">
-          <p className="mb-3 text-[10px] font-bold uppercase tracking-[.12em] text-[#53685a]">Construção da loja</p>
-          <div key={run} className="grid grid-cols-3 gap-1.5 sm:grid-cols-1 sm:gap-2">{steps.map((s,i)=><motion.div key={s} initial={reduce?false:{opacity:.35}} animate={{opacity:1}} transition={{delay:reduce?0:i*.45,duration:reduce?0:.35}} className="flex min-w-0 items-center gap-2 rounded-md border border-[#dce5dd] bg-[#ffffff] px-2 py-2.5 text-[10px] font-medium sm:text-xs"><Check size={14} className="shrink-0 text-[#286346]"/><span>{s}</span></motion.div>)}</div>
-          <div className="mt-5 hidden space-y-3 border-t border-[#dbe4dd] pt-4 sm:block"><p className="text-xs font-semibold">Secções</p>{['Cabeçalho','Banner','Coleção','Rodapé'].map(s=><div key={s} className="flex items-center gap-2 text-xs text-[#53685a]"><span className="h-2 w-2 rounded-sm border border-[#8fa498]"/>{s}</div>)}</div>
-        </div>
-        <div className="min-w-0 p-3 sm:p-5 lg:p-7">
-          <motion.div key={run} initial={reduce?false:{opacity:0,scale:.98}} animate={{opacity:1,scale:1}} transition={{delay:reduce?0:.45,duration:reduce?0:.65}} className="overflow-hidden border border-[#d8ddd3] bg-[#f9f8f1]">
-            <div className="flex items-center justify-between border-b border-[#e1e3d9] px-4 py-3 sm:px-6"><span className="text-base font-bold tracking-[.24em] text-[#232f26]">NORTH</span><span className="hidden text-[10px] text-[#435247] sm:block">Coleção &nbsp;&nbsp; Sobre a marca</span><ShoppingBag size={15} className="text-[#435247]"/></div>
-            <div className="relative isolate grid min-h-[170px] grid-cols-[1.05fr_.95fr] overflow-hidden bg-[#dce7d5] sm:min-h-[240px]">
-              <motion.div initial={reduce?false:{opacity:0,x:-10}} animate={{opacity:1,x:0}} transition={{delay:reduce?0:.85,duration:reduce?0:.55}} className="relative z-10 flex flex-col justify-center p-4 sm:p-8"><span className="text-[9px] font-bold uppercase tracking-[.18em] text-[#53685a]">Coleção 01 / 26</span><p className="mt-3 text-[clamp(1.6rem,3.4vw,3.1rem)] font-semibold leading-[.97] tracking-[-.055em] text-[#263d2d]">Feito para<br/>o teu dia.</p><span className="mt-5 w-fit border-b border-[#42604b] pb-1 text-[10px] font-semibold text-[#263d2d]">Explorar coleção ↗</span></motion.div>
-              <motion.div initial={reduce?false:{clipPath:'inset(0 100% 0 0)'}} animate={{clipPath:'inset(0 0 0 0)'}} transition={{delay:reduce?0:.85,duration:reduce?0:.9,ease:'easeOut'}} className="relative isolate overflow-hidden bg-[#829c82]"><div className="absolute -right-[25%] -top-[12%] aspect-square w-[120%] rounded-full border-[28px] border-[#b1c2a8] sm:border-[50px]"/><div className="absolute bottom-0 left-[17%] top-[23%] w-[52%] rounded-t-full bg-[#375943]"/><div className="absolute bottom-0 right-[7%] top-[45%] w-[48%] rounded-t-full bg-[#c3d0b5]"/><div className="absolute bottom-5 left-5 text-[9px] font-bold tracking-[.17em] text-[#f7faf5]">N / 01</div></motion.div>
-            </div>
-            <motion.div initial={reduce?false:{opacity:0,y:7}} animate={{opacity:1,y:0}} transition={{delay:reduce?0:1.45,duration:reduce?0:.45}} className="grid grid-cols-3 divide-x divide-[#e1e3d9] border-t border-[#e1e3d9]">{['Identidade de marca','Coleções','Checkout'].map((s,i)=><div key={s} className="p-3 text-[9px] font-semibold text-[#435247] sm:p-4 sm:text-xs"><span className="mb-1 block text-[10px] text-[#829c82]">0{i+1}</span>{s}</div>)}</motion.div>
-          </motion.div>
-          <motion.div key={'status'+run} initial={reduce?false:{opacity:0}} animate={{opacity:1}} transition={{delay:reduce?0:2,duration:reduce?0:.3}} onAnimationComplete={()=>setComplete(true)} className="mt-3 flex items-center justify-between gap-2 text-xs text-[#286346]"><span className="flex items-center gap-1.5"><Check size={15}/> Pré-visualização preparada</span><span className="text-[10px] text-[#65786a]">Loja conceptual</span></motion.div>
+  const [theme,setTheme]=useState(0);
+  const themes=[{name:'Menta',color:'#a3f5b5'},{name:'Lavanda',color:'#c0b4ff'},{name:'Areia',color:'#efc49e'},{name:'Azul',color:'#9bd9ef'}];
+  const accent=themes[theme].color;
+  const enter=(delay:number,x=0,y=18)=>({initial:reduce?false:{opacity:0,x,y,scale:.94},animate:{opacity:1,x:0,y:0,scale:1},transition:{duration:reduce?0:.75,delay:reduce?0:delay,ease:[.22,1,.36,1] as const}});
+  const panel='relative rounded-2xl border border-white/15 bg-[#182c24]/95 p-3 shadow-[0_18px_50px_-18px_#000] backdrop-blur-md';
+  return <section className="relative isolate overflow-hidden bg-[#0b1712] text-[#f5f8f5]">
+    <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_42%,#234332_0%,transparent_66%)]"/>
+    <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-40" style={{backgroundImage:'radial-gradient(circle,rgba(211,242,222,.22) 1px,transparent 1px)',backgroundSize:'30px 30px',maskImage:'linear-gradient(to bottom,transparent,#000 15%,#000 85%,transparent)'}}/>
+    <div className="relative mx-auto max-w-[1480px] px-5 pb-7 pt-12 sm:px-8 lg:pb-10 lg:pt-8">
+      <div className="flex items-center justify-between gap-2 text-[10px] font-medium uppercase tracking-[.13em] text-[#a9beb0] sm:text-xs"><span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full" style={{backgroundColor:accent}}/> ShopForge / Studio</span><span className="hidden sm:inline">Construtor visual · demonstração</span><button type="button" onClick={()=>setRun(n=>n+1)} className="inline-flex items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-xs normal-case tracking-normal text-[#e0eee4] hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"><RotateCcw size={13}/> Repetir</button></div>
+      <div key={run} className="relative mx-auto grid max-w-[1320px] gap-4 pb-8 pt-12 lg:min-h-[650px] lg:block lg:pb-0 lg:pt-[185px] xl:min-h-[700px] xl:pt-[190px]">
+        <motion.div {...enter(.1)} className="relative z-10 mx-auto w-full max-w-[780px] text-center lg:w-[66%]">
+          <div className="relative border bg-[#b9f2cb]/[.035] px-4 py-7 sm:px-8 sm:py-10 lg:py-11" style={{borderColor:accent}}>
+            <span className="absolute -top-5 left-[-1px] rounded-t-md px-2 py-1 text-[10px] font-bold leading-3 text-[#10261c]" style={{backgroundColor:accent}}>Título · H1</span>
+            {['-left-1 -top-1','-right-1 -top-1','-left-1 -bottom-1','-right-1 -bottom-1'].map(p=><span key={p} aria-hidden="true" className={'absolute h-2 w-2 border border-[#10261c] '+p} style={{backgroundColor:accent}}/>)}
+            <motion.p {...enter(.22)} className="mb-4 text-[10px] font-semibold uppercase tracking-[.19em] sm:text-xs" style={{color:accent}}>A plataforma inteligente de e-commerce</motion.p>
+            <motion.h1 {...enter(.3)} className="text-[clamp(2.65rem,5.3vw,5.4rem)] font-semibold leading-[.98] tracking-[-.065em]">A tua visão.<br/> <span style={{color:accent}}>A tua loja.</span></motion.h1>
+            <motion.p {...enter(.42)} className="mx-auto mt-5 max-w-[560px] text-sm leading-relaxed text-[#b9cebf] sm:text-lg">Cria, personaliza e faz crescer o teu negócio online com IA, um editor visual e ferramentas de gestão. Tudo no mesmo lugar.</motion.p>
+          </div>
+          <motion.div {...enter(.52)} className="mt-6 flex flex-wrap items-center justify-center gap-3"><Link href={href} className="inline-flex items-center justify-center gap-3 rounded-full px-6 py-3.5 text-sm font-bold text-[#10261c] transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white" style={{backgroundColor:accent}}>{cta}<ArrowRight size={17}/></Link><a href="#demo" className="inline-flex items-center gap-2 rounded-full border border-white/20 px-5 py-3.5 text-sm font-semibold hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-white">Explorar a plataforma <ArrowUpRight size={15}/></a></motion.div>
+          <motion.p {...enter(.65)} className="mt-4 text-xs text-[#a9beb0]">Da primeira ideia à tua próxima grande loja.</motion.p>
+        </motion.div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:contents">
+          <motion.div {...enter(.45,-64,22)} className={panel+' lg:absolute lg:left-0 lg:top-7 lg:w-[17%]'}><div className="flex items-center justify-between pb-2 text-[10px] text-[#b8ccbf]"><span>Produto / 01</span><Package size={13}/></div><div className="overflow-hidden rounded-xl"><HeroProductArt kind="jacket"/></div><div className="mt-2 flex justify-between gap-1 text-[10px] font-semibold sm:text-xs"><span>Urban Jacket</span><span>€89</span></div></motion.div>
+          <motion.div {...enter(.58,65,-38)} className={panel+' col-span-2 row-start-2 sm:col-span-2 sm:row-start-auto lg:absolute lg:right-0 lg:top-8 lg:w-[34%]'}><div className="mb-2 flex items-center justify-between text-[10px] text-[#b8ccbf]"><span>Catálogo · Nova coleção</span><span style={{color:accent}}>3 produtos</span></div><div className="grid grid-cols-3 gap-2">{([{kind:'bag',name:'Day Bag'},{kind:'shoe',name:'Studio Run'},{kind:'bottle',name:'Daily Care'}] as const).map((p,i)=><motion.div key={p.kind} {...enter(.76+i*.13,0,10)} className="relative overflow-hidden rounded-lg border border-white/10 bg-white/5 p-1.5"><span className="absolute left-2 top-2 z-10 grid h-3 w-3 place-items-center rounded-sm bg-[#13291f]"><Check size={9} style={{color:accent}}/></span><HeroProductArt kind={p.kind}/><p className="mt-1 truncate text-[9px] text-[#d6e6db]">{p.name}</p></motion.div>)}</div></motion.div>
+          <motion.div {...enter(.72,-50,-15)} className={panel+' lg:absolute lg:left-[2%] lg:top-[52%] lg:z-20 lg:w-[15%]'}><div className="mb-3 flex items-center gap-2 text-[10px] font-semibold text-[#c0d4c5]"><Palette size={14}/> Identidade visual</div><div className="flex flex-wrap gap-2" role="group" aria-label="Cores da demonstração">{themes.map((t,i)=><button key={t.name} type="button" aria-label={t.name} aria-pressed={theme===i} onClick={()=>setTheme(i)} className="grid h-7 w-7 place-items-center rounded-full border border-white/30 text-[#10261c] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:h-8 sm:w-8" style={{backgroundColor:t.color}}>{theme===i&&<Check size={15}/>}</button>)}</div><p className="mt-2 text-[10px] text-[#a9beb0]">Experimenta uma cor</p></motion.div>
+          <motion.div {...enter(.88,-45,65)} className={panel+' lg:absolute lg:bottom-1 lg:left-0 lg:w-[23%]'}><div className="mb-3 flex items-center justify-between text-xs font-semibold"><span>Página inicial</span><LayoutDashboard size={15} style={{color:accent}}/></div><div className="space-y-1.5 text-[10px] text-[#c1d3c6] sm:text-xs">{['Cabeçalho','Banner principal','Coleção'].map((label,i)=><div key={label} className="flex items-center gap-2 rounded-lg border border-white/10 px-2 py-2" style={i===1?{borderColor:accent,color:accent}:undefined}><span className="text-[9px] opacity-70">0{i+1}</span>{label}{i===1&&<MousePointerClick size={13} className="ml-auto"/>}</div>)}<div className="rounded-lg border border-dashed border-white/20 px-2 py-2" style={{color:accent}}>+ Adicionar secção</div></div></motion.div>
+          <motion.div {...enter(1.05,55,60)} className={panel+' lg:absolute lg:bottom-0 lg:right-0 lg:w-[19%]'}><div className="mb-2 flex items-center justify-between gap-1 text-[10px] text-[#b8ccbf]"><span>Pré-visualização</span><Globe size={13}/></div><div className="overflow-hidden rounded-xl bg-[#edf1e8] text-[#263d2d]"><div className="flex justify-between px-3 py-2 text-[9px] font-bold tracking-widest">NORTH <ShoppingBag size={12}/></div><div className="mx-2 overflow-hidden rounded-lg"><HeroProductArt kind="bottle"/></div><div className="p-2.5"><p className="text-xs font-bold">Daily Care</p><p className="mt-1 text-[10px]">€29,00</p><div className="mt-2 rounded-md py-1.5 text-center text-[9px] font-bold" style={{backgroundColor:accent}}>Adicionar ao carrinho</div></div></div></motion.div>
         </div>
       </div>
+      <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 border-t border-white/10 pt-5 text-xs text-[#a9beb0]"><span className="flex items-center gap-2"><Sparkles size={14} style={{color:accent}}/> Criação com IA</span><span className="flex items-center gap-2"><Palette size={14} style={{color:accent}}/> Editor visual</span><span className="flex items-center gap-2"><TrendingUp size={14} style={{color:accent}}/> Gestão e crescimento</span><span className="text-[10px]">Elementos ilustrativos</span></div>
     </div>
-    <div className="mt-4 flex items-center justify-between gap-4 text-xs text-[#53685a]"><span>Da configuração à pré-visualização, em três etapas.</span>{!reduce&&<button type="button" onClick={()=>{setComplete(false);setRun(n=>n+1);}} aria-label="Repetir animação" className="flex shrink-0 items-center gap-1.5 rounded-md border border-[#c9d5cd] px-3 py-2 font-semibold hover:bg-[#e4ebe3]"><RotateCcw size={14}/> {complete?'Repetir':'Reiniciar'}</button>}</div>
-  </div>;
+  </section>;
 }
 
 function EditorialDemo(){
@@ -153,29 +174,18 @@ export default function Home() {
   const {scrollYProgress}=useScroll();
   const href=isSignedIn?'/dashboard':'/register';
   const cta=isSignedIn?'Abrir painel':'Criar loja grátis';
-  const intro=(delay:number)=>({initial:reduce?false:{opacity:0,y:18},animate:{opacity:1,y:0},transition:{duration:reduce?0:0.65,delay:reduce?0:delay,ease:'easeOut' as const}});
 
   return <div className="min-h-screen bg-[#faf9f5] text-[#16291e] selection:bg-[#a3f5b5] selection:text-[#092519]">
-    <header className="sticky top-0 z-50 border-b border-[#d6d1c4] bg-[#f5f2e9]/95 text-[#252a21] backdrop-blur-xl">
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0b1712]/95 text-[#e0eee4] backdrop-blur-xl">
       {!reduce&&<motion.div aria-hidden="true" className="absolute bottom-0 left-0 right-0 h-0.5 origin-left bg-[#a3f5b5]" style={{scaleX:scrollYProgress}}/>}
       <nav className={shell+' flex h-[70px] items-center justify-between gap-4'} aria-label="Navegação principal">
-        <Brand dark/><div className="hidden items-center gap-7 xl:flex">{nav.map(n=><a key={n.href} href={n.href} className="text-sm font-medium text-[#424c3e] transition hover:text-[#286346]">{n.label}</a>)}</div>
-        <div className="flex items-center gap-3">{!isSignedIn&&<Link href="/login" className="hidden text-sm font-semibold text-[#424c3e] hover:text-[#286346] sm:block">Entrar</Link>}<Link href={href} className="hidden items-center gap-2 rounded-[5px] bg-[#245439] px-4 py-2.5 text-sm font-semibold text-[#f8f6ec] hover:bg-[#173d29] sm:inline-flex">{isSignedIn?'Painel':'Começar grátis'}<ArrowRight size={15}/></Link><button type="button" aria-label={menu?'Fechar menu':'Abrir menu'} aria-expanded={menu} aria-controls="mobile-nav" onClick={()=>setMenu(!menu)} className="grid h-10 w-10 place-items-center rounded-lg border border-[#c8c4b9] xl:hidden">{menu?<X size={20}/>:<Menu size={20}/>}</button></div>
+        <Brand/><div className="hidden items-center gap-7 xl:flex">{nav.map(n=><a key={n.href} href={n.href} className="text-sm font-medium text-[#b9cebf] transition hover:text-white">{n.label}</a>)}</div>
+        <div className="flex items-center gap-3">{!isSignedIn&&<Link href="/login" className="hidden text-sm font-semibold text-[#b9cebf] hover:text-white sm:block">Entrar</Link>}<Link href={href} className="hidden items-center gap-2 rounded-full bg-[#a3f5b5] px-4 py-2.5 text-sm font-semibold text-[#10261c] hover:bg-[#c5ffd1] sm:inline-flex">{isSignedIn?'Painel':'Começar grátis'}<ArrowRight size={15}/></Link><button type="button" aria-label={menu?'Fechar menu':'Abrir menu'} aria-expanded={menu} aria-controls="mobile-nav" onClick={()=>setMenu(!menu)} className="grid h-10 w-10 place-items-center rounded-lg border border-white/20 xl:hidden">{menu?<X size={20}/>:<Menu size={20}/>}</button></div>
       </nav>
-      {menu&&<div id="mobile-nav" className={shell+' grid gap-1 border-t border-[#d6d1c4] pb-5 pt-3 xl:hidden'}>{nav.map(n=><a key={n.href} href={n.href} onClick={()=>setMenu(false)} className="rounded-lg p-3 text-sm font-medium hover:bg-[#e7e6da]">{n.label}</a>)}{!isSignedIn&&<Link href="/login" onClick={()=>setMenu(false)} className="p-3 text-sm">Entrar</Link>}<Link href={href} className={primary}>{cta}<ArrowRight size={16}/></Link></div>}
+      {menu&&<div id="mobile-nav" className={shell+' grid gap-1 border-t border-white/10 pb-5 pt-3 xl:hidden'}>{nav.map(n=><a key={n.href} href={n.href} onClick={()=>setMenu(false)} className="rounded-lg p-3 text-sm font-medium hover:bg-white/10">{n.label}</a>)}{!isSignedIn&&<Link href="/login" onClick={()=>setMenu(false)} className="p-3 text-sm">Entrar</Link>}<Link href={href} className={primary}>{cta}<ArrowRight size={16}/></Link></div>}
     </header>
     <main>
-      <section className="relative overflow-hidden bg-[#f4f7f2] text-[#17291e]">
-        <div className={shell+' pb-12 pt-16 sm:pb-20 sm:pt-24'}>
-          <div className="mx-auto mb-12 max-w-[880px] text-center">
-            <motion.p {...intro(0)} className="mb-5 text-xs font-semibold uppercase tracking-[.16em] text-[#286346]">A tua plataforma de e-commerce</motion.p>
-            <motion.h1 {...intro(.08)} className="text-[clamp(2.85rem,6.7vw,6.2rem)] font-semibold leading-[.99] tracking-[-.065em]">Constrói a tua loja.<br className="hidden sm:block"/> Faz crescer o teu negócio.</motion.h1>
-            <motion.p {...intro(.17)} className="mx-auto mt-6 max-w-[580px] text-base leading-relaxed text-[#53685a] sm:text-lg">Criação de lojas, gestão de vendas e inteligência para tomar melhores decisões. Tudo o que precisas para transformar uma ideia num negócio online.</motion.p>
-            <motion.div {...intro(.24)} className="mt-7 flex flex-wrap items-center justify-center gap-4"><Link href={href} className="inline-flex items-center gap-3 rounded-lg bg-[#245439] px-6 py-3.5 font-semibold text-white hover:bg-[#173b2a]">{cta}<ArrowRight size={18}/></Link><a href="#demo" className="inline-flex items-center gap-2 px-2 py-3 text-sm font-semibold text-[#34523d] hover:underline">Conhecer a plataforma <ArrowUpRight size={15}/></a></motion.div>
-          </div>
-          <motion.div {...intro(.3)}><LaunchStudio/></motion.div>
-        </div>
-      </section>
+      <LaunchStudio href={href} cta={cta}/>
 
       <section id="features" className={shell+' scroll-mt-24 py-20 sm:py-28'}>
         <Reveal className="mb-12 grid gap-5 lg:grid-cols-[1.25fr_.75fr] lg:items-end">
