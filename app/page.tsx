@@ -127,8 +127,8 @@ function LaunchFilm(){
   const [take,setTake]=useState(0);
   const [stage,setStage]=useState(0);
   const [playing,setPlaying]=useState(true);
-  const current=reduce&&!selected?2:stage;
   const [selected,setSelected]=useState(false);
+  const current=reduce&&!selected?2:stage;
   function replay(){setStage(0);setSelected(false);setPlaying(true);setTake(t=>t+1);}
   function choose(i:number){setStage(i);setPlaying(false);setSelected(true);}
   return <div className="min-w-0">
@@ -157,7 +157,7 @@ function LaunchFilm(){
 }
 
 function EditorialDemo(){
-  const ref=useRef<HTMLDivElement>(null);
+  const ref=useRef<HTMLElement>(null);
   const reduce=useReducedMotion();
   const {scrollYProgress}=useScroll({target:ref,offset:['start end','end start']});
   const y=useTransform(scrollYProgress,[0,.5,1],[24,0,-24]);
