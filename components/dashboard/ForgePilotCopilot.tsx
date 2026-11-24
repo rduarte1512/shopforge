@@ -71,7 +71,7 @@ export default function ForgePilotCopilot({ storeId, storeName, audit, version, 
       const result = await runForgePilotCopilotAction(storeId, text, selected);
       setReplyPlan(result.mission);
       const date = new Date().toISOString();
-      setMessages(items => [...items, { id: 'user-' + Date.now(), role: 'user', content: text, date }, { id: 'assistant-' + Date.now(), role: 'assistant', content: result.answer, date }].slice(-24));
+      setMessages(items => [...items, { id: 'user-' + Date.now(), role: 'user' as const, content: text, date }, { id: 'assistant-' + Date.now(), role: 'assistant' as const, content: result.answer, date }].slice(-24));
       if (!result.saved) setNotice('A resposta está disponível, mas não foi possível guardá-la no histórico.');
     } catch (err) {
       setQuestion(text);
