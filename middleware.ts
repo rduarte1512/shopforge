@@ -6,6 +6,9 @@ const isPublicRoute = createRouteMatcher([
   "/login(.*)",
   "/register(.*)",
   "/api/webhook(.*)",
+  "/api/analytics/track",
+  "/api/forgepilot/experiment",
+  "/api/cron/prune-traffic", // authenticated by CRON_SECRET in the route itself
   "/s/(.*)", // Public store pages
 ]);
 

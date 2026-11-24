@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { sql } from '@vercel/postgres';
+import { refreshForgePilotMonitoring } from '@/lib/forgepilot-monitoring';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +13,10 @@ export async function GET(request: Request) {
     await sql`SELECT prune_store_traffic()`;
     // Privacidade: as conversas antigas do Copilot também expiram aos 90 dias.
     await sql`DELETE FROM forgepilot_chat_messages WHERE created_at < NOW() - INTERVAL '90 days'`;
-    return NextResponse.json({ ok: true, retentionDays: 90 });
+    await sql.query("UPDATE forgepilot_experiments SET ended_at=started_at+interval '30 days' WHERE ended_at IS NULL AND started_at<=now()-interval '30 days'");
+    await sql.query("DELETE FROM forgepilot_exposures WHERE exposed_at<now()-interval '90 days'");
+    const monitoredStores = await refreshForgePilotMonitoring();
+    return NextResponse.json({ ok: true, retentionDays: 90, monitoredStores });
   } catch (error) {
     console.error('ForgePilot cleanup failed:', error instanceof Error ? error.message : 'unknown');
     return NextResponse.json({ error: 'Cleanup failed' }, { status: 503 });

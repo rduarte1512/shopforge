@@ -124,6 +124,7 @@ export default function StoreTrafficTracker({ storeId, domain }: { storeId: stri
     } catch { setChoice('blocked'); setShowSettings(false); return; }
     lastTrackedPath.current = null;
     setChoice(next);
+    window.dispatchEvent(new Event('shopforge:traffic-consent-changed'));
     setShowSettings(false);
   };
 
@@ -135,7 +136,7 @@ export default function StoreTrafficTracker({ storeId, domain }: { storeId: stri
         <div className="rounded-xl bg-emerald-400/10 p-2.5 text-emerald-300"><ChartNoAxesCombined className="h-5 w-5" /></div>
         <div className="min-w-0 flex-1">
           <h3 className="font-bold">Ajuda-nos a melhorar a tua experiência</h3>
-          <p className="mt-1 text-xs leading-5 text-slate-300">Podemos medir visitas e interações de forma pseudónima? Não recolhemos dados de identificação neste sistema. Podes alterar a opção a qualquer momento.</p>
+          <p className="mt-1 text-xs leading-5 text-slate-300">Podemos medir visitas e interações de forma pseudónima e testar pequenas variantes de apresentação? Não recolhemos dados de identificação neste sistema. Podes alterar a opção a qualquer momento.</p>
         </div>
         {showSettings && <button aria-label="Fechar preferências" onClick={() => setShowSettings(false)} className="p-1 text-slate-300 hover:text-white"><X className="h-4 w-4" /></button>}
       </div>
