@@ -1,5 +1,6 @@
 'use client';
 
+import { effectiveForgePlan,hasFeature } from '@/lib/plans';
 import { useUser } from '@clerk/nextjs';
 import {
   addProductAction,
@@ -134,7 +135,7 @@ export default function StoresPage() {
   const router = useRouter();
 
   const subscriptionTier = user?.subscriptionTier || 'STARTER';
-  const plan = useMemo(() => SUBSCRIPTION_PLANS.find((item) => item.id === subscriptionTier) || SUBSCRIPTION_PLANS[0], [subscriptionTier]);
+  const plan = effectiveForgePlan(user?.subscriptionTier,user?.subscriptionStatus);
   const canCreateMoreStores = stores.length < plan.limits.stores;
   const isAiRestricted = plan.id === 'STARTER' || plan.id === 'GROWTH';
 

@@ -1,5 +1,6 @@
 'use client';
 
+import PlanComparison from '@/components/dashboard/PlanComparison';
 import { useState } from 'react';
 import ForgeTokenWallet from '@/components/dashboard/ForgeTokenWallet';
 import { tokenFormat } from '@/lib/plans';
@@ -132,6 +133,7 @@ export default function SubscriptionPage() {
       </div>
 
       <ForgeTokenWallet history/>
+      <PlanComparison/>
       {user && user.subscriptionTier !== 'STARTER' && ['active','trialing'].includes(user.subscriptionStatus) && <p className="rounded-xl border border-border bg-card-bg p-4 text-sm text-text-secondary">A tua subscrição atual mantém o preço contratado. Para evitar uma segunda cobrança, a troca automática de planos pagos ainda não está disponível.</p>}
       <div className="relative grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
         {SUBSCRIPTION_PLANS.map((plan, index) => {

@@ -1,5 +1,7 @@
 'use client';
 
+import { useAuth } from '@/lib/auth-context';
+import { effectiveForgePlan,hasFeature } from '@/lib/plans';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getStoreProductsAction, addProductAction, updateProductAction, deleteProductAction } from '@/lib/actions';
@@ -24,7 +26,8 @@ export default function ProductsClient({ user, initialProducts, selectedStoreId 
   const [products, setProducts] = useState<any[]>(initialProducts);
   const [loading, setLoading] = useState(false);
 
-  const plan = SUBSCRIPTION_PLANS.find(p => p.id === user.publicMetadata?.subscriptionTier) || SUBSCRIPTION_PLANS[0];
+  const {user:planUser}=useAuth();
+  const plan = effectiveForgePlan(planUser?.subscriptionTier,planUser?.subscriptionStatus);
   const isAiRestricted = plan.id === 'STARTER' || plan.id === 'GROWTH';
   const canCreateMoreProducts = products.length < (plan?.limits?.products || 50);
   

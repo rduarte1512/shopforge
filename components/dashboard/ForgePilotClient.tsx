@@ -1,5 +1,9 @@
 'use client';
 
+import { useAuth } from '@/lib/auth-context';
+import { hasFeature,featureForForgeTab } from '@/lib/plans';
+import PlanUpgrade from './PlanUpgrade';
+import { LockKeyhole } from 'lucide-react';
 import Link from 'next/link';
 import ForgeTokenWallet from './ForgeTokenWallet';
 import { useEffect, useState } from 'react';
@@ -80,8 +84,11 @@ function RealStorePreview({ overview, customization }: { overview: Overview; cus
 }
 
 export default function ForgePilotClient({ initial }: { initial: Overview | null }) {
+  const {user}=useAuth();
   const [overview, setOverview] = useState<Overview | null>(initial);
-  const [tab, setTab] = useState<Tab>('overview');
+  const [tab, setTab] = useState<Tab>('copilot');
+  const feature=featureForForgeTab(tab);
+  const locked=feature&&!hasFeature(user?.subscriptionTier,user?.subscriptionStatus,feature);
   const [actionBrief,setActionBrief]=useState('');
   useEffect(() => {
     const requested = new URLSearchParams(window.location.search).get('tab');
@@ -186,7 +193,7 @@ export default function ForgePilotClient({ initial }: { initial: Overview | null
       </header>
       <ForgeTokenWallet/>
 
-      {tab === 'insights' && <div className="grid gap-3 sm:grid-cols-3">
+      {!locked && tab === 'insights' && <div className="grid gap-3 sm:grid-cols-3">
         {[
           { label: 'Produtos na loja', value: audit.productCount, icon: Package, detail: 'Catálogo atual' },
           { label: 'Produtos com fotografia', value: audit.imageCount + ' / ' + audit.productCount, icon: Eye, detail: 'Imagens próprias registadas' },
@@ -197,22 +204,23 @@ export default function ForgePilotClient({ initial }: { initial: Overview | null
         </div>)}
       </div>}
 
-      {tab === 'insights' && <section className="rounded-[1.5rem] border border-border bg-card-bg p-5 sm:p-6"><h2 className="mb-4 text-base font-black">Diagnóstico por dimensão</h2><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">{forgePilotAuditDimensions(audit).map(dimension => <div key={dimension.id}><div className="mb-2 flex items-center justify-between gap-2"><span className="text-xs font-bold text-text-secondary">{dimension.label}</span><span className="text-xs font-black tabular-nums">{dimension.score}%</span></div><div className="h-2 overflow-hidden rounded-full bg-bg-main"><div className="h-full rounded-full bg-emerald-500" style={{ width: dimension.score + '%' }}/></div><p className="mt-1.5 text-[10px] text-text-muted">{dimension.achieved}/{dimension.total} pontos técnicos</p></div>)}</div><p className="mt-4 text-[11px] text-text-muted">Estas dimensões medem critérios de preparação; não são previsões de conversão.</p></section>}
+      {!locked && tab === 'insights' && <section className="rounded-[1.5rem] border border-border bg-card-bg p-5 sm:p-6"><h2 className="mb-4 text-base font-black">Diagnóstico por dimensão</h2><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">{forgePilotAuditDimensions(audit).map(dimension => <div key={dimension.id}><div className="mb-2 flex items-center justify-between gap-2"><span className="text-xs font-bold text-text-secondary">{dimension.label}</span><span className="text-xs font-black tabular-nums">{dimension.score}%</span></div><div className="h-2 overflow-hidden rounded-full bg-bg-main"><div className="h-full rounded-full bg-emerald-500" style={{ width: dimension.score + '%' }}/></div><p className="mt-1.5 text-[10px] text-text-muted">{dimension.achieved}/{dimension.total} pontos técnicos</p></div>)}</div><p className="mt-4 text-[11px] text-text-muted">Estas dimensões medem critérios de preparação; não são previsões de conversão.</p></section>}
 
       <div className="grid min-w-0 gap-5 xl:grid-cols-[220px_minmax(0,1fr)]">
         <aside className="min-w-0 self-start rounded-2xl border border-border bg-card-bg p-3 xl:sticky xl:top-4">
           <p className="px-3 pb-3 pt-1 text-[10px] font-black uppercase tracking-[.18em] text-text-muted">Centro de operações</p>
           <nav className="flex gap-1 overflow-x-auto xl:flex-col" aria-label="Secções do ForgePilot" role="tablist">
-          {navigation.map(item=><button key={item.id} role="tab" aria-selected={tab===item.id} type="button" onClick={()=>{setTab(item.id);setError(null);setNotice(null);}} className={'flex shrink-0 items-center gap-2 rounded-xl px-3 py-3 text-left text-xs font-bold transition xl:shrink '+(tab===item.id?'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300':'text-text-secondary hover:bg-bg-main hover:text-text-primary')}><item.icon className="h-4 w-4 shrink-0"/><span>{item.title}</span>{tab===item.id&&<ChevronRight className="ml-auto h-3.5 w-3.5"/>}</button>)}
+          {navigation.map(item=><button key={item.id} role="tab" aria-selected={tab===item.id} type="button" onClick={()=>{setTab(item.id);setError(null);setNotice(null);}} className={'flex shrink-0 items-center gap-2 rounded-xl px-3 py-3 text-left text-xs font-bold transition xl:shrink '+(tab===item.id?'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300':'text-text-secondary hover:bg-bg-main hover:text-text-primary')}><item.icon className="h-4 w-4 shrink-0"/><span>{item.title}</span>{featureForForgeTab(item.id)&&!hasFeature(user?.subscriptionTier,user?.subscriptionStatus,featureForForgeTab(item.id)!)&&<LockKeyhole className="ml-auto h-3.5 w-3.5 shrink-0"/>}{tab===item.id&&<ChevronRight className="ml-auto h-3.5 w-3.5"/>}</button>)}
           </nav>
           <div className="mt-3 hidden border-t border-border px-3 pt-4 xl:block"><p className="text-[10px] font-black uppercase text-text-muted">Preparação básica</p><p className="mt-1 text-xl font-black tabular-nums">{audit.score}/100</p><p className="mt-1 text-[11px] text-text-muted">{done} verificações concluídas</p></div>
         </aside>
         <main className="min-w-0 space-y-5">
-      {isCommandTab(tab) && <ForgePilotCommand key={store.id} storeId={store.id} domain={store.domain} mode={tab} brief={actionBrief} onRefresh={refresh} onNavigate={setTab}/>}
+      {locked&&feature&&<PlanUpgrade feature={feature}/>}
+      {!locked && isCommandTab(tab) && <ForgePilotCommand key={store.id} storeId={store.id} domain={store.domain} mode={tab} brief={actionBrief} onRefresh={refresh} onNavigate={setTab}/>}
       {notice && <div role="status" className="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-700 dark:text-emerald-200"><CheckCircle2 className="h-5 w-5 shrink-0" /> {notice}</div>}
       {error && <div role="alert" className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm font-semibold text-rose-700 dark:text-rose-200">{error} <button onClick={() => { setError(null); void refresh(); }} className="ml-2 underline">Atualizar</button></div>}
 
-      {tab === 'insights' && <>
+      {!locked && tab === 'insights' && <>
         <section className="rounded-[1.5rem] border border-border bg-card-bg p-5 shadow-sm sm:p-6">
           <div className="mb-4 flex items-start gap-3"><span className="rounded-xl bg-violet-500/10 p-2.5 text-violet-600"><Sparkles className="h-5 w-5" /></span><div><h2 className="text-lg font-black">Uma evolução de cada vez</h2><p className="mt-1 text-xs leading-5 text-text-secondary">Não precisas de conhecimentos técnicos para aplicar as sugestões.</p></div></div>
           <div className="grid gap-3 sm:grid-cols-3">
@@ -252,7 +260,7 @@ export default function ForgePilotClient({ initial }: { initial: Overview | null
 
       {tab === 'copilot' && <ForgePilotCopilot storeId={store.id} storeName={store.name} audit={audit} version={overview.version} activeMission={store.customization?.forgepilot?.activeMission} busy={Boolean(loading)} onPreview={id => void handlePreview(id)} onMissionSaved={refresh} onOpenGrowth={() => setTab('growth')} onPrepareChanges={brief => {setActionBrief(brief);setTab('actions');}} />}
 
-      {tab === 'brand' && <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+      {!locked && tab === 'brand' && <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="rounded-[1.5rem] border border-border bg-card-bg p-6 sm:p-8">
           <div className="mb-6"><h2 className="text-2xl font-black">Brand DNA</h2><p className="mt-2 text-sm text-text-secondary">Diz ao ForgePilot quem é a tua marca. A identidade guardada ajuda a orientar as próximas recomendações. Não altera a loja publicada sem aprovação.</p>
             <button onClick={() => void handleSuggestBrand()} disabled={Boolean(loading)} className="mt-4 inline-flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-sm font-bold text-emerald-700 transition hover:bg-emerald-500/15 disabled:opacity-50 dark:text-emerald-200">
@@ -279,7 +287,7 @@ export default function ForgePilotClient({ initial }: { initial: Overview | null
         </div>
       </section>}
 
-      {tab === 'history' && <section className="rounded-[1.5rem] border border-border bg-card-bg p-6 sm:p-8">
+      {!locked && tab === 'history' && <section className="rounded-[1.5rem] border border-border bg-card-bg p-6 sm:p-8">
         <h2 className="flex items-center gap-2 text-2xl font-black"><History className="h-6 w-6 text-emerald-500" /> Histórico de melhorias</h2>
         <p className="mt-2 text-sm text-text-secondary">Guarda-se automaticamente uma cópia antes de cada alteração feita no ForgePilot. Podes regressar a uma versão anterior.</p>
         {!history.length ? <div className="mt-7 rounded-xl bg-bg-main p-7 text-center text-sm text-text-secondary">Ainda não guardaste melhorias com o ForgePilot.</div> :
@@ -290,7 +298,7 @@ export default function ForgePilotClient({ initial }: { initial: Overview | null
         </div>)}</div>}
       </section>}
 
-      {tab === 'growth' && <ForgePilotGrowthLab storeId={store.id} />}
+      {!locked && tab === 'growth' && <ForgePilotGrowthLab storeId={store.id} />}
       </main></div>
 
       {preview && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 p-3 backdrop-blur-md sm:p-6" role="dialog" aria-modal="true" aria-label="Comparar melhoria da loja">

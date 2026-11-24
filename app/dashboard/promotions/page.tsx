@@ -1,3 +1,6 @@
+import { accountPlan } from '@/lib/plan-access';
+import { hasFeature } from '@/lib/plans';
+import PlanUpgrade from '@/components/dashboard/PlanUpgrade';
 import { auth } from '@clerk/nextjs/server';
 import { getMyStoresAction, getPromotionsAction, syncUserAction } from '@/lib/actions';
 import { getSelectedStoreId } from '@/lib/dashboard-actions';
@@ -11,6 +14,7 @@ export default async function PromotionsPage() {
     redirect('/login');
   }
 
+  if(!hasFeature((await accountPlan(userId)).id,'active','discounts'))return <PlanUpgrade feature="discounts"/>;
   // Fetch data in parallel on the server
   const [_, stores, cookieStoreId] = await Promise.all([
     syncUserAction(),

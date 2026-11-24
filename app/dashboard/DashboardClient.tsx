@@ -1,5 +1,8 @@
 'use client';
 
+import { useAuth } from '@/lib/auth-context';
+import { hasFeature } from '@/lib/plans';
+import PlanUpgrade from '@/components/dashboard/PlanUpgrade';
 import { useMemo } from 'react';
 import { 
   ShoppingBag, 
@@ -47,6 +50,7 @@ function formatOrderId(id: any) {
 }
 
 export default function DashboardClient({ user, stores, products, orders, selectedStoreId }: DashboardClientProps) {
+  const {user:planUser}=useAuth();
   const safeOrders = Array.isArray(orders) ? orders : [];
   const safeProducts = Array.isArray(products) ? products : [];
   const safeStores = Array.isArray(stores) ? stores : [];
@@ -174,7 +178,7 @@ export default function DashboardClient({ user, stores, products, orders, select
         />
       </div>
 
-      <TrafficPulse storeId={currentStore.id} />
+      {hasFeature(planUser?.subscriptionTier,planUser?.subscriptionStatus,'traffic')?<TrafficPulse storeId={currentStore.id}/>:<PlanUpgrade feature="traffic"/>}
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         <div className="xl:col-span-2 space-y-6">

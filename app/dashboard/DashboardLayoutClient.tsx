@@ -1,5 +1,8 @@
 'use client';
 
+import { featureForPath,hasFeature,effectiveForgePlan } from '@/lib/plans';
+import PlanUpgrade from '@/components/dashboard/PlanUpgrade';
+import { LockKeyhole } from 'lucide-react';
 import { useClerk } from '@clerk/nextjs';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -71,7 +74,10 @@ export default function DashboardLayoutClient({ children, user, initialStores, i
   const router = useRouter();
   const pathname = usePathname();
   const currentStore = selectedStoreId ? stores.find((store) => store.id === selectedStoreId) || stores[0] : stores[0];
-  const subscriptionTier = user?.publicMetadata?.subscriptionTier || 'STARTER';
+  const plan=effectiveForgePlan(user?.publicMetadata?.subscriptionTier,user?.publicMetadata?.subscriptionStatus);
+  const subscriptionTier=plan.id;
+  const lockedFeature=featureForPath(pathname);
+  const locked=lockedFeature&&!hasFeature(plan.id,'active',lockedFeature);
 
   // O cookie é a fonte de verdade da loja ativa. Quando router.refresh()
   // traz uma nova resposta do servidor, sincronizamos o seletor e os módulos
@@ -132,10 +138,11 @@ export default function DashboardLayoutClient({ children, user, initialStores, i
       <nav className="flex-1 overflow-y-auto space-y-1.5 px-2 no-scrollbar">
         {navigation.map((item) => {
           const active = isActive(item.href);
+          const feature=featureForPath(item.href);const restricted=feature&&!hasFeature(plan.id,'active',feature);
           return (
             <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)} className={`flex items-center gap-3 px-3.5 py-3 rounded-2xl transition-all text-[14px] ${active ? 'text-white font-black bg-white/[0.10]' : 'text-white/60 hover:text-white hover:bg-white/[0.06] font-bold'}`}>
               <item.icon className={`w-[18px] h-[18px] ${active ? 'text-emerald-300' : 'text-white/35'}`} />
-              <span className="truncate">{item.name}</span>
+              <span className="truncate">{item.name}</span>{restricted&&<LockKeyhole className="ml-auto h-3.5 w-3.5 shrink-0 text-white/45"/>}
             </Link>
           );
         })}
@@ -178,7 +185,7 @@ export default function DashboardLayoutClient({ children, user, initialStores, i
         </header>
         <main className="relative flex-1 p-4 lg:p-8 bg-[radial-gradient(circle_at_top_right,_rgba(16,185,129,0.10),_transparent_32%),linear-gradient(180deg,var(--color-bg-main)_0%,var(--color-bg-gray)_100%)] transition-colors duration-300">
           {isSwitchingStore && <div role="status" aria-live="polite" className="absolute inset-0 z-20 flex items-start justify-center bg-bg-main/80 pt-20 backdrop-blur-sm"><div className="rounded-2xl border border-border bg-card-bg px-5 py-3 text-sm font-bold shadow-lg">A atualizar os dados da loja...</div></div>}
-          <div key={initialSelectedStoreId || 'no-store'} className="max-w-7xl mx-auto">{children}</div>
+          <div key={initialSelectedStoreId || 'no-store'} className="max-w-7xl mx-auto">{locked&&lockedFeature?<PlanUpgrade feature={lockedFeature}/>:children}</div>
         </main>
       </div>
     </div>
