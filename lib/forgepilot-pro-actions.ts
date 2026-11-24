@@ -51,6 +51,11 @@ export async function previewForgePilotChangeAction(storeId:string,input:ChangeI
 export async function applyForgePilotChangeAction(storeId:string,input:ChangeInput,version:string) {
   const {store,userId,v,before,after,preview}=await readChange(storeId,input);
   if(version!==preview.version) throw Error('A loja foi alterada. Prepara uma nova pré-visualização.');
+  if(preview.before===preview.after)throw Error('O valor proposto é igual ao atual.');
+  if(v.kind==='hero'){
+    const active=await sql.query("SELECT id FROM forgepilot_experiments WHERE store_id=$1 AND ended_at IS NULL AND started_at>now()-interval '30 days' LIMIT 1",[storeId]);
+    if(active.rows.length)throw Error('Termina o teste A/B ativo antes de publicar um novo título.');
+  }
   const id=randomUUID();
   const design=v.kind==='hero'||v.kind==='accent';
   const column=v.kind==='product-name'?'name':'description'; // Fixed allowlist, never interpolated from user input.
@@ -93,16 +98,19 @@ async function experimentRows(storeId:string) {
     +"GROUP BY x.id,x.title,x.original_title,x.variant_title,x.started_at,x.ended_at ORDER BY x.started_at DESC",[storeId]);
   return rows.map(r=>({id:String(r.id),title:String(r.title),originalTitle:String(r.original_title),variantTitle:String(r.variant_title),startedAt:new Date(r.started_at).toISOString(),endedAt:r.ended_at?new Date(r.ended_at).toISOString():null,a:{exposed:asNum(r.a_exposed),converted:asNum(r.a_converted)},b:{exposed:asNum(r.b_exposed),converted:asNum(r.b_converted)}}));
 }
-export async function startForgePilotExperimentAction(storeId:string,title:string,variantTitle:string) {
+export async function startForgePilotExperimentAction(storeId:string,title:string,variantTitle:string,expectedOriginal:string) {
   const {store,userId}=await owner(storeId);
   const original=getHeroTitle(store);
+  if(original!==expectedOriginal)throw Error('O banner foi alterado. Atualiza os dados antes de iniciar o teste.');
   const variant=validChange({kind:'hero',value:variantTitle}).value;
   const name=String(title||'').trim();
   if(!name||name.length>120||name.includes('<')||name.includes('>')||variant===original)throw Error('Indica um nome e um título alternativo diferente.');
   // Supported storefront renderer only. No experiment on unsupported layout.
   const c=safeConfig(store.customization);
   if(c.layoutEngine!=='adaptive-v1'||!Array.isArray(c.sections)||!c.sections.some((s:any)=>s.type==='hero'))throw Error('O teste de banner requer uma loja com layout adaptativo e secção hero.');
-  await sql.query("INSERT INTO forgepilot_experiments(id,store_id,title,original_title,variant_title) SELECT $1,id,$3,$4,$5 FROM stores WHERE id=$2 AND user_id=$6",[randomUUID(),storeId,name,original,variant,userId]);
+  await sql.query("UPDATE forgepilot_experiments SET ended_at=started_at+interval '30 days' WHERE store_id=$1 AND ended_at IS NULL AND started_at<=now()-interval '30 days'",[storeId]);
+  const {rows}=await sql.query("INSERT INTO forgepilot_experiments(id,store_id,title,original_title,variant_title) SELECT $1,id,$3,$4,$5 FROM stores WHERE id=$2 AND user_id=$6 AND coalesce(customization,'{}'::jsonb)=$7::jsonb ON CONFLICT DO NOTHING RETURNING id",[randomUUID(),storeId,name,original,variant,userId,JSON.stringify(store.customization??{})]);
+  if(!rows.length)throw Error('Já existe uma experiência ativa ou a loja foi alterada. Atualiza os dados.');
   revalidatePath('/dashboard/forgepilot'); return {success:true};
 }
 export async function stopForgePilotExperimentAction(storeId:string,id:string) {

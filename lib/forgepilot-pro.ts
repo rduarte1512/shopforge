@@ -22,13 +22,13 @@ export function validChange(input: unknown): ChangeInput {
 export function getHeroTitle(store: any): string {
   const c = safeConfig(store?.customization);
   const hero = Array.isArray(c.sections) ? c.sections.find((s: any) => s?.type === 'hero') : undefined;
-  return String(hero?.content?.title || c.hero?.title || store?.name || '').slice(0, 120);
+  return String(hero?.content?.title || c.hero?.title || store?.name || '');
 }
 export function changeConfig(store: any, input: ChangeInput) {
   const v = validChange(input);
   const c = JSON.parse(JSON.stringify(safeConfig(store.customization)));
   if (v.kind === 'accent') {
-    c.colors = { ...c.colors, accent: v.value };
+    c.colors = { background: '#ffffff', text: '#0f172a', muted: '#64748b', primary: store.primary_color || '#008060', ...c.colors, accent: v.value };
   } else if (v.kind === 'hero') {
     if (!Array.isArray(c.sections) || !c.sections.some((s: any) => s?.type === 'hero')) throw Error('Cria primeiro um banner no editor de loja.');
     c.sections = c.sections.map((s: any) => s?.type === 'hero' ? { ...s, content: { ...s.content, title: v.value } } : s);
