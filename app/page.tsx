@@ -120,6 +120,15 @@ function HeroProductArt({kind}:{kind:HeroProduct}) {
   </svg>;
 }
 
+function HeroTypeLine({text,delay,reduced,last=false}:{text:string;delay:number;reduced:boolean;last?:boolean}){
+  if(reduced)return <span aria-hidden="true">{text}</span>;
+  const letters=Array.from(text), step=.065;
+  return <span aria-hidden="true" className="whitespace-pre">{letters.map((letter,i)=>{
+    const at=delay+i*step, final=last&&i===letters.length-1;
+    return <motion.span key={i} className="relative" initial={{opacity:0}} animate={{opacity:1}} transition={{delay:at,duration:.001}}>{letter}<motion.span className="pointer-events-none absolute -right-[.04em] top-[.14em] h-[.78em] w-[.035em] rounded-full bg-current" initial={{opacity:0}} animate={{opacity:final?[0,1,1,0,1,0]:[0,1,1,0]}} transition={{delay:at,duration:final?.65:step,times:final?[0,.01,.36,.48,.7,1]:[0,.01,.97,1]}}/></motion.span>;
+  })}</span>;
+}
+
 function LaunchStudio({href,cta}:{href:string;cta:string}){
   const reduce=useReducedMotion();
   const [run,setRun]=useState(0);
@@ -139,7 +148,7 @@ function LaunchStudio({href,cta}:{href:string;cta:string}){
             <span className="absolute -top-5 left-[-1px] rounded-t-md px-2 py-1 text-[10px] font-bold leading-3 text-[#10261c]" style={{backgroundColor:accent}}>Título · H1</span>
             {['-left-1 -top-1','-right-1 -top-1','-left-1 -bottom-1','-right-1 -bottom-1'].map(p=><span key={p} aria-hidden="true" className={'absolute h-2 w-2 border border-[#10261c] '+p} style={{backgroundColor:accent}}/>)}
             <motion.p {...enter(.22)} className="mb-4 text-[10px] font-semibold uppercase tracking-[.19em] sm:text-xs" style={{color:accent}}>A plataforma inteligente de e-commerce</motion.p>
-            <motion.h1 {...enter(.3)} className="text-[clamp(2.65rem,5.3vw,5.4rem)] font-semibold leading-[.98] tracking-[-.065em]">A tua visão.<br/> <span style={{color:accent}}>A tua loja.</span></motion.h1>
+            <motion.h1 {...enter(.3)} aria-label="A tua visão. A tua loja." className="text-[clamp(2.65rem,5.3vw,5.4rem)] font-semibold leading-[.98] tracking-[-.065em]"><HeroTypeLine text="A tua visão." delay={.38} reduced={Boolean(reduce)}/><br/><span style={{color:accent}}><HeroTypeLine text="A tua loja." delay={1.36} reduced={Boolean(reduce)} last/></span></motion.h1>
             <motion.p {...enter(.42)} className="mx-auto mt-5 max-w-[560px] text-sm leading-relaxed text-[#b9cebf] sm:text-lg">Cria, personaliza e faz crescer o teu negócio online com IA, um editor visual e ferramentas de gestão. Tudo no mesmo lugar.</motion.p>
           </div>
           <motion.div {...enter(.52)} className="mt-6 flex flex-wrap items-center justify-center gap-3"><Link href={href} className="inline-flex items-center justify-center gap-3 rounded-full px-6 py-3.5 text-sm font-bold text-[#10261c] transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white" style={{backgroundColor:accent}}>{cta}<ArrowRight size={17}/></Link><a href="#demo" className="inline-flex items-center gap-2 rounded-full border border-white/20 px-5 py-3.5 text-sm font-semibold hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-white">Explorar a plataforma <ArrowUpRight size={15}/></a></motion.div>
