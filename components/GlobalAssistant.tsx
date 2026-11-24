@@ -115,6 +115,7 @@ export default function GlobalAssistant() {
     setCopied(null);
     setShowRecent(false);
     setIsOpen(false);
+    setExpanded(false);
     conversationId.current = nextId.current++;
   }, [userId]);
 
@@ -214,7 +215,8 @@ export default function GlobalAssistant() {
 
   function archiveCurrent() {
     if (!messages.length) return;
-    setRecent(previous => [{ id: conversationId.current, messages }, ...previous.filter(item => item.id !== conversationId.current)].slice(0, 12));
+    const id = conversationId.current;
+    setRecent(previous => [{ id, messages }, ...previous.filter(item => item.id !== id)].slice(0, 12));
   }
 
   function newConversation() {
@@ -343,7 +345,7 @@ export default function GlobalAssistant() {
                 <h2 className="truncate text-sm font-bold tracking-tight">ShopForge AI</h2>
                 <p className="truncate text-[11px] text-text-secondary">O teu assistente de e-commerce</p>
               </div>
-              <button type="button" disabled={isLoading} onClick={() => setShowRecent(previous => !previous)} aria-pressed={showRecent} title="Conversas recentes" aria-label="Conversas recentes" className={iconButton + (showRecent ? ' bg-bg-gray text-primary' : '')}><History className="h-[18px] w-[18px]" /></button>
+              <button type="button" disabled={isLoading} onClick={() => { stopVoice(true); setShowRecent(previous => !previous); }} aria-pressed={showRecent} title="Conversas recentes" aria-label="Conversas recentes" className={iconButton + (showRecent ? ' bg-bg-gray text-primary' : '')}><History className="h-[18px] w-[18px]" /></button>
               <button type="button" disabled={isLoading} onClick={newConversation} title="Nova conversa" aria-label="Nova conversa" className={iconButton}><Plus className="h-5 w-5" /></button>
               <button type="button" onClick={() => setExpanded(previous => !previous)} aria-label={expanded ? 'Restaurar tamanho' : 'Expandir painel'} title={expanded ? 'Restaurar tamanho' : 'Expandir painel'} className={iconButton + ' hidden sm:inline-flex'}>{expanded ? <Minimize2 className="h-[17px] w-[17px]" /> : <Maximize2 className="h-[17px] w-[17px]" />}</button>
               <button type="button" onClick={closePanel} aria-label="Fechar assistente" title="Fechar assistente" className={iconButton}><X className="h-5 w-5" /></button>
