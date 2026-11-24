@@ -9,7 +9,7 @@
     "test:ai-designer": "node scripts/test-ai-designer.cjs",
     "test:store-switch": "node scripts/test-store-switch.cjs",
     "test:store-switch-ui": "node scripts/test-store-switch-ui.cjs",
-    "build": "npm run test:ai-niche && npm run test:layouts && npm run test:ai-designer && npm run test:store-switch && npm run test:store-switch-ui && npm run test:forgepilot && npm run test:growth-lab && npm run test:missions && npm run test:forgepilot-pro && npm run test:forgepilot-batch && npm run test:forgepilot-tokens && next build",
+    "build": "npm run test:ai-niche && npm run test:layouts && npm run test:ai-designer && npm run test:store-switch && npm run test:store-switch-ui && npm run test:forgepilot && npm run test:growth-lab && npm run test:missions && npm run test:forgepilot-pro && npm run test:forgepilot-batch && npm run test:forgepilot-tokens && npm run test:forgeads && next build",
     "start": "next start",
     "lint": "eslint .",
     "clean": "next clean",
@@ -18,7 +18,8 @@
     "test:missions": "node scripts/test-forgepilot-missions.cjs",
     "test:forgepilot-pro": "node scripts/test-forgepilot-pro.cjs",
     "test:forgepilot-batch": "node scripts/test-forgepilot-batch.cjs",
-    "test:forgepilot-tokens": "node scripts/test-forgepilot-tokens.cjs"
+    "test:forgepilot-tokens": "node scripts/test-forgepilot-tokens.cjs",
+    "test:forgeads": "node scripts/test-forgeads.cjs"
   },
   "dependencies": {
     "@clerk/localizations": "^4.5.8",

@@ -35,3 +35,7 @@ ads_management. O painel permite pausar/reativar campanhas existentes, com
 confirmação explícita (reativar pode gerar despesas). O servidor revalida
 propriedade da loja, plano, conta e campanha antes da alteração.
 Nenhuma alteração é executada pelo ForgePilot automaticamente.
+
+
+## Independent mode
+No advertising credentials needed for drafts, previews, chunked private uploads (images 3 MB, videos 25 MB, 100 MB/store), scenario simulator, campaign briefing CSV, partial paused Google Search Editor CSV, UTM links and local CSV report mapping. Meta native import is not implemented. Reports are session-local, not live. Forecast and reports use the existing ForgePilot draft token charge. No new external ad spend or publishing. Apply migrations/20261124_forgeads_media.sql before deploy.
