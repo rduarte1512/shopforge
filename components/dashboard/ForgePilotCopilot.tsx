@@ -63,16 +63,19 @@ export default function ForgePilotCopilot({ storeId, storeName, audit, version, 
     return () => { valid = false; };
   }, [storeId]);
 
-  async function ask(raw: string, selected: ForgePilotMissionId = goal) {
+  async function ask(raw: string, selected?: ForgePilotMissionId) {
     const text = raw.trim();
-    if (sending || text.length < 3 || text.length > 700) return;
+    if (sending || loadingHistory || text.length < 3 || text.length > 700) return;
     setSending(true); setError(''); setNotice(''); setQuestion('');
     try {
       const result = await runForgePilotCopilotAction(storeId, text, selected);
+      setGoal(result.mission.id);
       setReplyPlan(result.mission);
       const date = new Date().toISOString();
       setMessages(items => [...items, { id: 'user-' + Date.now(), role: 'user' as const, content: text, date }, { id: 'assistant-' + Date.now(), role: 'assistant' as const, content: result.answer, date }].slice(-24));
-      if (!result.saved) setNotice('A resposta está disponível, mas não foi possível guardá-la no histórico.');
+      const feedback = [result.notice, !result.saved ? 'Não foi possível guardar a resposta no histórico.' : ''].filter(Boolean).join(' ');
+      setNotice(feedback);
+      if (result.source === 'guided') setQuestion(text);
     } catch (err) {
       setQuestion(text);
       setError(err instanceof Error ? err.message : 'O assistente não conseguiu responder.');
@@ -128,7 +131,7 @@ export default function ForgePilotCopilot({ storeId, storeName, audit, version, 
           <p className="mt-1 text-xs leading-5 text-text-secondary">{plan.description}</p>
           <div className="mt-3 flex items-center gap-3"><div className="h-2 max-w-sm flex-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800"><div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: progress + '%' }}/></div><span className="text-xs font-bold tabular-nums text-text-secondary">{plan.completed}/{plan.total} verificações</span></div>
         </div>
-        <button type="button" onClick={() => void startMission()} disabled={savingMission || sending || busy} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-700 disabled:opacity-50">{savingMission ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}{activeMission === goal ? 'Atualizar plano' : 'Ativar esta missão'}<ArrowRight className="h-4 w-4" /></button>
+        <button type="button" onClick={() => void startMission()} disabled={savingMission || sending || loadingHistory || busy} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-700 disabled:opacity-50">{savingMission ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}{activeMission === goal ? 'Atualizar plano' : 'Ativar esta missão'}<ArrowRight className="h-4 w-4" /></button>
       </div>
     </section>
 
@@ -157,9 +160,9 @@ export default function ForgePilotCopilot({ storeId, storeName, audit, version, 
         <form onSubmit={event => { event.preventDefault(); void ask(question); }} className="border-t border-border p-4 sm:p-5">
           <div className="flex items-end gap-2 rounded-2xl border border-border bg-bg-main p-2 focus-within:border-emerald-500">
             <textarea aria-label="Pergunta ao ForgePilot" value={question} onChange={event => setQuestion(event.target.value)} maxLength={700} rows={2} placeholder="Ex.: Como posso tornar a minha loja mais profissional?" onKeyDown={event => { if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); void ask(question); } }} className="min-h-[60px] flex-1 resize-none bg-transparent px-2 py-2 text-sm text-text-primary outline-none placeholder:text-text-muted"/>
-            <button type="submit" title="Enviar mensagem" disabled={sending || question.trim().length < 3} className="mb-1 rounded-xl bg-emerald-600 p-3 text-white transition hover:bg-emerald-700 disabled:opacity-40">{sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}</button>
+            <button type="submit" title="Enviar mensagem" disabled={sending || loadingHistory || question.trim().length < 3} className="mb-1 rounded-xl bg-emerald-600 p-3 text-white transition hover:bg-emerald-700 disabled:opacity-40">{sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}</button>
           </div>
-          <p className="mt-2 flex items-center justify-between gap-2 text-[11px] text-text-muted"><span>IA assistiva · As alterações exigem aprovação</span><span>{question.length}/700</span></p>
+          <p className="mt-2 flex items-center justify-between gap-2 text-[11px] text-text-muted"><span>Conversa livre · Pergunta sobre qualquer área da loja</span><span>{question.length}/700</span></p>
         </form>
       </section>
 
