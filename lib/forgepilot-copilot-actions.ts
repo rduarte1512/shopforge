@@ -1,4 +1,5 @@
 'use server';
+import { requireFeature, accountPlan } from './plan-access';
 
 import { auth } from '@clerk/nextjs/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -49,6 +50,7 @@ export async function clearForgePilotChatHistoryAction(storeId: string) {
 }
 
 export async function setForgePilotMissionAction(storeId: string, missionId: ForgePilotMissionId, expectedVersion: string) {
+  await requireFeature('diagnostics');
   if (!isForgePilotMissionId(missionId)) throw new Error('Missão inválida.');
   if (!/^[a-f0-9]{64}$/.test(expectedVersion || '')) throw new Error('Versão inválida.');
   const { userId, config } = await authorize(storeId);
@@ -129,13 +131,14 @@ export async function runForgePilotCopilotAction(
   // A missão só é imposta quando o utilizador a inicia explicitamente.
   // Uma pergunta normal pode mudar de assunto sem ficar presa à missão ativa.
   const goal = isForgePilotMissionId(selectedGoal) ? selectedGoal : detectForgePilotMission(value);
-  const traffic = await getStoreTrafficOverview(storeId, 7).catch(() => null);
+  const plan=await accountPlan(userId);
+  const traffic = plan.id==='STARTER'?null:await getStoreTrafficOverview(storeId, 7).catch(() => null);
   // Read-only aggregates; no customer identities or order-level data are sent to Gemini.
-  const businessContext = await Promise.all([
+  const businessContext = ['PRO','BUSINESS','ENTERPRISE'].includes(plan.id)?await Promise.all([
     sql.query("SELECT coalesce(nullif(currency,''),'não indicada') AS currency,count(*)::int AS orders,coalesce(sum(total),0)::float8 AS gross,coalesce(sum(refunded_amount),0)::float8 AS refunds FROM orders WHERE store_id=$1 AND lower(status::text) IN ('paid','shipped','delivered') AND created_at>=now()-interval '30 days' GROUP BY 1",[storeId]),
     sql.query("SELECT monitoring_enabled,alerts,checked_at,expenses,expenses_at FROM forgepilot_workspace WHERE store_id=$1",[storeId]),
     sql.query("SELECT x.title,x.started_at,x.ended_at,count(e.visitor_id) FILTER(WHERE e.variant='A')::int AS a_exposed,count(e.visitor_id) FILTER(WHERE e.variant='B')::int AS b_exposed FROM (SELECT * FROM forgepilot_experiments WHERE store_id=$1 ORDER BY started_at DESC LIMIT 3) x LEFT JOIN forgepilot_exposures e ON e.experiment_id=x.id GROUP BY x.id,x.title,x.started_at,x.ended_at",[storeId]),
-  ]).then(([orders,workspace,experiments])=>({orders:orders.rows,monitoring:workspace.rows[0]||null,experiments:experiments.rows})).catch(()=>null);
+  ]).then(([orders,workspace,experiments])=>({orders:orders.rows,monitoring:workspace.rows[0]||null,experiments:experiments.rows})).catch(()=>null):null;
   const mission = planForgePilotMission(goal, overview.audit, traffic);
   const apiKey = [process.env.GEMINI_API_KEY, process.env.GOOGLE_GENERATIVE_AI_API_KEY].map(key => key?.trim()).find(Boolean);
   let answer = guidedAnswer(mission, Boolean(apiKey));

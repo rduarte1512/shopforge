@@ -1,4 +1,5 @@
 'use server';
+import { requireFeature, accountPlan } from './plan-access';
 
 import { auth } from '@clerk/nextjs/server';
 import { sql } from '@vercel/postgres';
@@ -33,11 +34,13 @@ function publicPreview(storeId:string,items:BatchItem[]):BatchPreview {
 const query:Query=(q,p)=>sql.query(q,p);
 function targetIds(input:unknown){return [...new Set(validateBatch(input).map(c=>c.targetId).filter((id):id is string=>!!id))];}
 export async function previewForgePilotBatchAction(storeId:string,input:unknown):Promise<BatchPreview>{
+  await requireFeature('actions');
   const userId=await identity(storeId);
   const {store,products}=await load(query,storeId,userId,targetIds(input));
   return publicPreview(storeId,buildBatch(store,products,input));
 }
 export async function applyForgePilotBatchAction(storeId:string,input:unknown,expectedVersion:string){
+  await requireFeature('actions');
   const userId=await identity(storeId);
   const ids=targetIds(input);
   const client=await sql.connect();
@@ -73,6 +76,7 @@ export async function applyForgePilotBatchAction(storeId:string,input:unknown,ex
   return {success:true,count};
 }
 export async function generateForgePilotBatchAction(storeId:string,brief:string):Promise<BatchPlan>{
+  await requireFeature('actions');
   const userId=await identity(storeId);
   if(typeof brief!=='string'||brief.trim().length<3||brief.length>700)throw Error('Escreve um objetivo entre 3 e 700 caracteres.');
   const {store,products}=await load(query,storeId,userId,null);

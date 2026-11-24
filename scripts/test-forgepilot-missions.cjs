@@ -88,6 +88,7 @@ async function testCopilotConversation() {
     process: { env: { GEMINI_API_KEY: 'test-key' } },
     Date,
     require: name => {
+ if(name==='./plan-access')return {requireFeature:async()=>({userId:'owner',plan:{id:'ENTERPRISE'}}),accountPlan:async()=>({id:'ENTERPRISE'})};
       if (name === './forgepilot-tokens') return {withForgeTokens:async(_user,_op,generate)=>generate(),ForgeTokenError:class extends Error{}};
       if (name === '@clerk/nextjs/server') return { auth: async () => ({ userId: 'owner' }) };
       if (name === '@vercel/postgres') return { sql: { query: async (query, params) => {

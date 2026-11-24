@@ -84,6 +84,7 @@ const validBrandJson = JSON.stringify({
 const responses = [];
 let aiCalls = 0;
 const server = { exports: {}, console, process: { env: { GEMINI_API_KEY: 'test-key' } }, require: id => {
+ if(id==='./plan-access')return {requireFeature:async()=>({userId:'owner',plan:{id:'ENTERPRISE'}}),accountPlan:async()=>({id:'ENTERPRISE'})};
   if (id === './forgepilot-tokens') return {withForgeTokens:async(_user,_op,generate)=>generate(),ForgeTokenError:class extends Error{}};
   if (id === '@google/generative-ai') return { GoogleGenerativeAI: class {
     getGenerativeModel() {

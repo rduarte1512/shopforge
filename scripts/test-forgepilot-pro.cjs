@@ -14,7 +14,8 @@ function compile(file) {
 }
 const engine={exports:{},console,Date};
 vm.runInNewContext(compile('lib/forgepilot-engine.ts'),engine);
-const shared={exports:{},console,Date,require:name=>{assert.equal(name,'./forgepilot-engine');return engine.exports;}};
+const shared={exports:{},console,Date,require:name=>{
+ if(name==='./plan-access')return {requireFeature:async()=>({userId:'owner',plan:{id:'ENTERPRISE'}}),accountPlan:async()=>({id:'ENTERPRISE'})};assert.equal(name,'./forgepilot-engine');return engine.exports;}};
 vm.runInNewContext(compile('lib/forgepilot-pro.ts'),shared);
 const {validChange,changeConfig,advancedDiagnostics,experimentVariant,experimentResult,safeExpenses}=shared.exports;
 const storeId='00000000-0000-4000-8000-000000000001';
@@ -53,6 +54,7 @@ assert.match(read('app/api/cron/prune-traffic/route.ts'),/CRON_SECRET/);
 
 let writes=0;
 const state={exports:{},console,Date,process:{env:{}},require:name=>{
+ if(name==='./plan-access')return {requireFeature:async()=>({userId:'owner',plan:{id:'ENTERPRISE'}}),accountPlan:async()=>({id:'ENTERPRISE'})};
   if(name==='./forgepilot-tokens')return {withForgeTokens:async(_user,_op,generate)=>generate(),ForgeTokenError:class extends Error{}};
   if(name==='@clerk/nextjs/server')return {auth:async()=>({userId:'owner'})};
   if(name==='@vercel/postgres')return {sql:{query:async(q,p)=>{
@@ -72,6 +74,7 @@ const state={exports:{},console,Date,process:{env:{}},require:name=>{
 }};
 vm.runInNewContext(compile('lib/forgepilot-pro-actions.ts'),state);
 const api={exports:{},console,URL,require:name=>{
+ if(name==='./plan-access')return {requireFeature:async()=>({userId:'owner',plan:{id:'ENTERPRISE'}}),accountPlan:async()=>({id:'ENTERPRISE'})};
   if(name==='next/server')return {NextResponse:{json:(body,config)=>({body,status:config.status})}};
   if(name==='@vercel/postgres')return {sql:{query:async(q,p)=>{assert.match(q,/EXISTS\(SELECT 1 FROM store_traffic_sessions/);assert.equal(p[2],'B');writes++;return {rows:[]};}}};
   if(name==='@/lib/forgepilot-pro')return shared.exports;

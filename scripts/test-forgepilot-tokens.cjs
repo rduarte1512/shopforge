@@ -31,12 +31,20 @@ const sql={connect:async()=>({release(){},query:async(q,p)=>{
 const {withForgeTokens}=load('lib/forgepilot-tokens.ts',{'@vercel/postgres':{sql},'./plans':plans});
 (async()=>{
  const generate=async()=>{generated++;return 'ok';};
- assert.equal(await withForgeTokens('owner','batch',generate),'ok');assert.equal(rows[0].tokens,30);assert.equal(rows[0].status,'spent');
- await assert.rejects(withForgeTokens('owner','draft',async()=>{throw Error('provider failed');}),/provider failed/);assert.equal(rows[1].status,'refunded');
- await withForgeTokens('owner','batch',generate);await withForgeTokens('owner','batch',generate);await withForgeTokens('owner','brand',generate);
+ await assert.rejects(withForgeTokens('owner','batch',generate),/plano superior/);assert.equal(generated,0);
+ await assert.rejects(withForgeTokens('owner','brand',generate),/plano superior/);
+ await assert.rejects(withForgeTokens('owner','chat',async()=>{throw Error('provider failed');}),/provider failed/);assert.equal(rows[0].status,'refunded');
+ for(let i=0;i<20;i++)await withForgeTokens('owner','chat',generate);
  assert.equal(rows.filter(r=>r.status==='spent').reduce((n,r)=>n+r.tokens,0),100);
- await assert.rejects(withForgeTokens('owner','chat',generate),/Tokens insuficientes/);assert.equal(generated,4);assert.equal(rollbacks,1);
- tier='GROWTH';await withForgeTokens('owner','chat',generate);assert.equal(generated,5);assert.equal(commits,6);
- assert.equal(rows.filter(r=>r.status==='spent').reduce((n,r)=>n+r.tokens,0),105);
+ await assert.rejects(withForgeTokens('owner','chat',generate),/Tokens insuficientes/);assert.equal(generated,20);assert.equal(rollbacks,3);
+ tier='GROWTH';await withForgeTokens('owner','brand',generate);assert.equal(generated,21);
+ assert.equal(rows.filter(r=>r.status==='spent').reduce((n,r)=>n+r.tokens,0),110);
+ await assert.rejects(withForgeTokens('owner','batch',generate),/plano superior/);
+ tier='PRO';await withForgeTokens('owner','batch',generate);assert.equal(generated,22);
+ assert.equal(plans.hasFeature('PRO','expired','actions'),false);
+ assert.equal(plans.hasFeature('STARTER','active','traffic'),false);
+ assert.equal(plans.hasFeature('GROWTH','active','traffic'),true);
+ assert.equal(plans.hasFeature('PRO','active','team'),false);
+ assert.equal(plans.hasFeature('BUSINESS','active','team'),true);
  console.log('PASS: shared plan quotas, credit reserve/settle/refund, quota rejection before generation, plan change.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

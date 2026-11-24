@@ -1,4 +1,5 @@
 'use server';
+import { requireFeature, accountPlan } from './plan-access';
 
 import { auth } from '@clerk/nextjs/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -82,6 +83,7 @@ export async function getForgePilotOverviewAction(storeId?: string | null) {
 }
 
 export async function previewForgePilotImprovementAction(storeId: string, improvementId: ImprovementId) {
+  await requireFeature('actions');
   const { store } = await ownedStore(storeId);
   if (!store) throw new Error('Loja não encontrada.');
   const products = await getProducts(store.id);
@@ -93,6 +95,7 @@ export async function previewForgePilotImprovementAction(storeId: string, improv
 }
 
 export async function applyForgePilotImprovementAction(storeId: string, improvementId: ImprovementId, expectedVersion: string) {
+  await requireFeature('actions');
   if (!/^[a-f0-9]{64}$/.test(expectedVersion || '')) throw new Error('Versão inválida.');
   const { store, userId } = await ownedStore(storeId);
   if (!store) throw new Error('Loja não encontrada.');
@@ -109,6 +112,7 @@ export async function applyForgePilotImprovementAction(storeId: string, improvem
 }
 
 export async function saveForgePilotBrandAction(storeId: string, value: ForgePilotBrand, expectedVersion: string) {
+  await requireFeature('brand');
   const { store, userId } = await ownedStore(storeId);
   if (!store) throw new Error('Loja não encontrada.');
   const original = safeConfig(store.customization);
@@ -128,6 +132,7 @@ export async function saveForgePilotBrandAction(storeId: string, value: ForgePil
 }
 
 export async function restoreForgePilotHistoryAction(storeId: string, historyId: string, expectedVersion: string) {
+  await requireFeature('actions');
   const { store, userId } = await ownedStore(storeId);
   if (!store) throw new Error('Loja não encontrada.');
   const original = safeConfig(store.customization);
@@ -173,6 +178,7 @@ function parseSuggestedBrand(raw: string): ForgePilotBrand {
 }
 
 export async function suggestForgePilotBrandWithAIAction(storeId: string): Promise<ForgePilotBrandSuggestion> {
+  await requireFeature('brand');
   const { store, userId } = await ownedStore(storeId);
   if (!store) throw new Error('Loja não encontrada.');
   const products = await getProducts(store.id);

@@ -1,4 +1,5 @@
 'use server';
+import { requireFeature, accountPlan } from './plan-access';
 import { auth } from '@clerk/nextjs/server';
 import { sql } from '@vercel/postgres';
 import { createHash, randomUUID } from 'node:crypto';
@@ -47,9 +48,11 @@ async function readChange(storeId:string, input:ChangeInput) {
   return {store,userId,v,before,after,preview};
 }
 export async function previewForgePilotChangeAction(storeId:string,input:ChangeInput):Promise<ChangePreview> {
+  await requireFeature('actions');
   return (await readChange(storeId,input)).preview;
 }
 export async function applyForgePilotChangeAction(storeId:string,input:ChangeInput,version:string) {
+  await requireFeature('actions');
   const {store,userId,v,before,after,preview}=await readChange(storeId,input);
   if(version!==preview.version) throw Error('A loja foi alterada. Prepara uma nova pré-visualização.');
   if(preview.before===preview.after)throw Error('O valor proposto é igual ao atual.');
@@ -72,6 +75,7 @@ export async function applyForgePilotChangeAction(storeId:string,input:ChangeInp
   return {success:true};
 }
 export async function undoForgePilotChangeAction(storeId:string,changeId:string) {
+  await requireFeature('actions');
   const {store,userId}=await owner(storeId);
   if(!/^[0-9a-f-]{36}$/i.test(changeId||''))throw Error('Versão inválida.');
   const {rows}=await sql.query('SELECT * FROM forgepilot_changes WHERE id=$1 AND store_id=$2 AND user_id=$3 AND undone_at IS NULL',[changeId,storeId,userId]);
@@ -100,6 +104,7 @@ async function experimentRows(storeId:string) {
   return rows.map(r=>({id:String(r.id),title:String(r.title),originalTitle:String(r.original_title),variantTitle:String(r.variant_title),startedAt:new Date(r.started_at).toISOString(),endedAt:r.ended_at?new Date(r.ended_at).toISOString():null,a:{exposed:asNum(r.a_exposed),converted:asNum(r.a_converted)},b:{exposed:asNum(r.b_exposed),converted:asNum(r.b_converted)}}));
 }
 export async function startForgePilotExperimentAction(storeId:string,title:string,variantTitle:string,expectedOriginal:string) {
+  await requireFeature('experiments');
   const {store,userId}=await owner(storeId);
   const original=getHeroTitle(store);
   if(original!==expectedOriginal)throw Error('O banner foi alterado. Atualiza os dados antes de iniciar o teste.');
@@ -115,12 +120,14 @@ export async function startForgePilotExperimentAction(storeId:string,title:strin
   revalidatePath('/dashboard/forgepilot'); return {success:true};
 }
 export async function stopForgePilotExperimentAction(storeId:string,id:string) {
+  await requireFeature('experiments');
   const {userId}=await owner(storeId);
   if(!/^[0-9a-f-]{36}$/i.test(id||''))throw Error('Teste inválido.');
   await sql.query('UPDATE forgepilot_experiments x SET ended_at=now() WHERE x.id=$1 AND x.store_id=$2 AND x.ended_at IS NULL AND EXISTS(SELECT 1 FROM stores s WHERE s.id=x.store_id AND s.user_id=$3)',[id,storeId,userId]);
   return {success:true};
 }
 export async function setForgePilotMonitoringAction(storeId:string,enabled:boolean) {
+  await requireFeature('autopilot');
   await owner(storeId);
   if(typeof enabled!=='boolean')throw Error('Opção inválida.');
   await sql.query("INSERT INTO forgepilot_workspace(store_id,monitoring_enabled) VALUES($1,$2) ON CONFLICT(store_id) DO UPDATE SET monitoring_enabled=excluded.monitoring_enabled",[storeId,enabled]);
@@ -128,15 +135,18 @@ export async function setForgePilotMonitoringAction(storeId:string,enabled:boole
   return {success:true};
 }
 export async function refreshForgePilotAlertsAction(storeId:string) {
+  await requireFeature('autopilot');
   await owner(storeId); await refreshForgePilotMonitoring(storeId); return {success:true};
 }
 export async function saveForgePilotExpensesAction(storeId:string,value:unknown) {
+  await requireFeature('actions');
   await owner(storeId);
   const expenses=safeExpenses(value);
   await sql.query("INSERT INTO forgepilot_workspace(store_id,expenses,expenses_at) VALUES($1,$2::jsonb,now()) ON CONFLICT(store_id) DO UPDATE SET expenses=excluded.expenses,expenses_at=excluded.expenses_at",[storeId,JSON.stringify(expenses)]);
   return {success:true};
 }
 export async function getForgePilotCommandAction(storeId:string) {
+  await requireFeature('actions');
   const {store,userId}=await owner(storeId);
   const [products,traffic,workspace,changes,experiments,business]=await Promise.all([
     catalog(storeId),
@@ -181,6 +191,7 @@ async function generateText(userId:string,prompt:string) {
   throw Error('A IA está indisponível. Podes escrever ou editar o conteúdo manualmente.');
 }
 export async function generateForgePilotDraftAction(storeId:string,kind:string,brief:string,targetId?:string) {
+  await requireFeature('marketing');
   const {store,userId}=await owner(storeId);
   if(typeof brief!=='string'||brief.length>700)throw Error('Pedido demasiado longo.');
   if(![...MARKETING_TYPES,...Object.keys(CHANGE_LABELS)].includes(kind))throw Error('Tipo de conteúdo inválido.');

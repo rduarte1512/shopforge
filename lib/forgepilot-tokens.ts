@@ -1,6 +1,6 @@
 import { sql } from '@vercel/postgres';
 import { randomUUID } from 'node:crypto';
-import { effectiveForgePlan, FORGE_TOKEN_COSTS, type ForgeOperation } from './plans';
+import { effectiveForgePlan, FORGE_TOKEN_COSTS, FORGE_OPERATION_FEATURE, hasFeature, type ForgeOperation } from './plans';
 
 export class ForgeTokenError extends Error {
   constructor(message:string){super(message);this.name='ForgeTokenError';}
@@ -15,6 +15,8 @@ async function reserve(userId:string,operation:ForgeOperation){
     const profile=(await client.query('SELECT subscription_tier,subscription_status FROM profiles WHERE id=$1 FOR UPDATE',[userId])).rows[0];
     if(!profile)throw new ForgeTokenError('Abre a tua conta antes de usar o ForgePilot.');
     const plan=effectiveForgePlan(profile.subscription_tier,profile.subscription_status);
+    const feature=FORGE_OPERATION_FEATURE[operation];
+    if(feature&&!hasFeature(plan.id,'active',feature))throw new ForgeTokenError('Esta geração requer um plano superior. Consulta os planos ShopForge.');
     const cost=FORGE_TOKEN_COSTS[operation];
     const {rows}=await client.query("SELECT coalesce(sum(tokens) FILTER (WHERE period_start="+periodSql+" AND status <> 'refunded'),0)::int AS used,count(*) FILTER (WHERE created_at>=now()-interval '24 hours')::int AS attempts FROM forgepilot_token_ledger WHERE user_id=$1 AND (period_start="+periodSql+" OR created_at>=now()-interval '24 hours')",[userId]);
     if(Number(rows[0].used)+cost>plan.tokens)throw new ForgeTokenError('Tokens insuficientes. Consulta o saldo ou escolhe um plano com mais tokens.');
