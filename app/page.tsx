@@ -9,11 +9,12 @@ import { Activity, ArrowRight, ArrowUpRight, BarChart3, Bot, Check, ChevronDown,
 import { SUBSCRIPTION_PLANS } from '@/lib/store';
 import { tokenFormat, FORGE_TOKEN_COSTS, FORGE_OPERATION_LABELS, type ForgeOperation } from '@/lib/plans';
 import LandingAssistant from '@/components/landing/LandingAssistant';
+import ForgeAdsShowcase from '@/components/landing/ForgeAdsShowcase';
 import { WhyMenu, WhySection } from '@/components/landing/WhyShopForge';
 
 const shell = 'mx-auto w-full max-w-[1240px] px-5 sm:px-8';
 const primary = 'inline-flex items-center justify-center gap-2 rounded-xl bg-[#a3f5b5] px-6 py-3.5 font-semibold text-[#092519] transition hover:bg-[#c5ffd1] hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#49b878] motion-reduce:transform-none';
-const nav = [{label:'Plataforma',href:'#features'},{label:'ForgePilot',href:'#forgepilot'},{label:'Growth Lab',href:'#growth'},{label:'Experimentar IA',href:'#assistant'},{label:'Preçário',href:'#pricing'}];
+const nav = [{label:'Plataforma',href:'#features'},{label:'ForgePilot',href:'#forgepilot'},{label:'Growth Lab',href:'#growth'},{label:'ForgeAds',href:'#forgeads'},{label:'Experimentar IA',href:'#assistant'},{label:'Preçário',href:'#pricing'}];
 
 function Reveal({children, className = '', delay = 0}: {children: ReactNode; className?: string; delay?: number}) {
   const reduce = useReducedMotion();
@@ -96,6 +97,7 @@ const faqs = [
   ['Preciso de saber programar?','Não. Podes criar e personalizar uma loja com o editor visual ou começar com a geração por IA, conforme o plano.'],
   ['O ForgePilot altera a minha loja sem autorização?','O Action Engine permite preparar e rever propostas antes de as aplicar. O Autopilot monitoriza e gera alertas, sem publicar alterações ou enviar campanhas automaticamente.'],
   ['O Growth Lab mostra dados reais?','No painel, acompanha o tráfego registado, visitantes recentes e etapas do funil. Os dados dependem da recolha disponível e do consentimento aplicável. Nesta página, os exemplos são ilustrativos.'],
+  ['Preciso de ligar as minhas contas publicitárias para usar a ForgeAds?','Não. Podes preparar campanhas, carregar criativos, simular investimentos e importar relatórios sem ligar contas externas. A publicação é manual e a funcionalidade completa está disponível a partir do Professional.'],
   ['Posso usar a voz no assistente?','Sim, em navegadores compatíveis com reconhecimento de voz. O ditado é convertido em texto que podes rever antes de enviar.'],
   ['Posso gerir mais do que uma loja?','Sim. O número de lojas e produtos depende do plano escolhido. Consulta o preçário para comparar os limites.'],
   ['Como funcionam os pagamentos?','Podes configurar os métodos de pagamento disponibilizados pela tua loja. A disponibilidade e a execução dependem da configuração e das integrações utilizadas.'],
@@ -215,6 +217,7 @@ export default function Home() {
           <Reveal delay={.1} className="rounded-xl border border-[#dce6dd] bg-[#ffffff] p-6 sm:p-8"><div className="mb-6 flex items-center justify-between gap-2"><p className="font-semibold">Funil de conversão</p><span className="text-[11px] text-[#607467]">Dados de exemplo</span></div><Funnel/></Reveal>
         </div>
       </section>
+      <ForgeAdsShowcase signedIn={Boolean(isSignedIn)}/>
       <section id="assistant" className="scroll-mt-24 border-y border-[#d8e4da] bg-[#e7efe5] py-16 sm:py-24"><div className={shell+' grid gap-8 lg:grid-cols-[.85fr_1.15fr] lg:items-center lg:gap-16'}>
         <Reveal><Eyebrow>Experimenta a inteligência artificial</Eyebrow><h2 className="text-4xl font-semibold leading-[1.05] tracking-[-.045em] sm:text-6xl">Uma pergunta pode ser o início.</h2><p className="mt-5 max-w-md text-base leading-relaxed text-[#45604e] sm:text-lg">Conta ao assistente o que queres vender ou como gostarias de melhorar a tua loja. Recebe uma resposta real, antes mesmo de criar uma conta.</p><p className="mt-5 max-w-md text-sm leading-relaxed text-[#53685a]">No painel ShopForge, tens também um assistente lateral ajustável e ditado por voz em navegadores compatíveis.</p></Reveal>
         <Reveal delay={.1}><LandingAssistant/></Reveal>
