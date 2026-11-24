@@ -6,10 +6,11 @@ import { useState, useRef, type ReactNode } from 'react';
 import { motion, AnimatePresence, useReducedMotion, useScroll, useTransform } from 'motion/react';
 import { Activity, ArrowRight, ArrowUpRight, BarChart3, Bot, Check, ChevronDown, CreditCard, FlaskConical, Globe, LayoutDashboard, Mail, Menu, Mic, MousePointerClick, Package, Palette, PanelRightOpen, Radio, Rocket, RotateCcw, ShieldCheck, ShoppingBag, ShoppingCart, Sparkles, Store, Target, TrendingUp, Users, Wallet, WandSparkles, X, Zap } from 'lucide-react';
 import { SUBSCRIPTION_PLANS } from '@/lib/store';
+import LandingAssistant from '@/components/landing/LandingAssistant';
 
 const shell = 'mx-auto w-full max-w-[1240px] px-5 sm:px-8';
 const primary = 'inline-flex items-center justify-center gap-2 rounded-xl bg-[#a3f5b5] px-6 py-3.5 font-semibold text-[#092519] transition hover:bg-[#c5ffd1] hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#49b878] motion-reduce:transform-none';
-const nav = [{label:'Plataforma',href:'#features'},{label:'ForgePilot',href:'#forgepilot'},{label:'Growth Lab',href:'#growth'},{label:'Preçário',href:'#pricing'}];
+const nav = [{label:'Plataforma',href:'#features'},{label:'ForgePilot',href:'#forgepilot'},{label:'Growth Lab',href:'#growth'},{label:'Experimentar IA',href:'#assistant'},{label:'Preçário',href:'#pricing'}];
 
 function Reveal({children, className = '', delay = 0}: {children: ReactNode; className?: string; delay?: number}) {
   const reduce = useReducedMotion();
@@ -98,61 +99,36 @@ const faqs = [
 ];
 
 
-/** Local, original editorial artwork. No external photos, videos or API calls. */
-function ObjectStudy({kind='chair',className=''}:{kind?:'chair'|'lamp'|'vase';className?:string}) {
-  return <svg viewBox="0 0 320 320" className={className} aria-hidden="true">
-    <ellipse cx="165" cy="274" rx="105" ry="13" fill="#29291f" opacity=".09"/>
-    {kind==='chair'&&<g strokeLinejoin="round">
-      <path d="M78 157 L66 269 M230 158 L244 269 M102 202 L99 270 M211 205 L209 270" stroke="#513d2b" strokeWidth="11" strokeLinecap="round"/>
-      <path d="M89 91 Q86 56 119 49 L215 49 Q237 53 237 80 L234 163 L93 163 Z" fill="#76543d"/>
-      <path d="M100 85 Q98 65 124 63 L209 63 Q223 64 223 83 L220 153 L104 153 Z" fill="#b28a61"/>
-      {Array.from({length:12},(_,i)=><path key={i} d={'M'+(111+i*9)+' 72 V145'} stroke="#e3c6a0" strokeWidth="1.3" opacity=".68"/>)}
-      <path d="M76 153 Q73 145 90 142 L225 142 Q240 145 244 156 L231 203 Q225 214 208 215 L111 215 Q94 215 88 203 Z" fill="#68503a"/>
-      <path d="M91 148 Q157 134 224 148 L230 177 Q228 191 210 192 H109 Q93 191 89 178 Z" fill="#d2b99a"/>
-      <path d="M89 178 Q161 191 230 177 L225 195 Q218 201 209 201 H111 Q96 200 91 191 Z" fill="#b99c7b"/>
-    </g>}
-    {kind==='lamp'&&<g><path d="M160 92 V257" stroke="#4c4437" strokeWidth="8"/><ellipse cx="160" cy="263" rx="49" ry="9" fill="#4c4437"/><path d="M104 65 Q160 42 216 65 L244 139 Q160 160 76 139 Z" fill="#c39561"/><path d="M104 65 Q160 84 216 65" fill="none" stroke="#e3c79d" strokeWidth="3"/><ellipse cx="160" cy="139" rx="84" ry="10" fill="#a7784b"/><path d="M113 71 L94 136 M134 77 L124 144 M186 77 L196 144 M207 71 L226 136" stroke="#e9cba2" strokeWidth="2" opacity=".75"/></g>}
-    {kind==='vase'&&<g><path d="M136 53 H184 L180 100 Q232 135 232 195 Q232 257 160 263 Q88 257 88 195 Q88 135 140 100 Z" fill="#a85f44"/><path d="M149 63 L148 106 Q105 145 105 194 Q105 239 141 248" fill="none" stroke="#cf9574" strokeWidth="8" opacity=".7"/><ellipse cx="160" cy="53" rx="24" ry="8" fill="#70412f"/><path d="M137 57 Q160 62 183 57" stroke="#d7a38b" fill="none" strokeWidth="2"/></g>}
-  </svg>;
-}
 
-const launchScenes=[
-  {title:'Começa pela ideia',detail:'A identidade da tua marca.'},
-  {title:'Constrói a experiência',detail:'O layout, os produtos e os detalhes.'},
-  {title:'Abre a tua loja',detail:'Da ideia a uma montra online.'},
-] as const;
-
-function LaunchFilm(){
+function LaunchStudio(){
   const reduce=useReducedMotion();
-  const [take,setTake]=useState(0);
-  const [stage,setStage]=useState(0);
-  const [playing,setPlaying]=useState(true);
-  const [selected,setSelected]=useState(false);
-  const current=reduce&&!selected?2:stage;
-  function replay(){setStage(0);setSelected(false);setPlaying(true);setTake(t=>t+1);}
-  function choose(i:number){setStage(i);setPlaying(false);setSelected(true);}
-  return <div className="min-w-0">
-    <div className="mb-3 flex items-center justify-between gap-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#655f53] sm:text-xs"><span>Uma loja, do zero.</span><span>01 / Studio Forma</span></div>
-    <div className="relative overflow-hidden rounded-[5px] border border-[#c8c4b9] bg-[#e4dfd4] shadow-[0_30px_70px_-45px_#39382e]">
-      <div className="flex h-9 items-center gap-1.5 border-b border-[#d9d4ca] bg-[#f8f6ef] px-3 sm:px-4"><span className="h-2 w-2 rounded-full bg-[#bf786d]"/><span className="h-2 w-2 rounded-full bg-[#d5b576]"/><span className="h-2 w-2 rounded-full bg-[#91ad8c]"/><span className="mx-auto truncate rounded-sm bg-[#ece8de] px-5 py-1 text-[9px] text-[#655f53] sm:text-[10px]">studioforma / demonstração</span><span className="hidden h-2 w-8 sm:block"/></div>
-      <div className="relative overflow-hidden bg-[#f7f3eb] text-[#302c25]">
-        <div className="flex items-center justify-between border-b border-[#e6dfd1] px-4 py-3 sm:px-6"><span className="font-serif text-lg font-normal tracking-[-0.06em] sm:text-xl">forma.</span><div className="hidden gap-5 text-[9px] font-medium sm:flex"><span>Coleção</span><span>Sobre nós</span></div><ShoppingBag size={15} strokeWidth={1.5}/></div>
-        <div className="relative grid min-h-[205px] grid-cols-[1fr_1.05fr] overflow-hidden sm:min-h-[290px]">
-          <motion.div key={'copy'+take} initial={reduce||selected?false:{opacity:0,x:-12}} animate={{opacity:1,x:0}} transition={{duration:reduce?0:.65,delay:reduce||selected?0:.4}} className="relative z-10 flex flex-col items-start justify-center px-4 py-6 sm:px-7">
-            <span className="text-[8px] font-medium uppercase tracking-[0.22em] text-[#756752] sm:text-[10px]">Objetos para viver</span><h2 className="my-3 font-serif text-[clamp(1.55rem,3.5vw,3.6rem)] font-normal leading-[.98] tracking-[-0.05em]">Espaço para<br/>o essencial.</h2><p className="max-w-[160px] text-[9px] leading-relaxed text-[#756752] sm:max-w-[200px] sm:text-xs">Peças intemporais, pensadas para todos os dias.</p><span className="mt-4 border-b border-[#514c3e] pb-1 text-[9px] font-semibold sm:text-[11px]">Descobrir coleção ↗</span>
-          </motion.div>
-          <motion.div key={'art'+take} initial={reduce||selected?false:{clipPath:'inset(0 100% 0 0)'}} animate={{clipPath:'inset(0 0% 0 0)'}} transition={{duration:reduce?0:1.2,delay:reduce||selected?0:.65,ease:[.22,1,.36,1]}} className="relative flex items-end justify-center overflow-hidden bg-[#d9c9b2]"><div className="absolute inset-0 bg-[linear-gradient(125deg,#f0e5d3_0%,#d8c4aa_55%,#b4a28a_100%)]"/><div className="absolute bottom-0 h-[22%] w-full bg-[#c6b69f]"/><div className="absolute -left-3 top-4 h-[70%] w-[62%] rounded-t-full bg-[#e9dcc8] opacity-60"/><ObjectStudy className="relative z-10 w-full max-w-[320px]" kind="chair"/></motion.div>
+  const [run,setRun]=useState(0);
+  const [complete,setComplete]=useState(false);
+  const steps=['Estrutura da loja','Catálogo e identidade','Pré-visualização'];
+  return <div className="relative mx-auto max-w-[1060px]">
+    <div className="mb-3 flex items-center justify-between gap-3 text-xs text-[#506459]"><span className="font-semibold">ShopForge / Editor de loja</span><span>Experiência ilustrativa</span></div>
+    <div className="overflow-hidden rounded-xl border border-[#c9d5cd] bg-[#f8faf8] shadow-[0_40px_90px_-45px_#2b4935]">
+      <div className="flex items-center justify-between border-b border-[#dbe4dd] bg-[#ffffff] px-3 py-3 sm:px-5"><div className="flex items-center gap-2"><span className="grid h-7 w-7 place-items-center rounded-md bg-[#245439] text-white"><ShoppingBag size={15}/></span><span className="text-xs font-bold sm:text-sm">ShopForge Studio</span></div><div className="flex items-center gap-2"><span className="hidden text-xs text-[#53685a] sm:block">Loja de exemplo</span><span className="rounded-md bg-[#245439] px-2.5 py-1.5 text-[10px] font-semibold text-white">Pré-visualização</span></div></div>
+      <div className="grid sm:grid-cols-[190px_1fr] lg:grid-cols-[225px_1fr]">
+        <div className="border-b border-[#dbe4dd] bg-[#f0f4f0] p-4 sm:border-b-0 sm:border-r sm:p-5">
+          <p className="mb-3 text-[10px] font-bold uppercase tracking-[.12em] text-[#53685a]">Construção da loja</p>
+          <div key={run} className="grid grid-cols-3 gap-1.5 sm:grid-cols-1 sm:gap-2">{steps.map((s,i)=><motion.div key={s} initial={reduce?false:{opacity:.35}} animate={{opacity:1}} transition={{delay:reduce?0:i*.45,duration:reduce?0:.35}} className="flex min-w-0 items-center gap-2 rounded-md border border-[#dce5dd] bg-[#ffffff] px-2 py-2.5 text-[10px] font-medium sm:text-xs"><Check size={14} className="shrink-0 text-[#286346]"/><span>{s}</span></motion.div>)}</div>
+          <div className="mt-5 hidden space-y-3 border-t border-[#dbe4dd] pt-4 sm:block"><p className="text-xs font-semibold">Secções</p>{['Cabeçalho','Banner','Coleção','Rodapé'].map(s=><div key={s} className="flex items-center gap-2 text-xs text-[#53685a]"><span className="h-2 w-2 rounded-sm border border-[#8fa498]"/>{s}</div>)}</div>
         </div>
-        <motion.div key={'collection'+take} initial={reduce||selected?false:{opacity:0,y:12}} animate={{opacity:1,y:0}} transition={{duration:reduce?0:.65,delay:reduce||selected?0:1.35}} className="border-t border-[#e6dfd1] px-4 py-3 sm:px-6 sm:py-4"><div className="mb-2 flex items-center justify-between"><span className="font-serif text-sm sm:text-lg">A coleção.</span><span className="text-[8px] text-[#756752]">Três peças essenciais</span></div><div className="grid grid-cols-3 gap-2 sm:gap-3">{([{kind:'chair',name:'Cadeira Nº 01',bg:'#e1d4be'},{kind:'lamp',name:'Luz de mesa',bg:'#e8dfce'},{kind:'vase',name:'Vaso Terra',bg:'#e0c9b7'}] as const).map(item=><div key={item.kind}><div className="flex aspect-[1.5] items-center justify-center overflow-hidden" style={{backgroundColor:item.bg}}><ObjectStudy kind={item.kind} className="h-full w-auto"/></div><p className="mt-1 text-[8px] font-medium sm:text-[10px]">{item.name}</p></div>)}</div></motion.div>
-        {selected&&current===0&&<div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-[#26372b] text-[#f0e8d7]"><span className="font-serif text-6xl tracking-[-0.07em]">forma.</span><span className="text-xs uppercase tracking-[.2em]">Identidade da marca</span></div>}
-        {selected&&current===1&&<div className="pointer-events-none absolute inset-x-3 bottom-3 z-20 border border-[#d7d1c3] bg-[#f8f6ef] p-3 text-xs font-semibold text-[#514c3e] shadow-lg">Editor visual · cabeçalho, coleção e produtos preparados</div>}
-        {!reduce&&playing&&<AnimatePresence>{current===0&&<motion.div key={'curtain'+take} initial={{scaleX:1}} animate={{scaleX:0}} exit={{opacity:0}} onAnimationComplete={()=>{if(playing)setStage(s=>s===0?1:s);}} transition={{duration:1.15,delay:.45,ease:[.76,0,.24,1]}} style={{transformOrigin:'right'}} className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-[#26372b]"><span className="font-serif text-6xl tracking-[-0.07em] text-[#f0e8d7]">forma.</span></motion.div>}</AnimatePresence>}
-        {!reduce&&playing&&<motion.span key={'timer'+take} aria-hidden="true" initial={{opacity:0}} animate={{opacity:1}} transition={{duration:.01,delay:2.4}} onAnimationComplete={()=>{setStage(2);setPlaying(false);}} className="absolute bottom-3 right-3 z-10 flex items-center gap-1 rounded-sm bg-[#294a35] px-2 py-1 text-[9px] font-semibold text-white"><Check size={11}/> Loja publicada · demo</motion.span>}
-        {(!playing||reduce)&&current===2&&<span className="absolute bottom-3 right-3 z-10 flex items-center gap-1 rounded-sm bg-[#294a35] px-2 py-1 text-[9px] font-semibold text-white"><Check size={11}/> Loja publicada · demo</span>}
+        <div className="min-w-0 p-3 sm:p-5 lg:p-7">
+          <motion.div key={run} initial={reduce?false:{opacity:0,scale:.98}} animate={{opacity:1,scale:1}} transition={{delay:reduce?0:.45,duration:reduce?0:.65}} className="overflow-hidden border border-[#d8ddd3] bg-[#f9f8f1]">
+            <div className="flex items-center justify-between border-b border-[#e1e3d9] px-4 py-3 sm:px-6"><span className="text-base font-bold tracking-[.24em] text-[#232f26]">NORTH</span><span className="hidden text-[10px] text-[#435247] sm:block">Coleção &nbsp;&nbsp; Sobre a marca</span><ShoppingBag size={15} className="text-[#435247]"/></div>
+            <div className="relative isolate grid min-h-[170px] grid-cols-[1.05fr_.95fr] overflow-hidden bg-[#dce7d5] sm:min-h-[240px]">
+              <motion.div initial={reduce?false:{opacity:0,x:-10}} animate={{opacity:1,x:0}} transition={{delay:reduce?0:.85,duration:reduce?0:.55}} className="relative z-10 flex flex-col justify-center p-4 sm:p-8"><span className="text-[9px] font-bold uppercase tracking-[.18em] text-[#53685a]">Coleção 01 / 26</span><p className="mt-3 text-[clamp(1.6rem,3.4vw,3.1rem)] font-semibold leading-[.97] tracking-[-.055em] text-[#263d2d]">Feito para<br/>o teu dia.</p><span className="mt-5 w-fit border-b border-[#42604b] pb-1 text-[10px] font-semibold text-[#263d2d]">Explorar coleção ↗</span></motion.div>
+              <motion.div initial={reduce?false:{clipPath:'inset(0 100% 0 0)'}} animate={{clipPath:'inset(0 0 0 0)'}} transition={{delay:reduce?0:.85,duration:reduce?0:.9,ease:'easeOut'}} className="relative isolate overflow-hidden bg-[#829c82]"><div className="absolute -right-[25%] -top-[12%] aspect-square w-[120%] rounded-full border-[28px] border-[#b1c2a8] sm:border-[50px]"/><div className="absolute bottom-0 left-[17%] top-[23%] w-[52%] rounded-t-full bg-[#375943]"/><div className="absolute bottom-0 right-[7%] top-[45%] w-[48%] rounded-t-full bg-[#c3d0b5]"/><div className="absolute bottom-5 left-5 text-[9px] font-bold tracking-[.17em] text-[#f7faf5]">N / 01</div></motion.div>
+            </div>
+            <motion.div initial={reduce?false:{opacity:0,y:7}} animate={{opacity:1,y:0}} transition={{delay:reduce?0:1.45,duration:reduce?0:.45}} className="grid grid-cols-3 divide-x divide-[#e1e3d9] border-t border-[#e1e3d9]">{['Identidade de marca','Coleções','Checkout'].map((s,i)=><div key={s} className="p-3 text-[9px] font-semibold text-[#435247] sm:p-4 sm:text-xs"><span className="mb-1 block text-[10px] text-[#829c82]">0{i+1}</span>{s}</div>)}</motion.div>
+          </motion.div>
+          <motion.div key={'status'+run} initial={reduce?false:{opacity:0}} animate={{opacity:1}} transition={{delay:reduce?0:2,duration:reduce?0:.3}} onAnimationComplete={()=>setComplete(true)} className="mt-3 flex items-center justify-between gap-2 text-xs text-[#286346]"><span className="flex items-center gap-1.5"><Check size={15}/> Pré-visualização preparada</span><span className="text-[10px] text-[#65786a]">Loja conceptual</span></motion.div>
+        </div>
       </div>
     </div>
-    <div className="mt-4 flex items-start justify-between gap-3"><div className="grid flex-1 grid-cols-3 gap-2" aria-label="Etapas da demonstração">{launchScenes.map((s,i)=><button key={s.title} type="button" aria-pressed={current===i} onClick={()=>choose(i)} className="min-w-0 text-left focus-visible:outline-2 focus-visible:outline-[#286346]"><span className={'mb-2 block h-[2px] '+(current>=i?'bg-[#286346]':'bg-[#d5d1c6]')}/><span className="block text-[10px] font-semibold leading-tight text-[#292c25] sm:text-xs">0{i+1} {s.title}</span><span className="mt-1 hidden text-[10px] text-[#655f53] sm:block">{s.detail}</span></button>)}</div>{!reduce&&<button type="button" aria-label="Repetir animação de lançamento" onClick={replay} className="mt-1 grid h-8 w-8 shrink-0 place-items-center rounded-full border border-[#c8c4b9] text-[#286346] transition hover:bg-[#e1e8d9]"><RotateCcw size={15}/></button>}</div>
-    <p className="mt-3 text-[10px] text-[#655f53]">Loja conceptual · ilustração original, não uma loja real.</p>
+    <div className="mt-4 flex items-center justify-between gap-4 text-xs text-[#53685a]"><span>Da configuração à pré-visualização, em três etapas.</span>{!reduce&&<button type="button" onClick={()=>{setComplete(false);setRun(n=>n+1);}} aria-label="Repetir animação" className="flex shrink-0 items-center gap-1.5 rounded-md border border-[#c9d5cd] px-3 py-2 font-semibold hover:bg-[#e4ebe3]"><RotateCcw size={14}/> {complete?'Repetir':'Reiniciar'}</button>}</div>
   </div>;
 }
 
@@ -183,31 +159,30 @@ export default function Home() {
     <header className="sticky top-0 z-50 border-b border-[#d6d1c4] bg-[#f5f2e9]/95 text-[#252a21] backdrop-blur-xl">
       {!reduce&&<motion.div aria-hidden="true" className="absolute bottom-0 left-0 right-0 h-0.5 origin-left bg-[#a3f5b5]" style={{scaleX:scrollYProgress}}/>}
       <nav className={shell+' flex h-[70px] items-center justify-between gap-4'} aria-label="Navegação principal">
-        <Brand dark/><div className="hidden items-center gap-7 lg:flex">{nav.map(n=><a key={n.href} href={n.href} className="text-sm font-medium text-[#424c3e] transition hover:text-[#286346]">{n.label}</a>)}</div>
-        <div className="flex items-center gap-3">{!isSignedIn&&<Link href="/login" className="hidden text-sm font-semibold text-[#424c3e] hover:text-[#286346] sm:block">Entrar</Link>}<Link href={href} className="hidden items-center gap-2 rounded-[5px] bg-[#245439] px-4 py-2.5 text-sm font-semibold text-[#f8f6ec] hover:bg-[#173d29] sm:inline-flex">{isSignedIn?'Painel':'Começar grátis'}<ArrowRight size={15}/></Link><button type="button" aria-label={menu?'Fechar menu':'Abrir menu'} aria-expanded={menu} aria-controls="mobile-nav" onClick={()=>setMenu(!menu)} className="grid h-10 w-10 place-items-center rounded-lg border border-[#c8c4b9] lg:hidden">{menu?<X size={20}/>:<Menu size={20}/>}</button></div>
+        <Brand dark/><div className="hidden items-center gap-7 xl:flex">{nav.map(n=><a key={n.href} href={n.href} className="text-sm font-medium text-[#424c3e] transition hover:text-[#286346]">{n.label}</a>)}</div>
+        <div className="flex items-center gap-3">{!isSignedIn&&<Link href="/login" className="hidden text-sm font-semibold text-[#424c3e] hover:text-[#286346] sm:block">Entrar</Link>}<Link href={href} className="hidden items-center gap-2 rounded-[5px] bg-[#245439] px-4 py-2.5 text-sm font-semibold text-[#f8f6ec] hover:bg-[#173d29] sm:inline-flex">{isSignedIn?'Painel':'Começar grátis'}<ArrowRight size={15}/></Link><button type="button" aria-label={menu?'Fechar menu':'Abrir menu'} aria-expanded={menu} aria-controls="mobile-nav" onClick={()=>setMenu(!menu)} className="grid h-10 w-10 place-items-center rounded-lg border border-[#c8c4b9] xl:hidden">{menu?<X size={20}/>:<Menu size={20}/>}</button></div>
       </nav>
-      {menu&&<div id="mobile-nav" className={shell+' grid gap-1 border-t border-[#d6d1c4] pb-5 pt-3 lg:hidden'}>{nav.map(n=><a key={n.href} href={n.href} onClick={()=>setMenu(false)} className="rounded-lg p-3 text-sm font-medium hover:bg-[#e7e6da]">{n.label}</a>)}{!isSignedIn&&<Link href="/login" onClick={()=>setMenu(false)} className="p-3 text-sm">Entrar</Link>}<Link href={href} className={primary}>{cta}<ArrowRight size={16}/></Link></div>}
+      {menu&&<div id="mobile-nav" className={shell+' grid gap-1 border-t border-[#d6d1c4] pb-5 pt-3 xl:hidden'}>{nav.map(n=><a key={n.href} href={n.href} onClick={()=>setMenu(false)} className="rounded-lg p-3 text-sm font-medium hover:bg-[#e7e6da]">{n.label}</a>)}{!isSignedIn&&<Link href="/login" onClick={()=>setMenu(false)} className="p-3 text-sm">Entrar</Link>}<Link href={href} className={primary}>{cta}<ArrowRight size={16}/></Link></div>}
     </header>
     <main>
-      <section className="relative overflow-hidden bg-[#f5f2e9] text-[#252a21]">
-        <div className={shell+' grid items-center gap-10 pb-14 pt-12 sm:pb-20 sm:pt-20 lg:grid-cols-[.85fr_1.15fr] lg:gap-14 lg:pb-24 lg:pt-24'}>
-          <div>
-            <motion.div {...intro(0)} className="mb-6 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[.15em] text-[#286346]"><span className="h-px w-8 bg-[#286346]"/> A plataforma de comércio independente</motion.div>
-            <motion.div {...intro(.08)} className="overflow-hidden"><h1 className="text-[clamp(3.2rem,6.5vw,6.1rem)] font-semibold leading-[.95] tracking-[-.07em]">O teu negócio.<br/>A tua <span className="font-serif font-normal italic tracking-[-.065em] text-[#286346]">loja.</span></h1></motion.div>
-            <motion.p {...intro(.18)} className="mt-6 max-w-md text-lg leading-relaxed text-[#5c6254]">Cria uma loja que tenha a tua identidade. Gere as vendas, acompanha os clientes e melhora o negócio com o ForgePilot, sem sair da ShopForge.</motion.p>
-            <motion.div {...intro(.26)} className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-4"><Link href={href} className="inline-flex items-center gap-3 rounded-[5px] bg-[#245439] px-6 py-4 font-semibold text-[#f8f6ec] transition hover:bg-[#173d29] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#286346]">{cta}<ArrowRight size={18}/></Link><a href="#demo" className="inline-flex items-center gap-2 border-b border-[#9ba692] pb-1 text-sm font-semibold text-[#343d30] hover:text-[#286346]">Ver como funciona <ArrowUpRight size={15}/></a></motion.div>
-            <motion.div {...intro(.34)} className="mt-12 flex items-center gap-3 border-t border-[#d6d1c4] pt-4 text-xs leading-relaxed text-[#655f53]"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-[#b9c5b4] text-[#286346]"><ArrowRight size={15}/></span> Da primeira ideia à primeira encomenda.</motion.div>
+      <section className="relative overflow-hidden bg-[#f4f7f2] text-[#17291e]">
+        <div className={shell+' pb-12 pt-16 sm:pb-20 sm:pt-24'}>
+          <div className="mx-auto mb-12 max-w-[880px] text-center">
+            <motion.p {...intro(0)} className="mb-5 text-xs font-semibold uppercase tracking-[.16em] text-[#286346]">A tua plataforma de e-commerce</motion.p>
+            <motion.h1 {...intro(.08)} className="text-[clamp(2.85rem,6.7vw,6.2rem)] font-semibold leading-[.99] tracking-[-.065em]">Constrói a tua loja.<br className="hidden sm:block"/> Faz crescer o teu negócio.</motion.h1>
+            <motion.p {...intro(.17)} className="mx-auto mt-6 max-w-[580px] text-base leading-relaxed text-[#53685a] sm:text-lg">Criação de lojas, gestão de vendas e inteligência para tomar melhores decisões. Tudo o que precisas para transformar uma ideia num negócio online.</motion.p>
+            <motion.div {...intro(.24)} className="mt-7 flex flex-wrap items-center justify-center gap-4"><Link href={href} className="inline-flex items-center gap-3 rounded-lg bg-[#245439] px-6 py-3.5 font-semibold text-white hover:bg-[#173b2a]">{cta}<ArrowRight size={18}/></Link><a href="#demo" className="inline-flex items-center gap-2 px-2 py-3 text-sm font-semibold text-[#34523d] hover:underline">Conhecer a plataforma <ArrowUpRight size={15}/></a></motion.div>
           </div>
-          <motion.div {...intro(.14)}><LaunchFilm/></motion.div>
+          <motion.div {...intro(.3)}><LaunchStudio/></motion.div>
         </div>
-        <div className={shell+' flex items-center justify-between gap-4 border-t border-[#d6d1c4] py-4 text-[10px] font-semibold uppercase tracking-[.13em] text-[#655f53]'}><span>Criação / Gestão / Crescimento</span><a href="#features" className="flex items-center gap-1 hover:text-[#286346]">Explorar <ChevronDown size={14}/></a></div>
       </section>
 
       <section id="features" className={shell+' scroll-mt-24 py-20 sm:py-28'}>
-        <div className="grid gap-10 lg:grid-cols-[.9fr_1.1fr] lg:gap-20">
-          <Reveal><p className="mb-5 text-xs font-semibold uppercase tracking-[.16em] text-[#286346]">01 — A plataforma</p><h2 className="max-w-lg text-4xl font-semibold leading-[1.02] tracking-[-.055em] sm:text-6xl">Tudo o que precisas.<br/><span className="font-serif font-normal italic text-[#286346]">Num só lugar.</span></h2><p className="mt-6 max-w-md leading-relaxed text-[#53685a]">A ShopForge junta a criação da loja e a operação do negócio. Começa com o essencial e acrescenta ferramentas à medida que cresces.</p><a href="#demo" className="mt-7 inline-flex items-center gap-2 border-b border-[#9ba692] pb-1 text-sm font-semibold">Conhecer o produto <ArrowUpRight size={15}/></a></Reveal>
-          <div className="border-t border-[#d5ddd3]">{platform.map(({icon:Icon,title,copy},i)=><Reveal key={title} delay={Math.min(i*.045,.2)}><div className="group grid grid-cols-[32px_1fr_25px] gap-3 border-b border-[#d5ddd3] py-5 sm:grid-cols-[40px_1fr_32px] sm:gap-4 sm:py-6"><span className="pt-1 text-xs font-semibold tabular-nums text-[#687e6b]">0{i+1}</span><div><h3 className="text-lg font-semibold tracking-tight sm:text-xl">{title}</h3><p className="mt-1.5 text-sm leading-relaxed text-[#53685a]">{copy}</p></div><Icon size={21} strokeWidth={1.6} className="mt-1 text-[#286346] transition-transform motion-safe:group-hover:-translate-y-1"/></div></Reveal>)}</div>
-        </div>
+        <Reveal className="mb-12 grid gap-5 lg:grid-cols-[1.25fr_.75fr] lg:items-end">
+          <div><p className="mb-4 text-xs font-semibold uppercase tracking-[.14em] text-[#286346]">01 — A plataforma</p><h2 className="font-[Arial,Helvetica,sans-serif] text-4xl font-bold leading-[1.06] tracking-[-.045em] sm:text-6xl">Da criação à gestão.<br/><span className="text-[#286346]">Sem complicações.</span></h2></div><p className="max-w-md text-base leading-relaxed text-[#53685a] lg:justify-self-end">Uma plataforma que acompanha cada fase do negócio, desde a criação da montra até à gestão diária e ao crescimento.</p>
+        </Reveal>
+        <div className="grid gap-x-10 border-t border-[#d5ddd3] md:grid-cols-2 lg:gap-x-16">{platform.map(({icon:Icon,title,copy},i)=><Reveal key={title} delay={(i%2)*.08}><div className="group grid h-full grid-cols-[42px_1fr] gap-4 border-b border-[#d5ddd3] py-7 sm:grid-cols-[52px_1fr] sm:py-9"><div><span className="grid h-10 w-10 place-items-center rounded-lg border border-[#c9d8cc] text-[#286346]"><Icon size={21} strokeWidth={1.65}/></span><span className="mt-3 block text-xs font-medium tabular-nums text-[#687e6b]">0{i+1}</span></div><div><h3 className="font-[Arial,Helvetica,sans-serif] text-xl font-bold tracking-[-.025em] sm:text-2xl">{title}</h3><p className="mt-2 max-w-md text-sm leading-relaxed text-[#53685a] sm:text-base">{copy}</p></div></div></Reveal>)}</div>
+        <a href="#demo" className="mt-7 inline-flex items-center gap-2 text-sm font-semibold text-[#286346] hover:underline">Explorar a plataforma <ArrowUpRight size={15}/></a>
       </section>
 
       <EditorialDemo/>
@@ -221,11 +196,15 @@ export default function Home() {
       </section>
 
       <section id="growth" className={shell+' scroll-mt-24 py-20 sm:py-28'}>
-        <div className="grid gap-5 lg:grid-cols-2">
-          <Reveal className="rounded-[26px] border border-[#dce6dd] bg-[#ffffff] p-6 sm:p-9"><Eyebrow>Growth Lab</Eyebrow><h2 className="text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">Não adivinhes. Analisa.</h2><p className="mt-4 max-w-md text-[#53685a] leading-relaxed">Acompanha visitantes, páginas vistas, atividade recente e o funil de compra. Descobre onde atuar primeiro com recomendações baseadas nos dados disponíveis.</p><div className="mt-7 rounded-2xl bg-[#edf3ee] p-5"><div className="mb-5 flex items-center justify-between gap-2"><p className="text-sm font-bold">Funil de conversão</p><span className="text-[10px] font-semibold text-[#607467]">Dados de exemplo</span></div><Funnel/></div><div className="mt-5 flex flex-wrap gap-3 text-xs font-semibold text-[#24633e]"><span className="flex items-center gap-1"><Radio size={15}/> Visitantes ativos</span><span className="flex items-center gap-1"><MousePointerClick size={15}/> Comportamento</span><span className="flex items-center gap-1"><BarChart3 size={15}/> Relatórios</span></div></Reveal>
-          <Reveal delay={0.1} className="rounded-[26px] bg-[#dceee0] p-6 sm:p-9"><Eyebrow>Assistente ShopForge</Eyebrow><h2 className="text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">Fala. Escreve. Avança.</h2><p className="mt-4 text-[#45604e] leading-relaxed">O assistente acompanha-te num painel lateral ajustável. Escreve perguntas ou utiliza o ditado por voz em navegadores compatíveis, revê o texto e envia quando quiseres.</p><div className="mt-7 rounded-2xl border border-[#c5dccb] bg-[#ffffff] p-4 shadow-sm sm:p-5"><div className="flex items-center justify-between border-b border-[#e1e9e3] pb-3"><span className="flex items-center gap-2 text-sm font-bold"><Sparkles size={17} className="text-[#258858]"/> Assistente IA</span><PanelRightOpen size={17} className="text-[#607467]"/></div><p className="my-4 ml-auto max-w-[85%] rounded-xl bg-[#e9f3eb] p-3 text-xs">Ajuda-me a preparar uma campanha para a nova coleção.</p><p className="rounded-xl border border-[#e1e9e3] p-3 text-xs leading-relaxed text-[#42584a]">Vamos começar pelo público, pelo objetivo e pelos produtos que queres destacar.</p><div className="mt-4 flex items-center gap-2 rounded-xl border border-[#d7e5d9] p-3 text-xs text-[#607467]"><Mic size={17} className="text-[#258858]"/><span className="flex-1">Escreve ou dita a tua mensagem</span><ArrowRight size={15}/></div><p className="mt-2 text-[10px] text-[#607467]">Conversa ilustrativa · não é um chat ativo</p></div></Reveal>
+        <div className="grid gap-8 lg:grid-cols-[.85fr_1.15fr] lg:items-center">
+          <Reveal><Eyebrow>Growth Lab</Eyebrow><h2 className="text-4xl font-semibold tracking-[-.045em] sm:text-5xl">Conhece os teus clientes.</h2><p className="mt-4 max-w-md leading-relaxed text-[#53685a]">Acompanha visitantes, páginas vistas, atividade recente e o funil de compra. Descobre onde atuar primeiro com recomendações baseadas nos dados disponíveis.</p><div className="mt-5 flex flex-wrap gap-4 text-xs font-semibold text-[#24633e]"><span className="flex items-center gap-1"><Radio size={15}/> Visitantes ativos</span><span className="flex items-center gap-1"><MousePointerClick size={15}/> Comportamento</span><span className="flex items-center gap-1"><BarChart3 size={15}/> Relatórios</span></div></Reveal>
+          <Reveal delay={.1} className="rounded-xl border border-[#dce6dd] bg-[#ffffff] p-6 sm:p-8"><div className="mb-6 flex items-center justify-between gap-2"><p className="font-semibold">Funil de conversão</p><span className="text-[11px] text-[#607467]">Dados de exemplo</span></div><Funnel/></Reveal>
         </div>
       </section>
+      <section id="assistant" className="scroll-mt-24 border-y border-[#d8e4da] bg-[#e7efe5] py-16 sm:py-24"><div className={shell+' grid gap-8 lg:grid-cols-[.85fr_1.15fr] lg:items-center lg:gap-16'}>
+        <Reveal><Eyebrow>Experimenta a inteligência artificial</Eyebrow><h2 className="text-4xl font-semibold leading-[1.05] tracking-[-.045em] sm:text-6xl">Uma pergunta pode ser o início.</h2><p className="mt-5 max-w-md text-base leading-relaxed text-[#45604e] sm:text-lg">Conta ao assistente o que queres vender ou como gostarias de melhorar a tua loja. Recebe uma resposta real, antes mesmo de criar uma conta.</p><p className="mt-5 max-w-md text-sm leading-relaxed text-[#53685a]">No painel ShopForge, tens também um assistente lateral ajustável e ditado por voz em navegadores compatíveis.</p></Reveal>
+        <Reveal delay={.1}><LandingAssistant/></Reveal>
+      </div></section>
 
       <section id="workflow" className="scroll-mt-24 border-y border-[#dce6dd] bg-[#edf2ec] py-16 sm:py-24"><div className={shell}><Reveal><Eyebrow>Do zero ao crescimento</Eyebrow><h2 className="mb-10 max-w-2xl text-4xl font-semibold tracking-[-0.055em] sm:text-5xl">O teu negócio, passo a passo.</h2></Reveal><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[{icon:Sparkles,title:'Imagina',copy:'Escolhe o nicho, a identidade e o conceito da loja.'},{icon:Palette,title:'Constrói',copy:'Usa a IA ou o editor visual para personalizar a experiência.'},{icon:CreditCard,title:'Lança',copy:'Organiza o catálogo, configura o checkout e publica a loja.'},{icon:TrendingUp,title:'Evolui',copy:'Usa o ForgePilot e os dados para priorizar melhorias.'}].map(({icon:Icon,title,copy},i)=><Reveal key={title} delay={i*0.07}><div className="h-full border-t border-[#b8cfbe] pt-5"><div className="mb-5 flex items-center justify-between text-[#258858]"><Icon size={24} strokeWidth={1.6}/><span className="text-xs font-bold">0{i+1}</span></div><h3 className="mb-2 text-xl font-semibold">{title}</h3><p className="text-sm leading-relaxed text-[#53685a]">{copy}</p></div></Reveal>)}</div></div></section>
 
