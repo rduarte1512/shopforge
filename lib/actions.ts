@@ -1,5 +1,6 @@
 'use server';
 
+import { requireFeature, requireOwnedStore } from './plan-access';
 import { cache } from 'react';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { 
@@ -114,7 +115,7 @@ export async function addProductAction(formData: any) {
   if (!userId) throw new Error('Unauthorized');
 
   try {
-    const product = await createProduct(formData);
+    const product = await createProduct(formData,userId);
     revalidatePath('/dashboard/products');
     return product;
   } catch (error) {
@@ -153,6 +154,7 @@ export async function deleteProductAction(id: string) {
 
 // AFFILIATE ACTIONS
 export async function getAffiliateLinksAction(storeId: string) {
+  await requireFeature('affiliates');
   try {
     const { getAffiliateLinks } = await import('./db');
     return await getAffiliateLinks(storeId);
@@ -163,6 +165,7 @@ export async function getAffiliateLinksAction(storeId: string) {
 }
 
 export async function createAffiliateLinkAction(data: any) {
+  await requireFeature('affiliates');
   const { userId } = await auth();
   if (!userId) throw new Error('Unauthorized');
   try {
@@ -177,6 +180,7 @@ export async function createAffiliateLinkAction(data: any) {
 }
 
 export async function deleteAffiliateLinkAction(id: string) {
+  await requireFeature('affiliates');
   const { userId } = await auth();
   if (!userId) throw new Error('Unauthorized');
   try {
@@ -191,6 +195,7 @@ export async function deleteAffiliateLinkAction(id: string) {
 }
 
 export async function toggleAffiliateLinkAction(id: string, active: boolean) {
+  await requireFeature('affiliates');
   const { userId } = await auth();
   if (!userId) throw new Error('Unauthorized');
   try {
@@ -205,6 +210,7 @@ export async function toggleAffiliateLinkAction(id: string, active: boolean) {
 }
 
 export async function getAffiliateCommissionsAction(linkId: string) {
+  await requireFeature('affiliates');
   try {
     const { getAffiliateCommissions } = await import('./db');
     return await getAffiliateCommissions(linkId);
@@ -216,6 +222,7 @@ export async function getAffiliateCommissionsAction(linkId: string) {
 
 // COUPON ACTIONS
 export async function getCouponsAction(storeId: string) {
+  await requireFeature('discounts');
   try {
     const { getCoupons } = await import('./db');
     return await getCoupons(storeId);
@@ -226,6 +233,7 @@ export async function getCouponsAction(storeId: string) {
 }
 
 export async function createCouponAction(data: any) {
+  await requireFeature('discounts');
   const { userId } = await auth();
   if (!userId) throw new Error('Unauthorized');
   try {
@@ -240,6 +248,7 @@ export async function createCouponAction(data: any) {
 }
 
 export async function updateCouponAction(id: string, data: any) {
+  await requireFeature('discounts');
   const { userId } = await auth();
   if (!userId) throw new Error('Unauthorized');
   try {
@@ -254,6 +263,7 @@ export async function updateCouponAction(id: string, data: any) {
 }
 
 export async function deleteCouponAction(id: string) {
+  await requireFeature('discounts');
   const { userId } = await auth();
   if (!userId) throw new Error('Unauthorized');
   try {
@@ -269,6 +279,7 @@ export async function deleteCouponAction(id: string) {
 
 // PROMOTION ACTIONS
 export async function getPromotionsAction(storeId: string) {
+  await requireFeature('discounts');
   try {
     const { getPromotions } = await import('./db');
     return await getPromotions(storeId);
@@ -279,6 +290,7 @@ export async function getPromotionsAction(storeId: string) {
 }
 
 export async function createPromotionAction(data: any) {
+  await requireFeature('discounts');
   const { userId } = await auth();
   if (!userId) throw new Error('Unauthorized');
   try {
@@ -293,6 +305,7 @@ export async function createPromotionAction(data: any) {
 }
 
 export async function updatePromotionAction(id: string, data: any) {
+  await requireFeature('discounts');
   const { userId } = await auth();
   if (!userId) throw new Error('Unauthorized');
   try {
@@ -307,6 +320,7 @@ export async function updatePromotionAction(id: string, data: any) {
 }
 
 export async function deletePromotionAction(id: string) {
+  await requireFeature('discounts');
   const { userId } = await auth();
   if (!userId) throw new Error('Unauthorized');
   try {
@@ -390,6 +404,7 @@ export async function updateStoreCustomizationAction(id: string, customization: 
 
 // EMAIL ACTIONS
 export async function getStoreEmailSettingsAction(storeId: string) {
+  await requireFeature('email');
   try {
     const { getStoreEmailSettings } = await import('./email');
     return await getStoreEmailSettings(storeId);
@@ -400,6 +415,7 @@ export async function getStoreEmailSettingsAction(storeId: string) {
 }
 
 export async function updateStoreEmailSettingsAction(settings: any) {
+  await requireFeature('email');
   const { userId } = await auth();
   if (!userId) throw new Error('Unauthorized');
   try {
@@ -414,6 +430,7 @@ export async function updateStoreEmailSettingsAction(settings: any) {
 }
 
 export async function getEmailTemplatesAction(storeId: string) {
+  await requireFeature('email');
   try {
     const { getEmailTemplates } = await import('./email');
     return await getEmailTemplates(storeId);
@@ -424,6 +441,7 @@ export async function getEmailTemplatesAction(storeId: string) {
 }
 
 export async function upsertEmailTemplateAction(template: any) {
+  await requireFeature('email');
   const { userId } = await auth();
   if (!userId) throw new Error('Unauthorized');
   try {

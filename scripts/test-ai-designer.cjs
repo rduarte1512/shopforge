@@ -55,6 +55,7 @@ async function run(){
  const outputs=[{__error:'503 Service Unavailable',status:503}, {intent:'edit',operations:[{type:'color',target:'hero',value:'#f97316'}]}];
  const called=[];
  const server={exports:{},Date,console:{warn:()=>{},error:()=>{}},process:{env:{GEMINI_API_KEY:'fake-test-key'}},require:(id)=>{
+ if(id==='./plan-access')return {requireFeature:async()=>({userId:'owner',plan:{id:'ENTERPRISE'}}),requireOwnedStore:async()=>{}};
    if(id==='./ai-designer-engine')return pure.exports;
    if(id==='@google/generative-ai')return {GoogleGenerativeAI:class{
      getGenerativeModel(options){return {generateContent:async()=>{called.push(options.model);const next=outputs.shift();if(next.__error)throw Object.assign(new Error(next.__error),{status:next.status});return{response:{text:()=>JSON.stringify(next)}}}}}
@@ -71,6 +72,7 @@ async function run(){
  assert.equal(local.status,'updated');
  assert.equal(called.length,callsBefore);
  const malformed=[];const broken={exports:{},Date,console:{warn:()=>{},error:()=>{}},process:{env:{GEMINI_API_KEY:'fake-test-key'}},require:(id)=>{
+ if(id==='./plan-access')return {requireFeature:async()=>({userId:'owner',plan:{id:'ENTERPRISE'}}),requireOwnedStore:async()=>{}};
    if(id==='./ai-designer-engine')return pure.exports;
    if(id==='@google/generative-ai')return {GoogleGenerativeAI:class{getGenerativeModel(){return{generateContent:async()=>({response:{text:()=>'{ "intent": "edit" , "operations": ['}})}}}};
    throw Error(id);

@@ -1,3 +1,4 @@
+import { requireFeature } from '@/lib/plan-access';
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { sql } from '@vercel/postgres';
@@ -8,6 +9,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: 'Sem sessão iniciada.' }, { status: 401 });
+  try{await requireFeature('traffic',userId);}catch{return NextResponse.json({error:'Funcionalidade disponível num plano superior.'},{status:403});}
   const url = new URL(request.url);
   const storeId = url.searchParams.get('storeId') || '';
   const days = Number(url.searchParams.get('days') || 7);

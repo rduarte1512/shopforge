@@ -1,5 +1,6 @@
 'use server';
 
+import { requireFeature, requireOwnedStore } from './plan-access';
 import { auth } from '@clerk/nextjs/server';
 import { sql } from '@vercel/postgres';
 import { revalidatePath } from 'next/cache';
@@ -18,6 +19,7 @@ async function ownedStores(userId: string) {
 }
 
 export async function getAutomationDashboardAction(storeId?: string | null) {
+  await requireFeature('automations');
   const { userId } = await auth();
   if (!userId) throw new Error('Unauthorized');
   const stores = await ownedStores(userId);
@@ -39,6 +41,7 @@ export async function getAutomationDashboardAction(storeId?: string | null) {
 }
 
 export async function seedDefaultAutomationsAction(storeId: string) {
+  await requireFeature('automations');
   const { userId } = await auth();
   if (!userId) throw new Error('Unauthorized');
   const stores = await ownedStores(userId);
@@ -63,6 +66,7 @@ export async function seedDefaultAutomationsAction(storeId: string) {
 }
 
 export async function updateAutomationAction(id: string, data: any) {
+  await requireFeature('automations');
   const { userId } = await auth();
   if (!userId) throw new Error('Unauthorized');
   const { rows } = await sql`

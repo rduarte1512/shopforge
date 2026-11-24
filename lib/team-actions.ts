@@ -1,5 +1,6 @@
 'use server';
 
+import { requireFeature, requireOwnedStore } from './plan-access';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { sql } from '@vercel/postgres';
 import { revalidatePath } from 'next/cache';
@@ -34,6 +35,7 @@ async function logAction(storeId: string, actorUserId: string, actorEmail: strin
 }
 
 export async function getTeamWorkspaceAction(storeId?: string | null) {
+  await requireFeature('team');
   const { userId } = await auth();
   if (!userId) throw new Error('Unauthorized');
 
@@ -57,6 +59,7 @@ export async function getTeamWorkspaceAction(storeId?: string | null) {
 }
 
 export async function inviteTeamMemberAction(data: any) {
+  await requireFeature('team');
   const { userId } = await auth();
   const user = await currentUser();
   if (!userId) throw new Error('Unauthorized');
@@ -92,6 +95,7 @@ export async function inviteTeamMemberAction(data: any) {
 }
 
 export async function updateTeamMemberAction(memberId: string, data: any) {
+  await requireFeature('team');
   const { userId } = await auth();
   const user = await currentUser();
   if (!userId) throw new Error('Unauthorized');
@@ -113,6 +117,7 @@ export async function updateTeamMemberAction(memberId: string, data: any) {
 }
 
 export async function removeTeamMemberAction(memberId: string) {
+  await requireFeature('team');
   const { userId } = await auth();
   const user = await currentUser();
   if (!userId) throw new Error('Unauthorized');

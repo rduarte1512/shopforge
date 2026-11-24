@@ -1,5 +1,6 @@
 'use server';
 
+import { requireFeature, requireOwnedStore } from './plan-access';
 import { revalidatePath } from 'next/cache';
 
 async function tableExists(sql: any, tableName: string) {
@@ -72,6 +73,7 @@ export async function saveAbandonedCartAction(data: any) {
 }
 
 export async function recoverAbandonedCartAction(storeId: string, sessionId: string) {
+  const {userId}=await requireFeature('carts'); await requireOwnedStore(userId,storeId);
   try {
     const { sql } = await import('@vercel/postgres');
     const exists = await tableExists(sql, 'abandoned_carts');
@@ -119,6 +121,7 @@ export async function deleteAbandonedCartBySessionAction(storeId: string, sessio
 }
 
 export async function getAbandonedCartsAction(storeId: string) {
+  const {userId}=await requireFeature('carts'); await requireOwnedStore(userId,storeId);
   try {
     const { sql } = await import('@vercel/postgres');
     const exists = await tableExists(sql, 'abandoned_carts');
@@ -146,9 +149,10 @@ export async function getAbandonedCartsAction(storeId: string) {
 }
 
 export async function deleteAbandonedCartAction(id: string) {
+  const {userId}=await requireFeature('carts');
   try {
     const { sql } = await import('@vercel/postgres');
-    await sql`DELETE FROM abandoned_carts WHERE id = ${id}`;
+    await sql`DELETE FROM abandoned_carts WHERE id = ${id} AND EXISTS (SELECT 1 FROM stores s WHERE s.id=abandoned_carts.store_id AND s.user_id=${userId})`;
     revalidatePath('/dashboard/abandoned-carts');
     return { success: true };
   } catch (error) {

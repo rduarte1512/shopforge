@@ -1,3 +1,4 @@
+import { effectiveForgePlan } from './plans';
 import { sql } from '@vercel/postgres';
 
 export async function getProfile(userId: string) {
@@ -46,17 +47,26 @@ export async function createStore(store: {
   primary_color: string;
   base_currency: string;
 }) {
+  const client=await sql.connect();
   try {
-    const { rows } = await sql`
+    await client.query('BEGIN');
+    const profile=(await client.query('SELECT subscription_tier,subscription_status FROM profiles WHERE id=$1 FOR UPDATE',[store.user_id])).rows[0];
+    if(!profile)throw Error('Perfil indisponível.');
+    const plan=effectiveForgePlan(profile.subscription_tier,profile.subscription_status);
+    const count=Number((await client.query('SELECT count(*)::int AS total FROM stores WHERE user_id=$1',[store.user_id])).rows[0].total);
+    if(count>=plan.limits.stores)throw Error('Atingiste o limite de lojas do teu plano.');
+    const { rows } = await client.sql`
       INSERT INTO stores (user_id, name, domain, description, theme, primary_color, base_currency)
       VALUES (${store.user_id}, ${store.name}, ${store.domain}, ${store.description}, ${store.theme}, ${store.primary_color}, ${store.base_currency})
       RETURNING *;
     `;
+    await client.query('COMMIT');
     return rows[0];
   } catch (error) {
+    await client.query('ROLLBACK').catch(()=>{});
     console.error('Database Error [createStore]:', error);
     throw error;
-  }
+  } finally {client.release();}
 }
 
 export async function deleteStore(id: string, userId: string) {
@@ -97,18 +107,28 @@ export async function createProduct(product: {
   stock: number;
   image_url: string;
   category: string;
-}) {
+}, userId:string) {
+  const client=await sql.connect();
   try {
-    const { rows } = await sql`
+    await client.query('BEGIN');
+    const profile=(await client.query('SELECT subscription_tier,subscription_status FROM profiles WHERE id=$1 FOR UPDATE',[userId])).rows[0];
+    if(!profile)throw Error('Perfil indisponível.');
+    const owned=await client.query('SELECT id FROM stores WHERE id=$1 AND user_id=$2',[product.store_id,userId]);if(!owned.rows.length)throw Error('Loja inválida.');
+    const plan=effectiveForgePlan(profile.subscription_tier,profile.subscription_status);
+    const count=Number((await client.query('SELECT count(*)::int AS total FROM products WHERE store_id=$1',[product.store_id])).rows[0].total);
+    if(count>=plan.limits.products)throw Error('Atingiste o limite de produtos do teu plano.');
+    const { rows } = await client.sql`
       INSERT INTO products (store_id, name, description, price, stock, image_url, category)
       VALUES (${product.store_id}, ${product.name}, ${product.description}, ${product.price}, ${product.stock}, ${product.image_url}, ${product.category})
       RETURNING *;
     `;
+    await client.query('COMMIT');
     return rows[0];
   } catch (error) {
+    await client.query('ROLLBACK').catch(()=>{});
     console.error('Database Error [createProduct]:', error);
     throw error;
-  }
+  } finally {client.release();}
 }
 
 export async function updateProduct(id: string, product: Partial<{

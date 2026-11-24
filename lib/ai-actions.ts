@@ -1,5 +1,6 @@
 'use server';
 
+import { requireFeature, requireOwnedStore } from './plan-access';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { planLocalDesignerEdit, applyDesignerOperations, type DesignerReply } from './ai-designer-engine';
 
@@ -431,6 +432,7 @@ function normalizeStoreConfig(config: any, prompt: string) {
 }
 
 export async function generateStoreConfig(prompt: string, includeProducts: boolean = true) {
+  await requireFeature('aiStore');
   const intent = detectIntent(prompt);
   const fallback = buildFallbackStoreConfig(prompt);
 
@@ -525,6 +527,7 @@ Return ONLY valid JSON.`;
 // O designer devolve operações pequenas e seguras em vez de recriar todo o JSON.
 // Pedidos comuns funcionam localmente mesmo quando o Gemini está indisponível.
 export async function updateStoreCustomizationWithAI(currentConfig: any, userRequest: string): Promise<DesignerReply> {
+  await requireFeature('aiDesigner');
   const request = typeof userRequest === 'string' ? userRequest.trim().slice(0, 800) : '';
   const config = currentConfig && typeof currentConfig === 'object' && !Array.isArray(currentConfig) ? currentConfig : {};
   const local = planLocalDesignerEdit(config, request);
@@ -614,6 +617,7 @@ export async function updateStoreCustomizationWithAI(currentConfig: any, userReq
 }
 
 export async function generateProduct(prompt: string, category?: string) {
+  await requireFeature('aiProducts');
   const intent = detectIntent(`${prompt} ${category || ''}`);
 
   try {
@@ -664,6 +668,7 @@ function isGeminiQuotaError(error: unknown) {
 }
 
 export async function generateMultipleProducts(prompt: string, count: number = 4) {
+  await requireFeature('aiProducts');
   const request = typeof prompt === 'string' ? prompt.trim() : '';
   const quantity = Math.min(8, Math.max(1, Math.floor(Number(count) || 4)));
   if (request.length < 5) throw new Error('Descreve primeiro o nicho da loja para gerar produtos adequados.');
@@ -778,6 +783,7 @@ export async function generateMultipleProductsForStore(prompt: string, count = 4
 }
 
 export async function chatWithAssistant(messages: { role: 'user' | 'assistant'; content: string }[]) {
+  await requireFeature('assistant');
   try {
     const model = getModel({
       systemInstruction: `Tu és o Assistente ShopForge, especialista em e-commerce, criação de lojas online e crescimento de vendas. Responde em Português de Portugal, com respostas práticas e diretas.`,

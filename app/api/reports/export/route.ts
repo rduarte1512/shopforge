@@ -1,3 +1,4 @@
+import { requireFeature } from '@/lib/plan-access';
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { buildFinanceCsv, buildSimpleFinancePdf, getFinancialOverviewForUser } from '@/lib/finance-actions';
@@ -5,6 +6,7 @@ import { buildFinanceCsv, buildSimpleFinancePdf, getFinancialOverviewForUser } f
 export async function GET(request: Request) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  try{await requireFeature('reports',userId);}catch{return NextResponse.json({error:'Funcionalidade disponível num plano superior.'},{status:403});}
 
   const url = new URL(request.url);
   const storeId = url.searchParams.get('storeId');

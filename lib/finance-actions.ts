@@ -1,5 +1,6 @@
 'use server';
 
+import { requireFeature, requireOwnedStore } from './plan-access';
 import { sql } from '@vercel/postgres';
 import { auth } from '@clerk/nextjs/server';
 
@@ -10,6 +11,8 @@ type CsvCell = string | number | null | undefined;
 type CsvRow = CsvCell[];
 
 export async function getFinancialOverviewForUser(userId: string, storeId?: string | null) {
+  const session=await auth();if(session.userId!==userId)throw Error('Sem acesso.');
+  await requireFeature('reports',userId);
   const { rows: stores } = await sql`SELECT * FROM stores WHERE user_id = ${userId} ORDER BY created_at DESC`;
   const store = storeId ? stores.find((s: any) => String(s.id) === String(storeId)) || stores[0] : stores[0];
   if (!store) return { stores: [], selectedStoreId: null, metrics: null, orders: [], monthly: [], topProducts: [], generatedAt: new Date().toISOString() };

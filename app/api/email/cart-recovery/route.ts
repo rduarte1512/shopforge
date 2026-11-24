@@ -1,3 +1,4 @@
+import { requireFeature, requireOwnedStore } from '@/lib/plan-access';
 import { NextRequest, NextResponse } from 'next/server';
 import { getStoreEmailSettings, sendEmail, logEmail, getEmailTemplate, getAbandonedCartsNeedingRecovery, markAbandonmentEmailSent, isEmailUnsubscribed } from '@/lib/email';
 import { sql } from '@vercel/postgres';
@@ -7,6 +8,7 @@ export async function POST(request: NextRequest) {
     const { storeId, hours } = await request.json();
     if (!storeId) return NextResponse.json({ error: 'Missing storeId' }, { status: 400 });
 
+    try{const {userId}=await requireFeature('carts');await requireOwnedStore(userId,storeId);}catch{return NextResponse.json({error:'Sem acesso a esta funcionalidade ou loja.'},{status:403});}
     const settings = await getStoreEmailSettings(storeId);
     if (!settings?.resend_api_key || !settings?.cart_recovery_enabled) {
       return NextResponse.json({ message: 'Cart recovery disabled' }, { status: 200 });

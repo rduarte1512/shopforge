@@ -1,3 +1,4 @@
+import { requireFeature, requireOwnedStore } from '@/lib/plan-access';
 import { NextRequest, NextResponse } from 'next/server';
 import { getStoreEmailSettings, sendEmail, logEmail } from '@/lib/email';
 import { sql } from '@vercel/postgres';
@@ -9,6 +10,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing storeId or to' }, { status: 400 });
     }
 
+    try{const {userId}=await requireFeature('email');await requireOwnedStore(userId,storeId);}catch{return NextResponse.json({error:'Sem acesso a esta funcionalidade ou loja.'},{status:403});}
     const settings = await getStoreEmailSettings(storeId);
     if (!settings?.resend_api_key) {
       return NextResponse.json({ error: 'Email not configured' }, { status: 400 });
