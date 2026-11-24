@@ -12,7 +12,7 @@ export function useForgePilotExperiment(store:any, config:any) {
     let cancelled=false;
     let pending=false;
     const consent=()=>{
-      try{return navigator.doNotTrack!=='1'&&!(navigator as Navigator&{globalPrivacyControl?:boolean}).globalPrivacyControl&&localStorage.getItem('shopforge-traffic-consent-'+id)==='granted';}catch{return false;}
+      try{return new URLSearchParams(window.location.search).get('forgepilot-audit')!=='1'&&navigator.doNotTrack!=='1'&&!(navigator as Navigator&{globalPrivacyControl?:boolean}).globalPrivacyControl&&localStorage.getItem('shopforge-traffic-consent-'+id)==='granted';}catch{return false;}
     };
     const update=async()=>{
       if(cancelled||pending)return;

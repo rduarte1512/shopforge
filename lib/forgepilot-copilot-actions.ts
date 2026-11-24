@@ -129,6 +129,12 @@ export async function runForgePilotCopilotAction(
   // Uma pergunta normal pode mudar de assunto sem ficar presa à missão ativa.
   const goal = isForgePilotMissionId(selectedGoal) ? selectedGoal : detectForgePilotMission(value);
   const traffic = await getStoreTrafficOverview(storeId, 7).catch(() => null);
+  // Read-only aggregates; no customer identities or order-level data are sent to Gemini.
+  const businessContext = await Promise.all([
+    sql.query("SELECT coalesce(nullif(currency,''),'não indicada') AS currency,count(*)::int AS orders,coalesce(sum(total),0)::float8 AS gross,coalesce(sum(refunded_amount),0)::float8 AS refunds FROM orders WHERE store_id=$1 AND lower(status::text) IN ('paid','shipped','delivered') AND created_at>=now()-interval '30 days' GROUP BY 1",[storeId]),
+    sql.query("SELECT monitoring_enabled,alerts,checked_at,expenses,expenses_at FROM forgepilot_workspace WHERE store_id=$1",[storeId]),
+    sql.query("SELECT x.title,x.started_at,x.ended_at,count(e.visitor_id) FILTER(WHERE e.variant='A')::int AS a_exposed,count(e.visitor_id) FILTER(WHERE e.variant='B')::int AS b_exposed FROM (SELECT * FROM forgepilot_experiments WHERE store_id=$1 ORDER BY started_at DESC LIMIT 3) x LEFT JOIN forgepilot_exposures e ON e.experiment_id=x.id GROUP BY x.id,x.title,x.started_at,x.ended_at",[storeId]),
+  ]).then(([orders,workspace,experiments])=>({orders:orders.rows,monitoring:workspace.rows[0]||null,experiments:experiments.rows})).catch(()=>null);
   const mission = planForgePilotMission(goal, overview.audit, traffic);
   const apiKey = [process.env.GEMINI_API_KEY, process.env.GOOGLE_GENERATIVE_AI_API_KEY].map(key => key?.trim()).find(Boolean);
   let answer = guidedAnswer(mission, Boolean(apiKey));
@@ -179,6 +185,7 @@ export async function runForgePilotCopilotAction(
         topProducts: traffic.topProducts.slice(0, 5).map(p => ({ name: p.name, views: p.views, addToCarts: p.addToCarts })),
         note: traffic.note,
       } : { available: false },
+      business: businessContext,
       mission: { title: mission.title, evidence: mission.evidence },
       recentConversation: lastRows.reverse()
         .filter(row => row.role !== 'assistant' || !/começaria por estas prioridades|plano automático da loja continua disponível|não consegui obter uma resposta da IA|não tem uma chave Gemini configurada/i.test(String(row.content)))
@@ -189,6 +196,7 @@ export async function runForgePilotCopilotAction(
       'Responde diretamente à PERGUNTA ATUAL em português de Portugal, em linguagem natural, sem JSON.',
       'Mantém uma conversa verdadeira: responde a perguntas de seguimento usando a conversa anterior. Não repitas o plano de ação quando não for pedido.',
       'Se o utilizador pede uma opinião sobre a loja, identifica problemas concretos observados, explica por que importam e sugere melhorias específicas para o catálogo e a marca. Se pede ideias, apresenta ideias próprias e distingue-as de factos.',
+      'Se houver dados financeiros, indica o período de 30 dias, distingue moedas, encomendas registadas e pagamentos verificados. Não calcules lucro sem custos completos nem atribuas compras a testes A/B. As exposições A/B não são conversões. Os alertas de monitorização são sinais técnicos. Se faltarem dados, diz isso.',
       'A missão é apenas contexto opcional. Podes falar de qualquer tema relacionado com a gestão da loja, incluindo produtos, marca, marketing, design, tráfego e estratégias.',
       'Não inventes dados, vendas, políticas, garantias ou certificações. Se não houver dados suficientes, diz o que não sabes. As métricas de tráfego têm consentimento e as compras pagas não estão atribuídas aos visitantes.',
       'Não afirmes que viste o site renderizado, que executaste alterações ou que publicaste algo. Ações requerem pré-visualização e aprovação.',

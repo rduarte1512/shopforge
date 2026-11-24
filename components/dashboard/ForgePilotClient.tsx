@@ -206,7 +206,7 @@ export default function ForgePilotClient({ initial }: { initial: Overview | null
           <div className="mt-3 hidden border-t border-border px-3 pt-4 xl:block"><p className="text-[10px] font-black uppercase text-text-muted">Preparação básica</p><p className="mt-1 text-xl font-black tabular-nums">{audit.score}/100</p><p className="mt-1 text-[11px] text-text-muted">{done} verificações concluídas</p></div>
         </aside>
         <main className="min-w-0 space-y-5">
-      {isCommandTab(tab) && <ForgePilotCommand key={store.id} storeId={store.id} mode={tab} brief={actionBrief} onRefresh={refresh} onNavigate={setTab}/>}
+      {isCommandTab(tab) && <ForgePilotCommand key={store.id} storeId={store.id} domain={store.domain} mode={tab} brief={actionBrief} onRefresh={refresh} onNavigate={setTab}/>}
       {notice && <div role="status" className="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-700 dark:text-emerald-200"><CheckCircle2 className="h-5 w-5 shrink-0" /> {notice}</div>}
       {error && <div role="alert" className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm font-semibold text-rose-700 dark:text-rose-200">{error} <button onClick={() => { setError(null); void refresh(); }} className="ml-2 underline">Atualizar</button></div>}
 
