@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@clerk/nextjs';
 import { useState, useRef, type ReactNode } from 'react';
 import { motion, AnimatePresence, useReducedMotion, useScroll, useTransform } from 'motion/react';
-import { Activity, ArrowRight, ArrowUpRight, BarChart3, Bot, Check, ChevronDown, CreditCard, FlaskConical, Globe, LayoutDashboard, Mail, Menu, Mic, MousePointerClick, Package, Palette, PanelRightOpen, Radio, Rocket, RotateCcw, ShieldCheck, ShoppingBag, ShoppingCart, Sparkles, Store, Target, TrendingUp, Users, Wallet, WandSparkles, X, Zap } from 'lucide-react';
+import { Activity, ArrowRight, ArrowUpRight, BarChart3, Bot, Check, ChevronDown, CreditCard, FlaskConical, Globe, LayoutDashboard, Mail, Menu, Mic, MousePointerClick, Package, Palette, PanelRightOpen, Radio, Rocket, ShieldCheck, ShoppingBag, ShoppingCart, Sparkles, Store, Target, TrendingUp, Users, Wallet, WandSparkles, X, Zap } from 'lucide-react';
 import { SUBSCRIPTION_PLANS } from '@/lib/store';
 import { tokenFormat, FORGE_TOKEN_COSTS, FORGE_OPERATION_LABELS, type ForgeOperation } from '@/lib/plans';
 import LandingAssistant from '@/components/landing/LandingAssistant';
@@ -122,7 +122,7 @@ function HeroProductArt({kind}:{kind:HeroProduct}) {
 
 function HeroTypeLine({text,delay,reduced,last=false}:{text:string;delay:number;reduced:boolean;last?:boolean}){
   if(reduced)return <span aria-hidden="true">{text}</span>;
-  const letters=Array.from(text), step=.065;
+  const letters=Array.from(text), step=.09;
   return <span aria-hidden="true" className="whitespace-pre">{letters.map((letter,i)=>{
     const at=delay+i*step, final=last&&i===letters.length-1;
     return <motion.span key={i} className="relative" initial={{opacity:0}} animate={{opacity:1}} transition={{delay:at,duration:.001}}>{letter}<motion.span className="pointer-events-none absolute -right-[.04em] top-[.14em] h-[.78em] w-[.035em] rounded-full bg-current" initial={{opacity:0}} animate={{opacity:final?[0,1,1,0,1,0]:[0,1,1,0]}} transition={{delay:at,duration:final?.65:step,times:final?[0,.01,.36,.48,.7,1]:[0,.01,.97,1]}}/></motion.span>;
@@ -131,7 +131,6 @@ function HeroTypeLine({text,delay,reduced,last=false}:{text:string;delay:number;
 
 function LaunchStudio({href,cta}:{href:string;cta:string}){
   const reduce=useReducedMotion();
-  const [run,setRun]=useState(0);
   const [theme,setTheme]=useState(0);
   const themes=[{name:'Menta',color:'#a3f5b5'},{name:'Lavanda',color:'#c0b4ff'},{name:'Areia',color:'#efc49e'},{name:'Azul',color:'#9bd9ef'}];
   const accent=themes[theme].color;
@@ -141,14 +140,14 @@ function LaunchStudio({href,cta}:{href:string;cta:string}){
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_42%,#234332_0%,transparent_66%)]"/>
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-40" style={{backgroundImage:'radial-gradient(circle,rgba(211,242,222,.22) 1px,transparent 1px)',backgroundSize:'30px 30px',maskImage:'linear-gradient(to bottom,transparent,#000 15%,#000 85%,transparent)'}}/>
     <div className="relative mx-auto max-w-[1480px] px-5 pb-7 pt-12 sm:px-8 lg:pb-10 lg:pt-8">
-      <div className="flex items-center justify-between gap-2 text-[10px] font-medium uppercase tracking-[.13em] text-[#a9beb0] sm:text-xs"><span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full" style={{backgroundColor:accent}}/> ShopForge / Studio</span><span className="hidden sm:inline">Construtor visual · demonstração</span><button type="button" onClick={()=>setRun(n=>n+1)} className="inline-flex items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-xs normal-case tracking-normal text-[#e0eee4] hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"><RotateCcw size={13}/> Repetir</button></div>
-      <div key={run} className="relative mx-auto grid max-w-[1320px] gap-4 pb-8 pt-12 lg:min-h-[650px] lg:block lg:pb-0 lg:pt-[185px] xl:min-h-[700px] xl:pt-[190px]">
+      <div className="flex items-center justify-between gap-2 text-[10px] font-medium uppercase tracking-[.13em] text-[#a9beb0] sm:text-xs"><span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full" style={{backgroundColor:accent}}/> ShopForge / Studio</span><span className="hidden sm:inline">Construtor visual · demonstração</span></div>
+      <div className="relative mx-auto grid max-w-[1320px] gap-4 pb-8 pt-12 lg:min-h-[650px] lg:block lg:pb-0 lg:pt-[185px] xl:min-h-[700px] xl:pt-[190px]">
         <motion.div {...enter(.1)} className="relative z-10 mx-auto w-full max-w-[780px] text-center lg:w-[66%]">
           <div className="relative border bg-[#b9f2cb]/[.035] px-4 py-7 sm:px-8 sm:py-10 lg:py-11" style={{borderColor:accent}}>
             <span className="absolute -top-5 left-[-1px] rounded-t-md px-2 py-1 text-[10px] font-bold leading-3 text-[#10261c]" style={{backgroundColor:accent}}>Título · H1</span>
             {['-left-1 -top-1','-right-1 -top-1','-left-1 -bottom-1','-right-1 -bottom-1'].map(p=><span key={p} aria-hidden="true" className={'absolute h-2 w-2 border border-[#10261c] '+p} style={{backgroundColor:accent}}/>)}
             <motion.p {...enter(.22)} className="mb-4 text-[10px] font-semibold uppercase tracking-[.19em] sm:text-xs" style={{color:accent}}>A plataforma inteligente de e-commerce</motion.p>
-            <motion.h1 {...enter(.3)} aria-label="A tua visão. A tua loja." className="text-[clamp(2.65rem,5.3vw,5.4rem)] font-semibold leading-[.98] tracking-[-.065em]"><HeroTypeLine text="A tua visão." delay={.38} reduced={Boolean(reduce)}/><br/><span style={{color:accent}}><HeroTypeLine text="A tua loja." delay={1.36} reduced={Boolean(reduce)} last/></span></motion.h1>
+            <motion.h1 {...enter(.3)} aria-label="A tua visão. A tua loja." className="text-[clamp(2.65rem,5.3vw,5.4rem)] font-semibold leading-[.98] tracking-[-.065em]"><HeroTypeLine text="A tua visão." delay={.38} reduced={Boolean(reduce)}/><br/><span style={{color:accent}}><HeroTypeLine text="A tua loja." delay={1.66} reduced={Boolean(reduce)} last/></span></motion.h1>
             <motion.p {...enter(.42)} className="mx-auto mt-5 max-w-[560px] text-sm leading-relaxed text-[#b9cebf] sm:text-lg">Cria, personaliza e faz crescer o teu negócio online com IA, um editor visual e ferramentas de gestão. Tudo no mesmo lugar.</motion.p>
           </div>
           <motion.div {...enter(.52)} className="mt-6 flex flex-wrap items-center justify-center gap-3"><Link href={href} className="inline-flex items-center justify-center gap-3 rounded-full px-6 py-3.5 text-sm font-bold text-[#10261c] transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white" style={{backgroundColor:accent}}>{cta}<ArrowRight size={17}/></Link><a href="#demo" className="inline-flex items-center gap-2 rounded-full border border-white/20 px-5 py-3.5 text-sm font-semibold hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-white">Explorar a plataforma <ArrowUpRight size={15}/></a></motion.div>
