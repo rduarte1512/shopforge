@@ -7,6 +7,7 @@ import { motion, AnimatePresence, useReducedMotion, useScroll, useTransform } fr
 import { Activity, ArrowRight, ArrowUpRight, BarChart3, Bot, Check, ChevronDown, CreditCard, FlaskConical, Globe, LayoutDashboard, Mail, Menu, Mic, MousePointerClick, Package, Palette, PanelRightOpen, Radio, Rocket, RotateCcw, ShieldCheck, ShoppingBag, ShoppingCart, Sparkles, Store, Target, TrendingUp, Users, Wallet, WandSparkles, X, Zap } from 'lucide-react';
 import { SUBSCRIPTION_PLANS } from '@/lib/store';
 import LandingAssistant from '@/components/landing/LandingAssistant';
+import { WhyMenu, WhySection } from '@/components/landing/WhyShopForge';
 
 const shell = 'mx-auto w-full max-w-[1240px] px-5 sm:px-8';
 const primary = 'inline-flex items-center justify-center gap-2 rounded-xl bg-[#a3f5b5] px-6 py-3.5 font-semibold text-[#092519] transition hover:bg-[#c5ffd1] hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#49b878] motion-reduce:transform-none';
@@ -179,13 +180,14 @@ export default function Home() {
     <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0b1712]/95 text-[#e0eee4] backdrop-blur-xl">
       {!reduce&&<motion.div aria-hidden="true" className="absolute bottom-0 left-0 right-0 h-0.5 origin-left bg-[#a3f5b5]" style={{scaleX:scrollYProgress}}/>}
       <nav className={shell+' flex h-[70px] items-center justify-between gap-4'} aria-label="Navegação principal">
-        <Brand/><div className="hidden items-center gap-7 xl:flex">{nav.map(n=><a key={n.href} href={n.href} className="text-sm font-medium text-[#b9cebf] transition hover:text-white">{n.label}</a>)}</div>
+        <Brand/><div className="hidden items-center gap-5 xl:flex"><WhyMenu/>{nav.map(n=><a key={n.href} href={n.href} className="text-sm font-medium text-[#b9cebf] transition hover:text-white">{n.label}</a>)}</div>
         <div className="flex items-center gap-3">{!isSignedIn&&<Link href="/login" className="hidden text-sm font-semibold text-[#b9cebf] hover:text-white sm:block">Entrar</Link>}<Link href={href} className="hidden items-center gap-2 rounded-full bg-[#a3f5b5] px-4 py-2.5 text-sm font-semibold text-[#10261c] hover:bg-[#c5ffd1] sm:inline-flex">{isSignedIn?'Painel':'Começar grátis'}<ArrowRight size={15}/></Link><button type="button" aria-label={menu?'Fechar menu':'Abrir menu'} aria-expanded={menu} aria-controls="mobile-nav" onClick={()=>setMenu(!menu)} className="grid h-10 w-10 place-items-center rounded-lg border border-white/20 xl:hidden">{menu?<X size={20}/>:<Menu size={20}/>}</button></div>
       </nav>
-      {menu&&<div id="mobile-nav" className={shell+' grid gap-1 border-t border-white/10 pb-5 pt-3 xl:hidden'}>{nav.map(n=><a key={n.href} href={n.href} onClick={()=>setMenu(false)} className="rounded-lg p-3 text-sm font-medium hover:bg-white/10">{n.label}</a>)}{!isSignedIn&&<Link href="/login" onClick={()=>setMenu(false)} className="p-3 text-sm">Entrar</Link>}<Link href={href} className={primary}>{cta}<ArrowRight size={16}/></Link></div>}
+      {menu&&<div id="mobile-nav" className={shell+' grid gap-1 border-t border-white/10 pb-5 pt-3 xl:hidden'}><WhyMenu mobile onNavigate={()=>setMenu(false)}/>{nav.map(n=><a key={n.href} href={n.href} onClick={()=>setMenu(false)} className="rounded-lg p-3 text-sm font-medium hover:bg-white/10">{n.label}</a>)}{!isSignedIn&&<Link href="/login" onClick={()=>setMenu(false)} className="p-3 text-sm">Entrar</Link>}<Link href={href} className={primary}>{cta}<ArrowRight size={16}/></Link></div>}
     </header>
     <main>
       <LaunchStudio href={href} cta={cta}/>
+      <WhySection/>
 
       <section id="features" className={shell+' scroll-mt-24 py-20 sm:py-28'}>
         <Reveal className="mb-12 grid gap-5 lg:grid-cols-[1.25fr_.75fr] lg:items-end">

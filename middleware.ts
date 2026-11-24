@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 const isPublicRoute = createRouteMatcher([
   "/",
+  "/porque/(criar|crescer|gerir)", // Public product education pages
   "/login(.*)",
   "/register(.*)",
   "/api/webhook(.*)",
