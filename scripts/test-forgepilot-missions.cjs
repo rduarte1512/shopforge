@@ -147,7 +147,7 @@ async function testCopilotConversation() {
   const unavailable = await ask(storeId, 'Que campanha devo fazer?');
   assert.equal(unavailable.source, 'guided');
   assert.match(unavailable.notice, /quota/);
-  assert.match(unavailable.answer, /não é uma resposta gerada/);
+  assert.match(unavailable.answer, /não uma resposta gerada/);
   assert(!unavailable.answer.includes('começaria por estas prioridades'));
   state.process.env.GEMINI_API_KEY = '';
   const missing = await ask(storeId, 'Olá, podes ajudar-me?');
