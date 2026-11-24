@@ -16,7 +16,7 @@ export function configured(p:Provider){try{key();appOrigin();return p==='meta'?B
 export function authorization(p:Provider,state:string,challenge:string){
  if(!configured(p))throw Error('Integração por configurar.');
  const url=new URL(p==='meta'?'https://www.facebook.com/'+metaVersion()+'/dialog/oauth':'https://accounts.google.com/o/oauth2/v2/auth');
- const params:Record<string,string>=p==='meta'?{client_id:process.env.META_ADS_APP_ID!,scope:'ads_read'}:{client_id:process.env.GOOGLE_ADS_CLIENT_ID!,scope:'https://www.googleapis.com/auth/adwords',access_type:'offline',prompt:'consent',code_challenge:challenge,code_challenge_method:'S256'};
+ const params:Record<string,string>=p==='meta'?{client_id:process.env.META_ADS_APP_ID!,scope:writesEnabled()?'ads_read,ads_management':'ads_read'}:{client_id:process.env.GOOGLE_ADS_CLIENT_ID!,scope:'https://www.googleapis.com/auth/adwords',access_type:'offline',prompt:'consent',code_challenge:challenge,code_challenge_method:'S256'};
  for(const [k,v] of Object.entries({...params,state,redirect_uri:callback(p),response_type:'code'}))url.searchParams.set(k,v);
  return url;
 }
@@ -41,4 +41,17 @@ const numberOrNull=(v:unknown)=>v===undefined||v===null||v===''?null:Number.isFi
 export async function campaigns(p:Provider,access:string,account:AdAccount):Promise<RemoteCampaign[]>{
  if(p==='meta'){const d=await graph(account.id+'/campaigns',{fields:'id,name,effective_status,objective,insights.date_preset(last_30d){spend,impressions,clicks}',limit:'100'},access);return (d.data||[]).map((x:any)=>({id:x.id,name:x.name,status:x.effective_status,type:x.objective,currency:account.currency||'',cost:numberOrNull(x.insights?.data?.[0]?.spend),impressions:numberOrNull(x.insights?.data?.[0]?.impressions),clicks:numberOrNull(x.insights?.data?.[0]?.clicks)}))}
  const d=await google('customers/'+account.id+'/googleAds:searchStream',access,{query:"SELECT campaign.id, campaign.name, campaign.status, campaign.advertising_channel_type, customer.currency_code, metrics.cost_micros, metrics.impressions, metrics.clicks FROM campaign WHERE segments.date DURING LAST_30_DAYS LIMIT 100"});return (Array.isArray(d)?d:[]).flatMap((x:any)=>x.results||[]).map((x:any)=>({id:x.campaign.id,name:x.campaign.name,status:x.campaign.status,type:x.campaign.advertisingChannelType,currency:x.customer?.currencyCode||'',cost:x.metrics?.costMicros==null?null:Number(x.metrics.costMicros)/1e6,impressions:numberOrNull(x.metrics?.impressions),clicks:numberOrNull(x.metrics?.clicks)}))
+}
+
+export function writesEnabled(){return process.env.ADS_ENABLE_WRITES==='true'}
+export async function updateCampaignStatus(p:Provider,access:string,account:AdAccount,campaignId:string,enabled:boolean){
+ if(!writesEnabled())throw Error('Alterações externas ainda não foram ativadas.');
+ if(!/^\d+$/.test(campaignId))throw Error('Campanha inválida.');
+ if(p==='meta'){
+  const d=await request('https://graph.facebook.com/'+metaVersion()+'/'+campaignId,{method:'POST',headers:{Authorization:'Bearer '+access},body:new URLSearchParams({status:enabled?'ACTIVE':'PAUSED'})});
+  if(d.success!==true)throw Error('Não foi possível confirmar a alteração.');
+ }else{
+  const d=await google('customers/'+account.id+'/campaigns:mutate',access,{operations:[{update:{resourceName:'customers/'+account.id+'/campaigns/'+campaignId,status:enabled?'ENABLED':'PAUSED'},updateMask:'status'}]});
+  if(!d.results?.[0]?.resourceName)throw Error('Não foi possível confirmar a alteração.');
+ }
 }

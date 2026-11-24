@@ -6,7 +6,7 @@ consulta das contas/campanhas via API, e geração de copy com a carteira ForgeP
 (15 tokens). Nenhuma campanha externa é criada ou publicada nesta versão.
 Dados externos são consultados sob pedido (até 100 campanhas, últimos 30 dias),
 sem agregação entre moedas. Google suporta apenas contas diretamente acessíveis,
-não a expansão de hierarquias MCC. Meta solicita ads_read.
+não a expansão de hierarquias MCC. Meta solicita ads_read (e ads_management quando as alterações externas forem ativadas).
 
 ## Ativação
 1. Aplicar migrations/20261124_forgeads.sql na base Neon efetiva do ShopForge.
@@ -24,6 +24,14 @@ não a expansão de hierarquias MCC. Meta solicita ads_read.
 Limites desta versão: não replica os editores completos nativos; países e públicos são
 briefings, não IDs validados das plataformas. Criativos pequenos em Postgres (3 MB,
 30 MB por loja); para vídeo de produção migrar para object storage com upload direto.
-Sem publicação, edição externa, métricas de conversão/ROAS, hierarquia Google MCC,
+Sem publicação de novas campanhas, edição externa de criativos/orçamentos, métricas de conversão/ROAS, hierarquia Google MCC,
 paginação completa, agendamento automático ou upload de criativos para as plataformas.
 A desconexão remove a autorização local; revogar consentimento na plataforma se necessário.
+
+## Gestão de estado (opt-in)
+Por omissão apenas leitura. Depois de validar ambas as integrações com contas
+de teste, configurar ADS_ENABLE_WRITES=true e religar Meta para obter
+ads_management. O painel permite pausar/reativar campanhas existentes, com
+confirmação explícita (reativar pode gerar despesas). O servidor revalida
+propriedade da loja, plano, conta e campanha antes da alteração.
+Nenhuma alteração é executada pelo ForgePilot automaticamente.
